@@ -176,12 +176,12 @@ func (service *OrderServiceImplementation) CreateOrder(requestId, idUser, idDesa
 	orderEntity.SubTotal = totalPrice
 
 	// Checking total bill from FE
-	if (totalPrice + orderRequest.ShippingCost) != orderRequest.TotalBill {
+	if (totalPrice + orderRequest.ShippingCost) != (orderRequest.TotalBill + orderRequest.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama"), requestId, []string{"harga tidak sama"}, service.Logger, tx)
 	}
 
 	// Checking total payment from FE
-	if (totalPrice + orderRequest.ShippingCost + orderRequest.PaymentFee) != ((orderRequest.PaymentCash + orderRequest.PaymentFee) + orderRequest.PaymentPoint) {
+	if (totalPrice + orderRequest.ShippingCost + orderRequest.PaymentFee) != ((orderRequest.TotalBill + orderRequest.PaymentFee) + orderRequest.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama dengan payment cash"), requestId, []string{"harga tidak sama dengan payment cash"}, service.Logger, tx)
 	}
 
@@ -195,7 +195,7 @@ func (service *OrderServiceImplementation) CreateOrder(requestId, idUser, idDesa
 	switch orderRequest.PaymentMethod {
 	case "cod":
 		orderEntity.OrderStatus = 0
-		orderEntity.PaymentCash = orderRequest.PaymentCash
+		orderEntity.PaymentCash = orderRequest.TotalBill
 		orderEntity.PaymentName = "Cash On Delivery"
 	case "point":
 		orderEntity.OrderStatus = 1
@@ -213,13 +213,13 @@ func (service *OrderServiceImplementation) CreateOrder(requestId, idUser, idDesa
 		max2 := 99
 		rand2Number := rand.Intn(max2-min2+1) + min
 
-		sisaPembagi := math.Mod(orderRequest.PaymentCash, 1000)
+		sisaPembagi := math.Mod(orderRequest.TotalBill, 1000)
 		var Total float64
 
 		if sisaPembagi < 100 {
-			Total = orderRequest.PaymentCash + float64(rand3Number)
+			Total = orderRequest.TotalBill + float64(rand3Number)
 		} else if sisaPembagi >= 100 {
-			Total = orderRequest.PaymentCash + float64(rand2Number)
+			Total = orderRequest.TotalBill + float64(rand2Number)
 		}
 
 		orderEntity.OrderStatus = 0
@@ -230,7 +230,7 @@ func (service *OrderServiceImplementation) CreateOrder(requestId, idUser, idDesa
 		orderEntity.PaymentCash = Total
 
 	case "va", "qris":
-		orderEntity.PaymentCash = orderRequest.PaymentCash + orderEntity.PaymentFee
+		orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		res := service.PaymentServiceInterface.VaQrisPay(requestId,
 			&payment.IpaymuQrisVaRequest{
 				Name:           userProfile.NamaLengkap,
@@ -284,7 +284,7 @@ func (service *OrderServiceImplementation) CreateOrder(requestId, idUser, idDesa
 			orderEntity.PaymentName = "Credit Card"
 			orderEntity.PaymentDueDate = null.NewTime(time.Now().Add(time.Hour*24), true)
 			orderEntity.OrderStatus = 0
-			orderEntity.PaymentCash = orderRequest.PaymentCash + orderEntity.PaymentFee
+			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
 	}
 
@@ -404,5 +404,6 @@ func (service *OrderServiceImplementation) UpdatePaymentStatusOrderById(requestI
 		exceptions.PanicIfBadRequest(errors.New("order tidak dalam status 0"), requestId, []string{"order tidak dalam status 0"}, service.Logger)
 	}
 
-	// Check
+	// Check status order ke ipaymu
+
 }

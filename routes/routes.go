@@ -89,5 +89,10 @@ func UserShippingAddressRoute(e *echo.Echo, jwt config.Jwt, userShippingAddress 
 	group := e.Group("api/v1")
 	group.POST("/shipping_address/create", userShippingAddress.CreateUserShippingAddress, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/shipping_address", userShippingAddress.FindUserShippingAddress, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.DELETE("/shipping_address/delete", userShippingAddress.DeleteUserShippingAddress, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/shipping_address/delete", userShippingAddress.DeleteUserShippingAddress, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
+func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInterface) {
+	group := e.Group("api/v1")
+	group.GET("/pricelist/pulsa", ppob.GetPulsaPriceList, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }

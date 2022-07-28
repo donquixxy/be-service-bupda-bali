@@ -15,7 +15,6 @@ type CreateOrderRequest struct {
 	CatatanKurir     string  `json:"catatan_kurir" form:"catatan_kurir" validate:"required"`
 	ShippingCost     float64 `json:"shipping_cost" form:"shipping_cost" validate:"required"`
 	PaymentFee       float64 `json:"payment_fee" form:"payment_fee"`
-	PaymentCash      float64 `json:"payment_cash" form:"payment_cash"`
 }
 
 func ReadFromCreateOrderRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *CreateOrderRequest {

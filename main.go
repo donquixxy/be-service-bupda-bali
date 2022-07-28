@@ -69,6 +69,7 @@ func main() {
 	productDesaStockRepository := repository.NewProductDesaStockHistoryRepository(&appConfig.Database)
 	settingRepository := repository.NewSettingRepository(&appConfig.Database)
 	userShippingAddressRepository := repository.NewUserShippingAddressRepository(&appConfig.Database)
+	operatorPrefixRepository := repository.NewOperatorPrefixRepository(&appConfig.Database)
 
 	// Service
 	authService := service.NewAuthService(
@@ -173,6 +174,11 @@ func main() {
 		logrusLogger,
 		userShippingAddressRepository,
 	)
+	ppobService := service.NewPpobService(
+		DBConn,
+		logrusLogger,
+		operatorPrefixRepository,
+	)
 
 	// Controller
 	authController := controller.NewAuthController(
@@ -224,6 +230,9 @@ func main() {
 		logrusLogger,
 		userShippingAddressService,
 	)
+	ppobController := controller.NewPpobController(
+		ppobService,
+	)
 
 	// Route
 	routes.AuthRoute(e, authController)
@@ -240,6 +249,7 @@ func main() {
 	routes.PaymentChannelRoute(e, appConfig.Jwt, paymentChannelController)
 	routes.SettingRoute(e, appConfig.Jwt, settingController)
 	routes.UserShippingAddressRoute(e, appConfig.Jwt, userShippingAddressController)
+	routes.PpobRoute(e, appConfig.Jwt, ppobController)
 
 	// Careful shutdown
 	go func() {

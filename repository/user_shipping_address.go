@@ -9,6 +9,7 @@ import (
 type UserShippingAddressRepositoryInterface interface {
 	CreateUserShippingAddress(DB *gorm.DB, userShippingAddress *entity.UserShippingAddress) (*entity.UserShippingAddress, error)
 	FindUserShippingAddressByIdUser(DB *gorm.DB, idUser string) ([]entity.UserShippingAddress, error)
+	FindUserShippingAddressById(DB *gorm.DB, idUserShippingAddress string) (*entity.UserShippingAddress, error)
 	DeleteUserShippingAddress(DB *gorm.DB, idUserShippingAddress string) error
 }
 
@@ -35,5 +36,11 @@ func (repository *UserShippingAddressRepositoryImplementation) DeleteUserShippin
 func (repository *UserShippingAddressRepositoryImplementation) FindUserShippingAddressByIdUser(DB *gorm.DB, idUser string) ([]entity.UserShippingAddress, error) {
 	userShippingAddresss := []entity.UserShippingAddress{}
 	results := DB.Where("id_user = ?", idUser).Find(&userShippingAddresss)
+	return userShippingAddresss, results.Error
+}
+
+func (repository *UserShippingAddressRepositoryImplementation) FindUserShippingAddressById(DB *gorm.DB, idUserShippingAddress string) (*entity.UserShippingAddress, error) {
+	userShippingAddresss := &entity.UserShippingAddress{}
+	results := DB.Where("id = ?", idUserShippingAddress).Find(userShippingAddresss)
 	return userShippingAddresss, results.Error
 }

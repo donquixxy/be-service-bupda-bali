@@ -42,7 +42,17 @@ func NewUserShippingAddressService(
 }
 
 func (service *UserShippingAddressServiceImplementation) DeleteUserShippingAddress(requestId string, userShippingAddressRequest *request.DeleteUserShippingAddressRequest) {
-	err := service.UserShippingAddressRepositoryInterface.DeleteUserShippingAddress(service.DB, userShippingAddressRequest.IdUserShippingAddress)
+	var err error
+	// validate
+	request.ValidateRequest(service.Validate, userShippingAddressRequest, requestId, service.Logger)
+
+	shippingAddress, err := service.UserShippingAddressRepositoryInterface.FindUserShippingAddressById(service.DB, userShippingAddressRequest.IdUserShippingAddress)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(shippingAddress.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("not found"), requestId, []string{"addres not found"}, service.Logger)
+	}
+
+	err = service.UserShippingAddressRepositoryInterface.DeleteUserShippingAddress(service.DB, userShippingAddressRequest.IdUserShippingAddress)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 }
 

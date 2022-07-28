@@ -8,7 +8,8 @@ type FindCartByUserResponse struct {
 	ProductName     string  `json:"product_name"`
 	PictureUrl      string  `json:"picture_url"`
 	Thumbnail       string  `json:"thumbnail"`
-	Price           float64 `json:"price"`
+	Price           float64 `json:"price_normal"`
+	PricePromo      float64 `json:"price_promo"`
 	PromoPercentage float64 `json:"promo_percentage"`
 	IsPromo         int     `json:"is_promo"`
 	Qty             int     `json:"qty"`
@@ -32,18 +33,19 @@ func ToFindCartByUserResponse(carts []entity.Cart, AccountType int) (cartRespons
 		cartResponse.IsPromo = cart.ProductsDesa.IsPromo
 		if AccountType == 1 {
 			if cart.ProductsDesa.IsPromo == 1 {
-				cartResponse.AccountType = "User Biasa"
-				cartResponse.PriceInfo = "Harga Normal"
-				cartResponse.Price = cart.ProductsDesa.PricePromo
+				cartResponse.PricePromo = cart.ProductsDesa.PricePromo
+				cartResponse.Price = cart.ProductsDesa.ProductsMaster.Price
 				cartResponse.PromoPercentage = cart.ProductsDesa.PercentagePromo
 			} else {
-				cartResponse.AccountType = "User Biasa"
-				cartResponse.PriceInfo = "Harga Normal"
 				cartResponse.Price = cart.ProductsDesa.ProductsMaster.Price
+				cartResponse.PricePromo = 0
+				cartResponse.PromoPercentage = 0
 			}
+			cartResponse.AccountType = "User Biasa"
+			cartResponse.PriceInfo = "Krama Harga Normal"
 		} else if AccountType == 2 {
 			cartResponse.AccountType = "User Merchant"
-			cartResponse.PriceInfo = "Harga Grosir"
+			cartResponse.PriceInfo = "Krama Harga Grosir"
 			cartResponse.Price = cart.ProductsDesa.ProductsMaster.PriceGrosir
 		}
 		cartResponses = append(cartResponses, cartResponse)

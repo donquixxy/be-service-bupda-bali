@@ -7,20 +7,22 @@ import (
 )
 
 type FindOrderByIdResponse struct {
-	Id             string        `json:"id_order"`
-	OrderName      string        `json:"order_name"`
-	NumberOrder    string        `json:"number_order"`
-	OrderStatus    int           `json:"order_status"`
-	PaymentMethod  string        `json:"payment_method"`
-	PaymentChannel string        `json:"payment_channel"`
-	PaymentDueDate time.Time     `json:"payment_due_date"`
-	SubTotal       float64       `json:"sub_total"`
-	ShippingCost   float64       `json:"shipping_cost"`
-	PaymentPoint   float64       `json:"payment_point"`
-	PaymentFee     float64       `json:"payment_fee"`
-	PaymentCash    float64       `json:"payment_cash"`
-	TotalBill      float64       `json:"total_bill"`
-	OrdersItems    []OrdersItems `json:"order_items"`
+	Id               string        `json:"id_order"`
+	OrderName        string        `json:"order_name"`
+	NumberOrder      string        `json:"number_order"`
+	OrderStatus      int           `json:"order_status"`
+	PaymentMethod    string        `json:"payment_method"`
+	PaymentChannel   string        `json:"payment_channel"`
+	PaymentDueDate   time.Time     `json:"payment_due_date"`
+	SubTotal         float64       `json:"sub_total"`
+	ShippingCost     float64       `json:"shipping_cost"`
+	PaymentPoint     float64       `json:"payment_point"`
+	PaymentFee       float64       `json:"payment_fee"`
+	PaymentCash      float64       `json:"payment_cash"`
+	TotalBill        float64       `json:"total_bill"`
+	AlamatPengiriman string        `json:"alamat_pengiriman"`
+	CatatanKurir     string        `json:"catatan_kurir"`
+	OrdersItems      []OrdersItems `json:"order_items"`
 }
 
 type OrdersItems struct {
@@ -50,7 +52,8 @@ func ToFindOrderByIdResponse(order *entity.Order, orderItems []entity.OrderItem)
 	orderResponse.PaymentFee = order.PaymentFee
 	orderResponse.PaymentCash = order.PaymentCash
 	orderResponse.TotalBill = order.TotalBill
-
+	orderResponse.AlamatPengiriman = order.AlamatPengiriman
+	orderResponse.CatatanKurir = order.Catatan
 	var orderItemsResponses []OrdersItems
 	for _, orderItem := range orderItems {
 		var orderItemResponse OrdersItems

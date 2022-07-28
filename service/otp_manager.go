@@ -106,8 +106,8 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 		// Update OTP
 		updateOtpErr := service.OtpManagerRepositoryInterface.UpdateOtp(service.DB, resultOtp.Id, otpManagerEntity)
 		exceptions.PanicIfError(updateOtpErr, requestId, service.Logger)
-		// Send OTP
 
+		// Send OTP
 		// go service.SmsServiceInterface.SendOTP(requestId, otpManagerEntity.Phone, otpManagerEntity.OtpCode)
 	}
 }
@@ -127,8 +127,9 @@ func (service *OtpManagerServiceImplementation) VerifyOtp(requestId string, veri
 	if time.Now().After(otp.OtpExperiedAt) {
 		exceptions.PanicIfBadRequest(errors.New("otp code has expired"), requestId, []string{"otp code has expired"}, service.Logger)
 	}
-
-	token, _ := service.GenerateFormToken()
+	var userModelService modelService.User
+	userModelService.Phone = otp.Phone
+	token, _ := service.GenerateFormToken(userModelService)
 
 	verifyOtpResponse := response.ToVerifyOtpResponse(token)
 
@@ -136,11 +137,12 @@ func (service *OtpManagerServiceImplementation) VerifyOtp(requestId string, veri
 
 }
 
-func (service *OtpManagerServiceImplementation) GenerateFormToken() (token string, err error) {
+func (service *OtpManagerServiceImplementation) GenerateFormToken(user modelService.User) (token string, err error) {
 	// Create the Claims
 	claims := modelService.TokenClaims{
+		Phone: user.Phone,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * time.Duration(service.ConfigJwt.Tokenexpiredtime)).Unix(),
+			ExpiresAt: time.Now().Add(time.Minute * time.Duration(service.ConfigJwt.FormTokenExperiedTime)).Unix(),
 			Issuer:    "cyrilia",
 		},
 	}

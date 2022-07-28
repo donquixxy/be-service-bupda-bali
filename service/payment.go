@@ -23,6 +23,7 @@ import (
 type PaymentServiceInterface interface {
 	VaQrisPay(requestId string, paymentRequest *payment.IpaymuQrisVaRequest) *payment.IpaymuQrisVaResponse
 	CreditCardPay(requestId string, paymentRequest *payment.IpaymuCreditCardRequest) *payment.IpaymuCreditCardResponse
+	CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus
 }
 
 type PaymentServiceImplementation struct {
@@ -35,6 +36,50 @@ func NewPaymentService(
 	return &PaymentServiceImplementation{
 		Logger: logger,
 	}
+}
+
+func (service *PaymentServiceImplementation) CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus {
+	var ipaymu_va = string(config.GetConfig().IpaymuPayment.IpaymuVa)
+	var ipaymu_key = string(config.GetConfig().IpaymuPayment.IpaymuKey)
+
+	url, _ := url.Parse(string(config.GetConfig().IpaymuPayment.IpaymuUrl))
+
+	postBody, _ := json.Marshal(map[string]interface{}{
+		"transactionId": trxId,
+	})
+
+	signature, reqBody := BodyHash(postBody, ipaymu_key, ipaymu_va)
+
+	req := &http.Request{
+		Method: "POST",
+		URL:    url,
+		Header: map[string][]string{
+			"Content-Type": {"application/json"},
+			"va":           {ipaymu_va},
+			"signature":    {signature},
+		},
+		Body: reqBody,
+	}
+
+	reqDump, _ := httputil.DumpRequestOut(req, true)
+	fmt.Printf("REQUEST:\n%s", string(reqDump))
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		log.Fatalf("An Error Occured %v", err)
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+	defer resp.Body.Close()
+
+	var dataResponseIpaymu payment.PaymentStatusResponse
+
+	if err := json.NewDecoder(resp.Body).Decode(&dataResponseIpaymu); err != nil {
+		fmt.Println(err)
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	return &dataResponseIpaymu.Data
 }
 
 func BodyHash(postBody []byte, ipaymuKey string, ipaymuVa string) (signature string, reqBody io.ReadCloser) {
@@ -108,7 +153,7 @@ func (service *PaymentServiceImplementation) CreditCardPay(requestId string, pay
 	var ipaymu_va = string(config.GetConfig().IpaymuPayment.IpaymuVa)
 	var ipaymu_key = string(config.GetConfig().IpaymuPayment.IpaymuKey)
 
-	url, _ := url.Parse(string(config.GetConfig().IpaymuPayment.IpaymuSnapUrl	))
+	url, _ := url.Parse(string(config.GetConfig().IpaymuPayment.IpaymuSnapUrl))
 
 	postBody, _ := json.Marshal(map[string]interface{}{
 		"product":       paymentRequest.Product,

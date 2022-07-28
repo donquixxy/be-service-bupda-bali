@@ -12,7 +12,8 @@ type FindProductsDesaResponse struct {
 	IdUnit          int     `json:"id_unit"`
 	NoSku           string  `json:"no_sku"`
 	ProductName     string  `json:"product_name"`
-	Price           float64 `json:"price"`
+	Price           float64 `json:"price_normal"`
+	PricePromo      float64 `json:"price_promo"`
 	PromoPercentage float64 `json:"promo_percentage"`
 	FlagPromo       int     `json:"flag_promo"`
 	Description     string  `json:"description"`
@@ -36,18 +37,19 @@ func ToFindProductsDesaResponse(productsDesas []entity.ProductsDesa, AccountType
 		productsDesaResponse.FlagPromo = productDesa.IsPromo
 		if AccountType == 1 {
 			if productDesa.IsPromo == 1 {
-				productsDesaResponse.AccountType = "User Biasa"
-				productsDesaResponse.PriceInfo = "Harga Normal"
-				productsDesaResponse.Price = productDesa.PricePromo
+				productsDesaResponse.Price = productDesa.ProductsMaster.Price
+				productsDesaResponse.PricePromo = productDesa.PricePromo
 				productsDesaResponse.PromoPercentage = productDesa.PercentagePromo
 			} else {
-				productsDesaResponse.AccountType = "User Biasa"
-				productsDesaResponse.PriceInfo = "Harga Normal"
 				productsDesaResponse.Price = productDesa.ProductsMaster.Price
+				productsDesaResponse.PricePromo = 0
+				productsDesaResponse.PromoPercentage = 0
 			}
+			productsDesaResponse.AccountType = "User Biasa"
+			productsDesaResponse.PriceInfo = "Krama Harga Normal"
 		} else if AccountType == 2 {
 			productsDesaResponse.AccountType = "User Merchant"
-			productsDesaResponse.PriceInfo = "Harga Grosir"
+			productsDesaResponse.PriceInfo = "Krama Harga Grosir"
 			productsDesaResponse.Price = productDesa.ProductsMaster.PriceGrosir
 		}
 		productsDesaResponse.Description = productDesa.ProductsMaster.Description
