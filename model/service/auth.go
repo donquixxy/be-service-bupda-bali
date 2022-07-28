@@ -12,5 +12,6 @@ type TokenClaims struct {
 	Id          string `json:"id"`
 	IdDesa      string `json:"id_desa"`
 	AccountType int    `json:"account_type"`
+	Phone       string `json:"phone"`
 	jwt.StandardClaims
 }
