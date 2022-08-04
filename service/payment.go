@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -42,10 +44,10 @@ func (service *PaymentServiceImplementation) CheckPaymentStatus(requestId string
 	var ipaymu_va = string(config.GetConfig().IpaymuPayment.IpaymuVa)
 	var ipaymu_key = string(config.GetConfig().IpaymuPayment.IpaymuKey)
 
-	url, _ := url.Parse(string(config.GetConfig().IpaymuPayment.IpaymuUrl))
+	url, _ := url.Parse(string(config.GetConfig().IpaymuPayment.IpaymuTranscationUrl))
 
 	postBody, _ := json.Marshal(map[string]interface{}{
-		"transactionId": trxId,
+		"transactionId": strconv.Itoa(trxId),
 	})
 
 	signature, reqBody := BodyHash(postBody, ipaymu_key, ipaymu_va)
@@ -70,13 +72,16 @@ func (service *PaymentServiceImplementation) CheckPaymentStatus(requestId string
 		log.Fatalf("An Error Occured %v", err)
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
+
 	defer resp.Body.Close()
 
-	var dataResponseIpaymu payment.PaymentStatusResponse
+	data, _ := ioutil.ReadAll(resp.Body)
+	fmt.Printf("body: %s\n", data)
 
-	if err := json.NewDecoder(resp.Body).Decode(&dataResponseIpaymu); err != nil {
-		fmt.Println(err)
-		exceptions.PanicIfError(err, requestId, service.Logger)
+	dataResponseIpaymu := &payment.PaymentStatusResponse{}
+
+	if err = json.Unmarshal([]byte(data), &dataResponseIpaymu); err != nil {
+		exceptions.PanicIfBadRequest(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
 	}
 
 	return &dataResponseIpaymu.Data

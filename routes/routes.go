@@ -47,6 +47,9 @@ func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterfa
 	group.GET("/products/category", productDesaControllerInterface.FindProductsDesaByCategory, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/products/sub_category", productDesaControllerInterface.FindProductsDesaBySubCategory, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/products/promo", productDesaControllerInterface.FindProductsDesaByPromo, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/products/notoken", productDesaControllerInterface.FindProductsDesaNotoken, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/products/category/notoken", productDesaControllerInterface.FindProductsDesaByCategoryNotoken, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/products/sub_category/notoken", productDesaControllerInterface.FindProductsDesaBySubCategoryNotoken, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func PromoRoute(e *echo.Echo, jwt config.Jwt, promoDesaControllerInterface controller.PromoControllerInterface) {
@@ -72,7 +75,8 @@ func OrderRoute(e *echo.Echo, jwt config.Jwt, orderControllerInterface controlle
 	group.GET("/orders/user", orderControllerInterface.FindOrderByUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/order", orderControllerInterface.FindOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/order/cancel", orderControllerInterface.CancelOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.PUT("/order/complete", orderControllerInterface.CancelOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.PUT("/order/complete", orderControllerInterface.CompleteOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/order/update/payment", orderControllerInterface.UpdateOrderPaymentStatus, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func PaymentChannelRoute(e *echo.Echo, jwt config.Jwt, paymentChannelControllerInterface controller.PaymentChannelControllerInterface) {
@@ -94,5 +98,11 @@ func UserShippingAddressRoute(e *echo.Echo, jwt config.Jwt, userShippingAddress 
 
 func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInterface) {
 	group := e.Group("api/v1")
-	group.GET("/pricelist/pulsa", ppob.GetPulsaPriceList, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/prepaid/pricelist/pulsa", ppob.GetPrepaidPulsaPriceList, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/prepaid/pricelist/data", ppob.GetPrepaidDataPriceList, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/prepaid/pricelist/pln", ppob.GetPrepaidPlnPriceList, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/prepaid/inquiry/pln", ppob.InquiryPrepaidPln, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/postpaid/inquiry/pln", ppob.InquiryPostpaidPln, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/postpaid/list/pln", ppob.GetPostpaidPdamProduct, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/postpaid/inquiry/pdam", ppob.InquiryPostpaidPdam, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }

@@ -65,6 +65,7 @@ func main() {
 	pointRepository := repository.NewPointRepository(&appConfig.Database)
 	orderRepository := repository.NewOrderRepository(&appConfig.Database)
 	orderItemRepository := repository.NewOrderItemRepository(&appConfig.Database)
+	orderItemPpobRepository := repository.NewOrderItemPpobRepository(&appConfig.Database)
 	paymentChannelRepository := repository.NewPaymentChannelRepository(&appConfig.Database)
 	productDesaStockRepository := repository.NewProductDesaStockHistoryRepository(&appConfig.Database)
 	settingRepository := repository.NewSettingRepository(&appConfig.Database)
@@ -155,6 +156,8 @@ func main() {
 		paymentChannelRepository,
 		productDesaRepository,
 		productDesaService,
+		operatorPrefixRepository,
+		orderItemPpobRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,
@@ -176,8 +179,10 @@ func main() {
 	)
 	ppobService := service.NewPpobService(
 		DBConn,
+		validate,
 		logrusLogger,
 		operatorPrefixRepository,
+		orderService,
 	)
 
 	// Controller
@@ -231,6 +236,7 @@ func main() {
 		userShippingAddressService,
 	)
 	ppobController := controller.NewPpobController(
+		logrusLogger,
 		ppobService,
 	)
 

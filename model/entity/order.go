@@ -11,7 +11,8 @@ type Order struct {
 	IdUser              string    `gorm:"column:id_user;"`
 	IdDesa              string    `gorm:"column:id_desa;"`
 	NumberOrder         string    `gorm:"column:number_order;"`
-	OrderName           string    `gorm:"column:order_name;"`
+	ProductType         string    `gorm:"column:product_type;"`
+	OrderType           int       `gorm:"column:order_type;"`
 	TrxId               int       `gorm:"column:trx_id;"`
 	NamaLengkap         string    `gorm:"column:nama_lengkap;"`
 	Email               string    `gorm:"column:email;"`

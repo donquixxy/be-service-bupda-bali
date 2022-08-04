@@ -82,6 +82,11 @@ type Sms struct {
 	PassKey string `yaml:"passkey"`
 }
 
+type Ppob struct {
+	Username string `yaml:"username"`
+	PpobKey  string `yaml:"ppobkey"`
+}
+
 type ApplicationConfiguration struct {
 	Application   Application
 	Webserver     Webserver
@@ -94,6 +99,7 @@ type ApplicationConfiguration struct {
 	Telegram      Telegram
 	Fcm           Fcm
 	Sms           Sms
+	Ppob          Ppob
 }
 
 var lock = sync.Mutex{}

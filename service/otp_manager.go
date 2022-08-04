@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -129,6 +130,7 @@ func (service *OtpManagerServiceImplementation) VerifyOtp(requestId string, veri
 	}
 	var userModelService modelService.User
 	userModelService.Phone = otp.Phone
+	fmt.Println("masuk ke sini")
 	token, _ := service.GenerateFormToken(userModelService)
 
 	verifyOtpResponse := response.ToVerifyOtpResponse(token)
@@ -142,7 +144,7 @@ func (service *OtpManagerServiceImplementation) GenerateFormToken(user modelServ
 	claims := modelService.TokenClaims{
 		Phone: user.Phone,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * time.Duration(service.ConfigJwt.FormTokenExperiedTime)).Unix(),
+			ExpiresAt: time.Now().Add(time.Minute * time.Duration(10)).Unix(),
 			Issuer:    "cyrilia",
 		},
 	}

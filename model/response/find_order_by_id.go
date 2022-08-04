@@ -8,7 +8,8 @@ import (
 
 type FindOrderByIdResponse struct {
 	Id               string        `json:"id_order"`
-	OrderName        string        `json:"order_name"`
+	ProductType      string        `json:"product_type"`
+	OrderType        int           `json:"order_type"`
 	NumberOrder      string        `json:"number_order"`
 	OrderStatus      int           `json:"order_status"`
 	PaymentMethod    string        `json:"payment_method"`
@@ -18,10 +19,15 @@ type FindOrderByIdResponse struct {
 	ShippingCost     float64       `json:"shipping_cost"`
 	PaymentPoint     float64       `json:"payment_point"`
 	PaymentFee       float64       `json:"payment_fee"`
+	PaymentName      string        `json:"payment_name"`
+	BankName         string        `json:"bank_name"`
+	BankLogo         string        `json:"bank_logo"`
+	PaymentNumber    string        `json:"payment_number"`
 	PaymentCash      float64       `json:"payment_cash"`
 	TotalBill        float64       `json:"total_bill"`
 	AlamatPengiriman string        `json:"alamat_pengiriman"`
 	CatatanKurir     string        `json:"catatan_kurir"`
+	OrderDate        time.Time     `json:"order_date"`
 	OrdersItems      []OrdersItems `json:"order_items"`
 }
 
@@ -38,9 +44,10 @@ type OrdersItems struct {
 	FlagPromo     int     `json:"flag_promo"`
 }
 
-func ToFindOrderByIdResponse(order *entity.Order, orderItems []entity.OrderItem) (orderResponse FindOrderByIdResponse) {
+func ToFindOrderByIdResponse(order *entity.Order, orderItems []entity.OrderItem, payment *entity.PaymentChannel) (orderResponse FindOrderByIdResponse) {
 	orderResponse.Id = order.Id
-	orderResponse.OrderName = order.OrderName
+	orderResponse.ProductType = order.ProductType
+	orderResponse.OrderType = order.OrderType
 	orderResponse.NumberOrder = order.NumberOrder
 	orderResponse.OrderStatus = order.OrderStatus
 	orderResponse.PaymentMethod = order.PaymentMethod
@@ -54,6 +61,12 @@ func ToFindOrderByIdResponse(order *entity.Order, orderItems []entity.OrderItem)
 	orderResponse.TotalBill = order.TotalBill
 	orderResponse.AlamatPengiriman = order.AlamatPengiriman
 	orderResponse.CatatanKurir = order.Catatan
+	orderResponse.OrderDate = order.OrderedDate
+	orderResponse.PaymentNumber = order.PaymentNo
+	orderResponse.PaymentName = order.PaymentName
+	orderResponse.BankName = payment.Name
+	orderResponse.BankLogo = payment.Logo
+
 	var orderItemsResponses []OrdersItems
 	for _, orderItem := range orderItems {
 		var orderItemResponse OrdersItems

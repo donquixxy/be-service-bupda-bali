@@ -1,10 +1,8 @@
 package response
 
-import (
-	"github.com/tensuqiuwulu/be-service-bupda-bali/model/ppob"
-)
+import "github.com/tensuqiuwulu/be-service-bupda-bali/model/ppob"
 
-type GetPrepaidPriceListResponse struct {
+type GetPostPaidProductListResponse struct {
 	ProductCode        string  `json:"product_code"`
 	ProductDescription string  `json:"product_description"`
 	ProductNominal     string  `json:"product_nominal"`
@@ -16,7 +14,7 @@ type GetPrepaidPriceListResponse struct {
 	IconUrl            string  `json:"icon_url"`
 }
 
-func ToGetPrepaidPriceListResponse(priceLists []ppob.PrepaidPriceList) (priceListResponses []GetPrepaidPriceListResponse) {
+func ToGetPostPaidProductListResponse(priceLists []ppob.PrepaidPriceList) (priceListResponses []GetPrepaidPriceListResponse) {
 	for _, priceList := range priceLists {
 		pulsaPriceListResponse := GetPrepaidPriceListResponse{}
 		pulsaPriceListResponse.ProductCode = priceList.ProductCode
