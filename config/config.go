@@ -83,8 +83,10 @@ type Sms struct {
 }
 
 type Ppob struct {
-	Username string `yaml:"username"`
-	PpobKey  string `yaml:"ppobkey"`
+	Username    string `yaml:"username"`
+	PpobKey     string `yaml:"ppobkey"`
+	PrepaidHost string `yaml:"prepaidhost"`
+	PostpaidUrl string `yaml:"postpaidurl"`
 }
 
 type ApplicationConfiguration struct {

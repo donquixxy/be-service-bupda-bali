@@ -49,13 +49,18 @@ func (controller *OrderControllerImplementation) CreateOrder(c echo.Context) err
 		orderResponse = controller.OrderServiceInterface.CreateOrderSembako(requestId, idUser, idDesa, accountType, request)
 	} else if orderType == 2 {
 		switch productType {
-		case "prepaid_pulsa", "prepaid_data", "prepaid_pln":
+		case "prepaid_pulsa", "prepaid_data":
 			request := request.ReadFromCreateOrderPrepaidRequestBody(c, requestId, controller.Logger)
-			orderResponse = controller.OrderServiceInterface.CreateOrderPrepaid(requestId, idUser, idDesa, productType, request)
-		case "postpaid_pln":
-			// request := request.ReadFromCreateOrderPostpaidPlnRequestBody(c, requestId, controller.Logger)
-			// orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPln(requestId, idUser, idDesa, request)
+			orderResponse = controller.OrderServiceInterface.CreateOrderPrepaidPulsa(requestId, idUser, idDesa, productType, request)
+		case "prepaid_pln":
+			request := request.ReadFromCreateOrderPrepaidRequestBody(c, requestId, controller.Logger)
+			orderResponse = controller.OrderServiceInterface.CreateOrderPrepaidPln(requestId, idUser, idDesa, productType, request)
 		case "postpaid_pdam":
+			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
+			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPdam(requestId, idUser, idDesa, productType, request)
+		case "postpaid_pln":
+			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
+			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPln(requestId, idUser, idDesa, productType, request)
 		}
 	}
 	responses := response.Response{Code: 201, Mssg: "success", Data: orderResponse, Error: []string{}}
@@ -81,9 +86,30 @@ func (controller *OrderControllerImplementation) FindOrderByUser(c echo.Context)
 func (controller *OrderControllerImplementation) FindOrderById(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	idOrder := c.QueryParam("id_order")
-	orderResponse := controller.OrderServiceInterface.FindOrderById(requestId, idOrder)
-	responses := response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+	productType := c.QueryParam("product_type")
+
+	var responses response.Response
+
+	switch productType {
+	case "sembako":
+		orderResponse := controller.OrderServiceInterface.FindOrderSembakoById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+
+	case "prepaid_pulsa", "prepaid_data":
+		orderResponse := controller.OrderServiceInterface.FindOrderPrepaidPulsaById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+
+	case "prepaid_pln":
+		orderResponse := controller.OrderServiceInterface.FindOrderPrepaidPlnById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+
+	case "postpaid_pln":
+		orderResponse := controller.OrderServiceInterface.FindOrderPostpaidPlnById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+	}
+
 	return c.JSON(http.StatusOK, responses)
+
 }
 
 func (controller *OrderControllerImplementation) CancelOrderById(c echo.Context) error {

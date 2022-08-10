@@ -26,7 +26,7 @@ func ReadFromCreateOrderPrepaidRequestBody(c echo.Context, requestId string, log
 }
 
 // Postpaid Pln
-type CreateOrderPostpaidPlnRequest struct {
+type CreateOrderPostpaidRequest struct {
 	ProductCode    string  `json:"product_code" form:"product_code" validate:"required"`
 	CustomerId     string  `json:"customer_id" form:"customer_id" validate:"required"`
 	RefId          string  `json:"ref_id" form:"ref_id" validate:"required"`
@@ -37,10 +37,10 @@ type CreateOrderPostpaidPlnRequest struct {
 	TotalBill      float64 `json:"total_bill" form:"total_bill" validate:"required"`
 }
 
-func ReadFromCreateOrderPostpaidPlnRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *CreateOrderPostpaidPlnRequest {
-	createOrderPostpaidPlnRequest := &CreateOrderPostpaidPlnRequest{}
-	if err := c.Bind(createOrderPostpaidPlnRequest); err != nil {
+func ReadFromCreateOrderPostpaidRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *CreateOrderPostpaidRequest {
+	createOrderPostpaidRequest := &CreateOrderPostpaidRequest{}
+	if err := c.Bind(createOrderPostpaidRequest); err != nil {
 		exceptions.PanicIfError(err, requestId, logger)
 	}
-	return createOrderPostpaidPlnRequest
+	return createOrderPostpaidRequest
 }

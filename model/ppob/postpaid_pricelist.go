@@ -104,3 +104,71 @@ type InquiryPostpaidPdamBillDetail struct {
 	MiscAmount float64 `json:"misc_amount"`
 	Stand      string  `json:"stand"`
 }
+
+// Postpaid Check Transaction
+type PostpaidCheckTransactionPdam struct {
+	Data PostpaidCheckTransactionPdamData `json:"data"`
+	Meta []interface{}                    `json:"meta"`
+}
+
+type PostpaidCheckTransactionPdamData struct {
+	TrxId        int                     `json:"tr_id"`
+	Code         string                  `json:"code"`
+	Datetime     string                  `json:"datetime"`
+	Hp           string                  `json:"hp"`
+	TrName       string                  `json:"tr_name"`
+	Period       string                  `json:"period"`
+	Nominal      float64                 `json:"nominal"`
+	Admin        float64                 `json:"admin"`
+	Status       int                     `json:"status"`
+	ResponseCode string                  `json:"response_code"`
+	Message      string                  `json:"message"`
+	Price        float64                 `json:"price"`
+	SellingPrice float64                 `json:"selling_price"`
+	Desc         InquiryPostpaidPdamDesc `json:"desc"`
+}
+
+type PostpaidCheckTransactionPln struct {
+	Data PostpaidCheckTransactionPlnData `json:"data"`
+	Meta []interface{}                   `json:"meta"`
+}
+
+type PostpaidCheckTransactionPlnData struct {
+	TrxId        int                    `json:"tr_id"`
+	Code         string                 `json:"code"`
+	Datetime     string                 `json:"datetime"`
+	Hp           string                 `json:"hp"`
+	TrName       string                 `json:"tr_name"`
+	Period       string                 `json:"period"`
+	Nominal      float64                `json:"nominal"`
+	Admin        float64                `json:"admin"`
+	Status       int                    `json:"status"`
+	ResponseCode string                 `json:"response_code"`
+	Message      string                 `json:"message"`
+	Price        float64                `json:"price"`
+	SellingPrice float64                `json:"selling_price"`
+	Desc         InquiryPostpaidPlnDesc `json:"desc"`
+}
+
+type TopupPostaidPdamResponse struct {
+	Data int
+}
+
+type TopupPostaidPdamDataResponse struct {
+	TrxId        int                     `json:"tr_id"`
+	Code         string                  `json:"code"`
+	Datetime     string                  `json:"datetime"`
+	Hp           string                  `json:"hp"` //Customer Number
+	TrxName      string                  `json:"tr_name"`
+	Period       string                  `json:"period"`
+	Nominal      float64                 `json:"nominal"`
+	Admin        float64                 `json:"admin"`
+	RefId        string                  `json:"ref_id"`
+	ResponseCode string                  `json:"response_code"`
+	Message      string                  `json:"message"`
+	Price        float64                 `json:"price"`
+	SellingPrice float64                 `json:"selling_price"`
+	Balance      float64                 `json:"balance"`
+	NoRef        string                  `json:"noref"`
+	Desc         InquiryPostpaidPdamDesc `json:"desc"`
+}

@@ -71,8 +71,16 @@ func main() {
 	settingRepository := repository.NewSettingRepository(&appConfig.Database)
 	userShippingAddressRepository := repository.NewUserShippingAddressRepository(&appConfig.Database)
 	operatorPrefixRepository := repository.NewOperatorPrefixRepository(&appConfig.Database)
+	ppobDetailRepository := repository.NewPpobDetailRepository(&appConfig.Database)
+	infoDesaRepository := repository.NewInfoDesaRepository(&appConfig.Database)
 
 	// Service
+	infoDesaService := service.NewInfoDesaService(
+		DBConn,
+		validate,
+		logrusLogger,
+		infoDesaRepository,
+	)
 	authService := service.NewAuthService(
 		DBConn,
 		appConfig.Jwt,
@@ -158,6 +166,7 @@ func main() {
 		productDesaService,
 		operatorPrefixRepository,
 		orderItemPpobRepository,
+		ppobDetailRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,
@@ -185,6 +194,9 @@ func main() {
 		orderService,
 	)
 
+	infoDesaController := controller.NewInfoDesaController(
+		infoDesaService,
+	)
 	// Controller
 	authController := controller.NewAuthController(
 		logrusLogger,
@@ -241,6 +253,7 @@ func main() {
 	)
 
 	// Route
+	routes.InfoDesaRoute(e, appConfig.Jwt, infoDesaController)
 	routes.AuthRoute(e, authController)
 	routes.OtpManagerRoute(e, otpManagerController)
 	routes.KecamatanRoute(e, kecamatanController)

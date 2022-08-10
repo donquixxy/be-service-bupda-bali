@@ -12,6 +12,8 @@ type OrderRepositoryInterface interface {
 	FindOrderByUser(db *gorm.DB, idUser string, orderStatus int) ([]entity.Order, error)
 	FindOrderById(db *gorm.DB, idOrder string) (*entity.Order, error)
 	UpdateOrderByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
+	FindOrderPrepaidPulsaById(db *gorm.DB, idUser string) (*entity.Order, error)
+	FindOrderPrepaidPlnById(db *gorm.DB, idUser string) (*entity.Order, error)
 }
 
 type OrderRepositoryImplementation struct {
@@ -50,6 +52,18 @@ func (repository *OrderRepositoryImplementation) FindOrderByUser(db *gorm.DB, id
 }
 
 func (repository *OrderRepositoryImplementation) FindOrderById(db *gorm.DB, idUser string) (*entity.Order, error) {
+	orders := &entity.Order{}
+	result := db.Find(orders, "id = ?", idUser)
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOrderPrepaidPulsaById(db *gorm.DB, idUser string) (*entity.Order, error) {
+	orders := &entity.Order{}
+	result := db.Find(orders, "id = ?", idUser)
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOrderPrepaidPlnById(db *gorm.DB, idUser string) (*entity.Order, error) {
 	orders := &entity.Order{}
 	result := db.Find(orders, "id = ?", idUser)
 	return orders, result.Error

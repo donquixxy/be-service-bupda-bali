@@ -21,6 +21,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"gorm.io/gorm"
 )
 
@@ -32,7 +33,6 @@ type PpobServiceInterface interface {
 	InquiryPrepaidPln(requestId string, inquiryPrepaidPlnRequest *request.InquiryPrepaidPlnRequest) (inquiryPrepaidPlnResponse response.InquiryPrepaidPlnResponse)
 	InquiryPostpaidPln(requestId string, inquiryPostpaidPlnRequest *request.InquiryPostpaidPlnRequest) (inquiryPostpadPlnResponse response.InquiryPostpaidPlnResponse)
 	InquiryPostpaidPdam(requestId string, inquiryPostpaidPdamRequest *request.InquiryPostpaidPdamRequest) (inquiryPostpaidPdamResponse response.InquiryPostpaidPdamResponse)
-	PrepaidTopup(requestId string, customerId, numberOrder, productCode string)
 	PrepaidCheckStatusTransaction(requestId, NumberOrder string)
 }
 
@@ -77,6 +77,9 @@ func (service *PpobServiceImplementation) GetPrepaidPulsaPriceList(requestId str
 
 	opereratorPrefixResult, err := service.OperatorPrefixRepositoryInterface.FindOperatorPrefixByPhone(service.DB, phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(opereratorPrefixResult.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("operator tidak ditemukan"), requestId, []string{"operator not found"}, service.Logger)
+	}
 
 	prepaidPulsaPriceList := service.GetPrepaidPriceList(requestId, numberPhone, "pulsa", opereratorPrefixResult.KodeOperator)
 	priceListResponses = response.ToGetPrepaidPriceListResponse(prepaidPulsaPriceList.Data.Data)
@@ -88,24 +91,28 @@ func (service *PpobServiceImplementation) GetPrepaidDataPriceList(requestId stri
 
 	opereratorPrefixResult, err := service.OperatorPrefixRepositoryInterface.FindOperatorPrefixByPhone(service.DB, phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(opereratorPrefixResult.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("operator tidak ditemukan"), requestId, []string{"operator not found"}, service.Logger)
+	}
 
 	prepaidDataPriceList := service.GetPrepaidPriceList(requestId, numberPhone, "data", opereratorPrefixResult.KodeOperator)
-	priceListResponses = response.ToGetPrepaidPriceListResponse(prepaidDataPriceList.Data.Data)
+	priceListResponses = response.ToGetPrepaidDataPriceListResponse(prepaidDataPriceList.Data.Data)
 	return priceListResponses
 }
 
 func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, id, tipe, operator string) *ppob.PrepaidPriceListResponse {
 
 	// Create Request
+	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + "pl"))
 	body, _ := json.Marshal(map[string]interface{}{
 		"status":   "all",
-		"username": "087762212544",
-		"sign":     "2acaad8d0dd84f9bcff26ea0b0e3af81",
+		"username": config.GetConfig().Ppob.Username,
+		"sign":     hex.EncodeToString(sign[:]),
 	})
 
 	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
 
-	urlString := "https://prepaid.iak.dev/api/pricelist?type=" + tipe + "&operator=" + operator
+	urlString := config.GetConfig().Ppob.PrepaidHost + "/pricelist" + "/" + tipe + "/" + operator
 	// URL
 	url, _ := url.Parse(urlString)
 
@@ -128,7 +135,7 @@ func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, 
 	}
 
 	// Read response body
-	// data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -136,8 +143,7 @@ func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, 
 	prepaidPriceList := &ppob.PrepaidPriceListResponse{}
 	// fmt.Printf("body: %s\n", prepaidPriceList)
 
-	if err := json.NewDecoder(resp.Body).Decode(prepaidPriceList); err != nil {
-		fmt.Println(err)
+	if err = json.Unmarshal([]byte(data), &prepaidPriceList); err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
@@ -147,8 +153,6 @@ func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, 
 	}
 
 	return prepaidPriceList
-
-	// return nil
 }
 
 func (service *PpobServiceImplementation) InquiryPrepaidPln(requestId string, inquiryPrepaidPlnRequest *request.InquiryPrepaidPlnRequest) (inquiryPrepaidPlnResponse response.InquiryPrepaidPlnResponse) {
@@ -159,14 +163,14 @@ func (service *PpobServiceImplementation) InquiryPrepaidPln(requestId string, in
 	// Create Request
 	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + inquiryPrepaidPlnRequest.CustomerId))
 	body, _ := json.Marshal(map[string]interface{}{
-		"username":    "087762212544",
+		"username":    config.GetConfig().Ppob.Username,
 		"customer_id": inquiryPrepaidPlnRequest.CustomerId,
 		"sign":        hex.EncodeToString(sign[:]),
 	})
 
 	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
 
-	urlString := "https://prepaid.iak.dev/api/inquiry-pln"
+	urlString := config.GetConfig().Ppob.PrepaidHost + "/inquiry-pln"
 
 	// URL
 	url, _ := url.Parse(urlString)
@@ -228,7 +232,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPln(requestId string, i
 	request.ValidateRequest(service.Validate, inquiryPostpaidPlnRequest, requestId, service.Logger)
 
 	// generate number order yg akan digunakan sebagai ref id
-	refId := service.OrderServiceInterface.GenerateNumberOrder()
+	refId := utilities.GenerateRefId()
 
 	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + refId))
 	body, _ := json.Marshal(map[string]interface{}{
@@ -242,7 +246,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPln(requestId string, i
 
 	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
 
-	urlString := "https://testpostpaid.mobilepulsa.net/api/v1/bill/check"
+	urlString := config.GetConfig().Ppob.PostpaidUrl
 
 	// URL
 	url, _ := url.Parse(urlString)
@@ -291,11 +295,12 @@ func (service *PpobServiceImplementation) GetPostpaidPdamProduct(requestId strin
 		"username": config.GetConfig().Ppob.Username,
 		"sign":     hex.EncodeToString(sign[:]),
 		"status":   "all",
+		"province": "bali",
 	})
 
 	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
 
-	urlString := "https://testpostpaid.mobilepulsa.net/api/v1/bill/check?type=pdam"
+	urlString := config.GetConfig().Ppob.PostpaidUrl + "/pdam"
 
 	// URL
 	url, _ := url.Parse(urlString)
@@ -341,7 +346,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 
 	request.ValidateRequest(service.Validate, inquiryPostpaidPdamRequest, requestId, service.Logger)
 
-	refId := service.OrderServiceInterface.GenerateNumberOrder()
+	refId := utilities.GenerateRefId()
 	// Create Request
 	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + refId))
 	body, _ := json.Marshal(map[string]interface{}{
@@ -355,7 +360,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 
 	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
 
-	urlString := "https://testpostpaid.mobilepulsa.net/api/v1/bill/check"
+	urlString := config.GetConfig().Ppob.PostpaidUrl
 
 	// URL
 	url, _ := url.Parse(urlString)
@@ -396,64 +401,19 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 
 }
 
-func (service *PpobServiceImplementation) PrepaidTopup(requestId string, customerId, numberOrder, productCode string) {
+func (service *PpobServiceImplementation) PrepaidCheckStatusTransaction(requestId, refId string) {
 	var err error
 
-	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + numberOrder))
-	body, _ := json.Marshal(map[string]interface{}{
-		"username":     config.GetConfig().Ppob.Username,
-		"ref_id":       numberOrder,
-		"customer_id":  customerId,
-		"product_code": productCode,
-		"sign":         hex.EncodeToString(sign[:]),
-	})
-
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
-
-	urlString := "https://prepaid.iak.dev/api/top-up"
-
-	// URL
-	url, _ := url.Parse(urlString)
-
-	req := &http.Request{
-		Method: "POST",
-		URL:    url,
-		Header: map[string][]string{
-			"Content-Type": {"application/json"},
-		},
-		Body: reqBody,
-	}
-
-	reqDump, _ := httputil.DumpRequestOut(req, true)
-	fmt.Printf("REQUEST:\n%s", string(reqDump))
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatalf("An Error Occured %v", err)
-		exceptions.PanicIfError(err, requestId, service.Logger)
-	}
-
-	defer resp.Body.Close()
-
-	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("body: %s\n", data)
-
-}
-
-func (service *PpobServiceImplementation) PrepaidCheckStatusTransaction(requestId, numberOrder string) {
-	var err error
-
-	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + numberOrder))
+	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + refId))
 	body, _ := json.Marshal(map[string]interface{}{
 		"username": config.GetConfig().Ppob.Username,
-		"ref_id":   numberOrder,
+		"ref_id":   refId,
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
 	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
 
-	urlString := "https://prepaid.iak.dev/api/top-up"
+	urlString := config.GetConfig().Ppob.PrepaidHost + "/check-status"
 
 	// URL
 	url, _ := url.Parse(urlString)

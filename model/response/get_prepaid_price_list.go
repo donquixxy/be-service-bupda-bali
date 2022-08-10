@@ -1,6 +1,8 @@
 package response
 
 import (
+	"strconv"
+
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/ppob"
 )
 
@@ -17,6 +19,26 @@ type GetPrepaidPriceListResponse struct {
 }
 
 func ToGetPrepaidPriceListResponse(priceLists []ppob.PrepaidPriceList) (priceListResponses []GetPrepaidPriceListResponse) {
+	for _, priceList := range priceLists {
+		pulsaPriceListResponse := GetPrepaidPriceListResponse{}
+		_, err := strconv.Atoi(priceList.ProductNominal)
+		if err == nil {
+			pulsaPriceListResponse.ProductCode = priceList.ProductCode
+			pulsaPriceListResponse.ProductDescription = priceList.ProductDescription
+			pulsaPriceListResponse.ProductNominal = priceList.ProductNominal
+			pulsaPriceListResponse.ProductDetails = priceList.ProductDetails
+			pulsaPriceListResponse.ProductPrice = priceList.ProductPrice
+			pulsaPriceListResponse.ProductType = priceList.ProductType
+			pulsaPriceListResponse.ActivePeriod = priceList.ActivePeriod
+			pulsaPriceListResponse.Status = priceList.Status
+			pulsaPriceListResponse.IconUrl = priceList.IconUrl
+			priceListResponses = append(priceListResponses, pulsaPriceListResponse)
+		}
+	}
+	return priceListResponses
+}
+
+func ToGetPrepaidDataPriceListResponse(priceLists []ppob.PrepaidPriceList) (priceListResponses []GetPrepaidPriceListResponse) {
 	for _, priceList := range priceLists {
 		pulsaPriceListResponse := GetPrepaidPriceListResponse{}
 		pulsaPriceListResponse.ProductCode = priceList.ProductCode

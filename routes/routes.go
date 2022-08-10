@@ -34,6 +34,11 @@ func DesaRoute(e *echo.Echo, desaControllerInterface controller.DesaControllerIn
 	group.GET("/desa", desaControllerInterface.FindDesaByIdKelu, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
+func InfoDesaRoute(e *echo.Echo, jwt config.Jwt, infoDesaControllerInterface controller.InfoDesaControllerInterface) {
+	group := e.Group("api/v1")
+	group.GET("/infodesa", infoDesaControllerInterface.FindInfoDesaByIdDesa, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
 func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.UserControllerInterface) {
 	group := e.Group("api/v1")
 	group.POST("/user/non_surveyed", userControllerInterface.CreateUserNonSuveyed, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
@@ -103,6 +108,6 @@ func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInter
 	group.GET("/prepaid/pricelist/pln", ppob.GetPrepaidPlnPriceList, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/prepaid/inquiry/pln", ppob.InquiryPrepaidPln, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/postpaid/inquiry/pln", ppob.InquiryPostpaidPln, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.GET("/postpaid/list/pln", ppob.GetPostpaidPdamProduct, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/postpaid/list/pdam", ppob.GetPostpaidPdamProduct, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/postpaid/inquiry/pdam", ppob.InquiryPostpaidPdam, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }

@@ -39,6 +39,7 @@ type Order struct {
 	OrderCanceledDate   null.Time `gorm:"column:order_cancel_date;"`
 	FotoBarangSampai    string    `gorm:"column:foto_barang_sampai;"`
 	FotoBuktiBayar      string    `gorm:"column:foto_bukti_bayar;"`
+	RefId               string    `gorm:"column:ref_id;"`
 }
 
 func (Order) TableName() string {

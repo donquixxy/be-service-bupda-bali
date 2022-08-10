@@ -47,13 +47,13 @@ type InquiryPrepaidPlnErrorData struct {
 	Status  interface{} `json:"status"`
 }
 
-type TopupPrepaidResponse struct {
-	Data TopupPrepaidResponseData `json:"data"`
+type TopupPrepaidPulsaResponse struct {
+	Data TopupPrepaidPulsaResponseData `json:"data"`
 }
 
-type TopupPrepaidResponseData struct {
+type TopupPrepaidPulsaResponseData struct {
 	RefId       string  `json:"ref_id"`
-	Status      float64 `json:"status"`
+	Status      int     `json:"status"`
 	ProductCode string  `json:"product_code"`
 	CustomerId  string  `json:"customer_id"`
 	Price       float64 `json:"price"`

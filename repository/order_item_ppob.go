@@ -9,6 +9,7 @@ import (
 type OrderItemPpobRepositoryInterface interface {
 	CreateOrderItemPpob(db *gorm.DB, orderItemPpob *entity.OrderItemPpob) error
 	FindOrderItemsPpobByIdOrder(db *gorm.DB, idOrder string) (*entity.OrderItemPpob, error)
+	UpdateOrderItemsPpobByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.OrderItemPpob) error
 }
 
 type OrderItemPpobRepositoryImplementation struct {
@@ -33,4 +34,13 @@ func (repository *OrderItemPpobRepositoryImplementation) FindOrderItemsPpobByIdO
 	result := db.
 		Find(orderItemsPpob, "id_order = ?", idOrder)
 	return orderItemsPpob, result.Error
+}
+
+func (repository *OrderItemPpobRepositoryImplementation) UpdateOrderItemsPpobByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.OrderItemPpob) error {
+	order := &entity.OrderItemPpob{}
+	result := db.
+		Model(order).
+		Where("id_order = ?", idOrder).
+		Updates(orderUpdate)
+	return result.Error
 }
