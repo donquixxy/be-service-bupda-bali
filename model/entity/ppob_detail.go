@@ -3,16 +3,26 @@ package entity
 import "gopkg.in/guregu/null.v4"
 
 type PpobDetailPostpaidPdam struct {
-	Id                string        `gorm:"primaryKey;column:id;"`
-	IdOrderItemPpob   string        `gorm:"column:id_order_item_ppob;"`
-	OrderItemPpob     OrderItemPpob `gorm:"foreignKey:IdOrderItemPpob;"`
-	BillQty           int           `gorm:"column:bill_qty;"`
-	DueDate           string        `gorm:"column:due_date;"`
-	PdamName          string        `gorm:"column:pdam_name;"`
-	PdamAddress       string        `gorm:"column:pdam_address;"`
-	StampDuty         string        `gorm:"column:stamp_duty;"`
-	Address           string        `gorm:"column:address;"`
-	JsonDetailTagihan string        `gorm:"column:json_detail_tagihan;"`
+	Id                  string        `gorm:"primaryKey;column:id;"`
+	IdOrderItemPpob     string        `gorm:"column:id_order_item_ppob;"`
+	OrderItemPpob       OrderItemPpob `gorm:"foreignKey:IdOrderItemPpob;"`
+	TrId                int           `gorm:"column:tr_id;"`
+	CustomerId          string        `gorm:"column:customer_id;"`
+	CustomerName        string        `gorm:"column:customer_name;"`
+	RefId               string        `gorm:"column:ref_id;"`
+	Period              string        `gorm:"column:period;"`
+	BillQty             int           `gorm:"column:bill_qty;"`
+	DueDate             string        `gorm:"column:due_date;"`
+	PdamName            string        `gorm:"column:pdam_name;"`
+	PdamAddress         string        `gorm:"column:pdam_address;"`
+	StampDuty           string        `gorm:"column:stamp_duty;"`
+	Address             string        `gorm:"column:address;"`
+	StatusTopUp         int           `gorm:"column:status_topup;"`
+	LastBalance         float64       `gorm:"column:last_balance;"`
+	TopupProccesingDate null.Time     `gorm:"column:topup_proccesing_date;"`
+	TopupSuccessDate    null.Time     `gorm:"column:topup_success_date;"`
+	TopupFailedDate     null.Time     `gorm:"column:topup_failed_date;"`
+	JsonDetailTagihan   string        `gorm:"column:json_detail_tagihan;"`
 }
 
 func (PpobDetailPostpaidPdam) TableName() string {
@@ -25,11 +35,13 @@ type PpobDetailPostpaidPln struct {
 	OrderItemPpob       OrderItemPpob `gorm:"foreignKey:IdOrderItemPpob;"`
 	RefId               string        `gorm:"column:ref_id;"`
 	CustomerId          string        `gorm:"column:customer_id;"`
+	CustomerName        string        `gorm:"column:customer_name;"`
 	Tarif               string        `gorm:"column:tarif;"`
 	Daya                int           `gorm:"column:daya;"`
 	LembarTagihan       string        `gorm:"column:lembar_tagihan;"`
 	Period              string        `gorm:"column:period;"`
 	StatusTopUp         int           `gorm:"column:status_topup;"`
+	LastBalance         float64       `gorm:"column:last_balance;"`
 	TopupProccesingDate null.Time     `gorm:"column:topup_proccesing_date;"`
 	TopupSuccessDate    null.Time     `gorm:"column:topup_success_date;"`
 	TopupFailedDate     null.Time     `gorm:"column:topup_failed_date;"`

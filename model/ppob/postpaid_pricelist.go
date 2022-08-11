@@ -151,7 +151,7 @@ type PostpaidCheckTransactionPlnData struct {
 }
 
 type TopupPostaidPdamResponse struct {
-	Data int
+	Data TopupPostaidPdamDataResponse `json:"data"`
 }
 
 type TopupPostaidPdamDataResponse struct {
@@ -171,4 +171,27 @@ type TopupPostaidPdamDataResponse struct {
 	Balance      float64                 `json:"balance"`
 	NoRef        string                  `json:"noref"`
 	Desc         InquiryPostpaidPdamDesc `json:"desc"`
+}
+
+type TopupPostaidPlnResponse struct {
+	Data TopupPostaidPlnDataResponse `json:"data"`
+}
+
+type TopupPostaidPlnDataResponse struct {
+	TrxId        int                    `json:"tr_id"`
+	Code         string                 `json:"code"`
+	Datetime     string                 `json:"datetime"`
+	Hp           string                 `json:"hp"` //Customer Number
+	TrxName      string                 `json:"tr_name"`
+	Period       string                 `json:"period"`
+	Nominal      float64                `json:"nominal"`
+	Admin        float64                `json:"admin"`
+	RefId        string                 `json:"ref_id"`
+	ResponseCode string                 `json:"response_code"`
+	Message      string                 `json:"message"`
+	Price        float64                `json:"price"`
+	SellingPrice float64                `json:"selling_price"`
+	Balance      float64                `json:"balance"`
+	NoRef        string                 `json:"noref"`
+	Desc         InquiryPostpaidPlnDesc `json:"desc"`
 }

@@ -32,19 +32,17 @@ func ToFindProductDesaByIdResponse(productDesa *entity.ProductsDesa, AccountType
 	productDesaResponse.IsPromo = productDesa.IsPromo
 	if AccountType == 1 {
 		if productDesa.IsPromo == 1 {
-			productDesaResponse.AccountType = "User Biasa"
-			productDesaResponse.PriceInfo = "Harga Normal"
 			productDesaResponse.Price = productDesa.PricePromo
 			productDesaResponse.PromoPercentage = productDesa.PercentagePromo
 		} else {
-			productDesaResponse.AccountType = "User Biasa"
-			productDesaResponse.PriceInfo = "Harga Normal"
-			productDesaResponse.Price = productDesa.ProductsMaster.Price
+			productDesaResponse.Price = productDesa.Price
 		}
+		productDesaResponse.AccountType = "User Biasa"
+		productDesaResponse.PriceInfo = "Harga Normal"
 	} else if AccountType == 2 {
 		productDesaResponse.AccountType = "User Merchant"
 		productDesaResponse.PriceInfo = "Harga Grosir"
-		productDesaResponse.Price = productDesa.ProductsMaster.PriceGrosir
+		productDesaResponse.Price = productDesa.PriceGrosir
 	}
 	productDesaResponse.Description = productDesa.ProductsMaster.Description
 	productDesaResponse.PictureUrl = productDesa.ProductsMaster.PictureUrl

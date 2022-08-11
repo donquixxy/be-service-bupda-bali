@@ -34,10 +34,10 @@ func ToFindCartByUserResponse(carts []entity.Cart, AccountType int) (cartRespons
 		if AccountType == 1 {
 			if cart.ProductsDesa.IsPromo == 1 {
 				cartResponse.PricePromo = cart.ProductsDesa.PricePromo
-				cartResponse.Price = cart.ProductsDesa.ProductsMaster.Price
+				cartResponse.Price = cart.ProductsDesa.Price
 				cartResponse.PromoPercentage = cart.ProductsDesa.PercentagePromo
 			} else {
-				cartResponse.Price = cart.ProductsDesa.ProductsMaster.Price
+				cartResponse.Price = cart.ProductsDesa.Price
 				cartResponse.PricePromo = 0
 				cartResponse.PromoPercentage = 0
 			}
@@ -46,7 +46,7 @@ func ToFindCartByUserResponse(carts []entity.Cart, AccountType int) (cartRespons
 		} else if AccountType == 2 {
 			cartResponse.AccountType = "User Merchant"
 			cartResponse.PriceInfo = "Krama Harga Grosir"
-			cartResponse.Price = cart.ProductsDesa.ProductsMaster.PriceGrosir
+			cartResponse.Price = cart.ProductsDesa.PriceGrosir
 		}
 		cartResponses = append(cartResponses, cartResponse)
 	}

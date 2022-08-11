@@ -19,6 +19,7 @@ type OrderControllerInterface interface {
 	CancelOrderById(c echo.Context) error
 	CompleteOrderById(c echo.Context) error
 	UpdateOrderPaymentStatus(c echo.Context) error
+	CallbackPpobTransaction(c echo.Context) error
 }
 
 type OrderControllerImplementation struct {
@@ -106,6 +107,10 @@ func (controller *OrderControllerImplementation) FindOrderById(c echo.Context) e
 	case "postpaid_pln":
 		orderResponse := controller.OrderServiceInterface.FindOrderPostpaidPlnById(requestId, idOrder)
 		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+
+	case "postpaid_pdam":
+		orderResponse := controller.OrderServiceInterface.FindOrderPostpaidPdamById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
 	}
 
 	return c.JSON(http.StatusOK, responses)
@@ -132,6 +137,14 @@ func (controller *OrderControllerImplementation) UpdateOrderPaymentStatus(c echo
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	orderRequest := request.ReadFromUpdatePaymentStatusOrderRequestBody(c, requestId, controller.Logger)
 	controller.OrderServiceInterface.UpdatePaymentStatusOrder(requestId, orderRequest)
+	response := response.Response{Code: 201, Mssg: "success", Data: nil, Error: []string{}}
+	return c.JSON(http.StatusOK, response)
+}
+
+func (controller *OrderControllerImplementation) CallbackPpobTransaction(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	orderRequest := request.ReadFromPpobCallbackRequestRequestBody(c, requestId, controller.Logger)
+	controller.OrderServiceInterface.CallbackPpobTransaction(requestId, orderRequest)
 	response := response.Response{Code: 201, Mssg: "success", Data: nil, Error: []string{}}
 	return c.JSON(http.StatusOK, response)
 }

@@ -41,9 +41,8 @@ func RateLimit() echo.MiddlewareFunc {
 
 func Timeout() echo.MiddlewareFunc {
 	return middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Skipper:      middleware.DefaultSkipper,
 		ErrorMessage: "Request Timeout",
-		Timeout:      10 * time.Second,
+		Timeout:      15 * time.Second,
 	})
 }
 

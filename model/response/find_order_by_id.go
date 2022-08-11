@@ -256,6 +256,7 @@ type OrdersItemsPostpaidPln struct {
 	TrId              int                 `json:"tr_id"`
 	RefId             string              `json:"ref_id"`
 	CustomerId        string              `json:"customer_id"`
+	CustomerName      string              `json:"customer_name"`
 	Tarif             string              `json:"tarif"`
 	Daya              int                 `json:"daya"`
 	LembarTagihan     string              `json:"lembar_tagihan"`
@@ -298,6 +299,7 @@ func ToFindOrderPostpaidPlnByIdResponse(order *entity.Order, orderItemPpob *enti
 	orderResponse.OrdersItemsPostpaidPln.Period = detailPpobPostpaidPln.Period
 	orderResponse.OrdersItemsPostpaidPln.LembarTagihan = detailPpobPostpaidPln.LembarTagihan
 	orderResponse.OrdersItemsPostpaidPln.StatusTopUp = detailPpobPostpaidPln.StatusTopUp
+	orderResponse.OrdersItemsPostpaidPln.CustomerName = detailPpobPostpaidPln.CustomerName
 
 	var postpaidPlnDetails []PostpaidPlnDetail
 	for _, detailTagihan := range detailTagihans {
@@ -310,6 +312,99 @@ func ToFindOrderPostpaidPlnByIdResponse(order *entity.Order, orderItemPpob *enti
 		postpaidPlnDetails = append(postpaidPlnDetails, postpaidPlnDetail)
 	}
 	orderResponse.OrdersItemsPostpaidPln.PostpaidPlnDetail = postpaidPlnDetails
+
+	return orderResponse
+}
+
+type FindOrderPostpaidPdamByIdResponse struct {
+	Id                      string                  `json:"id_order"`
+	ProductType             string                  `json:"product_type"`
+	OrderType               int                     `json:"order_type"`
+	NumberOrder             string                  `json:"number_order"`
+	OrderStatus             int                     `json:"order_status"`
+	PaymentMethod           string                  `json:"payment_method"`
+	PaymentChannel          string                  `json:"payment_channel"`
+	PaymentDueDate          time.Time               `json:"payment_due_date"`
+	SubTotal                float64                 `json:"sub_total"`
+	PaymentPoint            float64                 `json:"payment_point"`
+	PaymentFee              float64                 `json:"payment_fee"`
+	PaymentName             string                  `json:"payment_name"`
+	BankName                string                  `json:"bank_name"`
+	BankLogo                string                  `json:"bank_logo"`
+	PaymentNumber           string                  `json:"payment_number"`
+	PaymentCash             float64                 `json:"payment_cash"`
+	TotalBill               float64                 `json:"total_bill"`
+	OrderDate               time.Time               `json:"order_date"`
+	OrdersItemsPostpaidPdam OrdersItemsPostpaidPdam `json:"order_items"`
+}
+
+type OrdersItemsPostpaidPdam struct {
+	BillQty            int                  `json:"bill_qty"`
+	TrId               int                  `json:"tr_id"`
+	RefId              string               `json:"ref_id"`
+	CustomerId         string               `json:"customer_id"`
+	CustomerName       string               `json:"customer_name"`
+	Period             string               `json:"period"`
+	DueDate            string               `json:"due_date"`
+	PdamName           string               `json:"pdam_name"`
+	PdamAddress        string               `json:"address"`
+	StatusTopUp        int                  `json:"status_topup"`
+	PostpaidPdamDetail []PostpaidPdamDetail `json:"detail_tagihan"`
+}
+
+type PostpaidPdamDetail struct {
+	Periode    string  `json:"periode"`
+	FirstMeter int     `json:"first_meter"`
+	LastMeter  int     `json:"last_meter"`
+	Penalty    float64 `json:"penalty"`
+	BillAmount float64 `json:"bill_amount"`
+	MiscAmount float64 `json:"misc_amount"`
+	Stand      string  `json:"stand"`
+}
+
+func ToFindOrderPostpaidPdamByIdResponse(order *entity.Order, orderItemPpob *entity.OrderItemPpob, detailPpobPostpaidPdam *entity.PpobDetailPostpaidPdam, payment *entity.PaymentChannel, detailTagihans []ppob.InquiryPostpaidPdamBillDetail) (orderResponse FindOrderPostpaidPdamByIdResponse) {
+	orderResponse.Id = order.Id
+	orderResponse.ProductType = order.ProductType
+	orderResponse.OrderType = order.OrderType
+	orderResponse.NumberOrder = order.NumberOrder
+	orderResponse.OrderStatus = order.OrderStatus
+	orderResponse.PaymentMethod = order.PaymentMethod
+	orderResponse.PaymentChannel = order.PaymentChannel
+	orderResponse.PaymentDueDate = order.PaymentDueDate.Time
+	orderResponse.SubTotal = orderItemPpob.TotalTagihan
+	orderResponse.PaymentPoint = order.PaymentPoint
+	orderResponse.PaymentFee = order.PaymentFee
+	orderResponse.PaymentCash = order.PaymentCash
+	orderResponse.TotalBill = order.TotalBill
+	orderResponse.OrderDate = order.OrderedDate
+	orderResponse.PaymentNumber = order.PaymentNo
+	orderResponse.PaymentName = order.PaymentName
+	orderResponse.BankName = payment.Name
+	orderResponse.BankLogo = payment.Logo
+	orderResponse.OrdersItemsPostpaidPdam.BillQty = detailPpobPostpaidPdam.BillQty
+	orderResponse.OrdersItemsPostpaidPdam.TrId = detailPpobPostpaidPdam.TrId
+	orderResponse.OrdersItemsPostpaidPdam.RefId = detailPpobPostpaidPdam.RefId
+	orderResponse.OrdersItemsPostpaidPdam.CustomerId = detailPpobPostpaidPdam.CustomerId
+	orderResponse.OrdersItemsPostpaidPdam.CustomerName = detailPpobPostpaidPdam.CustomerName
+	orderResponse.OrdersItemsPostpaidPdam.PdamName = detailPpobPostpaidPdam.PdamName
+	orderResponse.OrdersItemsPostpaidPdam.PdamAddress = detailPpobPostpaidPdam.PdamAddress
+	orderResponse.OrdersItemsPostpaidPdam.Period = detailPpobPostpaidPdam.Period
+	orderResponse.OrdersItemsPostpaidPdam.DueDate = detailPpobPostpaidPdam.DueDate
+	orderResponse.OrdersItemsPostpaidPdam.StatusTopUp = detailPpobPostpaidPdam.StatusTopUp
+
+	var postpaidPdamDetails []PostpaidPdamDetail
+	for _, detailTagihan := range detailTagihans {
+		var postpaidPdamDetail PostpaidPdamDetail
+		postpaidPdamDetail.Periode = detailTagihan.Period
+		postpaidPdamDetail.FirstMeter = detailTagihan.FirstMeter
+		postpaidPdamDetail.LastMeter = detailTagihan.LastMeter
+		postpaidPdamDetail.Penalty = detailTagihan.Penalty
+		postpaidPdamDetail.BillAmount = detailTagihan.BillAmount
+		postpaidPdamDetail.MiscAmount = detailTagihan.MiscAmount
+		postpaidPdamDetail.Stand = detailTagihan.Stand
+		postpaidPdamDetails = append(postpaidPdamDetails, postpaidPdamDetail)
+	}
+	orderResponse.OrdersItemsPostpaidPdam.PostpaidPdamDetail = postpaidPdamDetails
 
 	return orderResponse
 }

@@ -14,8 +14,11 @@ type PpobDetailRepositoryInterface interface {
 	FindPpobDetailPrepaidPulsaById(db *gorm.DB, idOrderItemsPpob string) (*entity.PpobDetailPrepaidPulsa, error)
 	FindPpobDetailPrepaidPlnById(db *gorm.DB, idOrderItemsPpob string) (*entity.PpobDetailPrepaidPln, error)
 	FindPpobDetailPostpaidPlnById(db *gorm.DB, idOrderItemsPpob string) (*entity.PpobDetailPostpaidPln, error)
+	FindPpobDetailPostpaidPdamById(db *gorm.DB, idOrderItemsPpob string) (*entity.PpobDetailPostpaidPdam, error)
 	UpdatePpobPrepaidPulsaById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePrepaidPulsa *entity.PpobDetailPrepaidPulsa) error
 	UpdatePpobPrepaidPlnById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePrepaidPln *entity.PpobDetailPrepaidPln) error
+	UpdatePpobPostpaidPlnById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePostpaidPln *entity.PpobDetailPostpaidPln) error
+	UpdatePpobPostpaidPdamById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePostpaidPdam *entity.PpobDetailPostpaidPdam) error
 }
 
 type PpobDetailRepositoryImplementation struct {
@@ -71,6 +74,13 @@ func (repository *PpobDetailRepositoryImplementation) FindPpobDetailPostpaidPlnB
 	return ppobDetailPostpaidPln, result.Error
 }
 
+func (repository *PpobDetailRepositoryImplementation) FindPpobDetailPostpaidPdamById(db *gorm.DB, idOrderItemsPpob string) (*entity.PpobDetailPostpaidPdam, error) {
+	ppobDetailPostpaidPdam := &entity.PpobDetailPostpaidPdam{}
+	result := db.
+		Find(ppobDetailPostpaidPdam, "id_order_item_ppob = ?", idOrderItemsPpob)
+	return ppobDetailPostpaidPdam, result.Error
+}
+
 func (repository *PpobDetailRepositoryImplementation) UpdatePpobPrepaidPulsaById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePrepaidPulsa *entity.PpobDetailPrepaidPulsa) error {
 	ppobDetailPrepaidPulsa := &entity.PpobDetailPrepaidPulsa{}
 	result := db.
@@ -86,5 +96,23 @@ func (repository *PpobDetailRepositoryImplementation) UpdatePpobPrepaidPlnById(d
 		Model(ppobDetailPrepaidPln).
 		Where("id = ?", idOrderItemPpob).
 		Updates(ppobDetailUpdatePrepaidPln)
+	return result.Error
+}
+
+func (repository *PpobDetailRepositoryImplementation) UpdatePpobPostpaidPlnById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePostpaidPln *entity.PpobDetailPostpaidPln) error {
+	ppobDetailPostpaidPln := &entity.PpobDetailPostpaidPln{}
+	result := db.
+		Model(ppobDetailPostpaidPln).
+		Where("id = ?", idOrderItemPpob).
+		Updates(ppobDetailUpdatePostpaidPln)
+	return result.Error
+}
+
+func (repository *PpobDetailRepositoryImplementation) UpdatePpobPostpaidPdamById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePostpaidPdam *entity.PpobDetailPostpaidPdam) error {
+	ppobDetailPostpaidPdam := &entity.PpobDetailPostpaidPdam{}
+	result := db.
+		Model(ppobDetailPostpaidPdam).
+		Where("id = ?", idOrderItemPpob).
+		Updates(ppobDetailUpdatePostpaidPdam)
 	return result.Error
 }

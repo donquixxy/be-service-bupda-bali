@@ -82,6 +82,7 @@ func OrderRoute(e *echo.Echo, jwt config.Jwt, orderControllerInterface controlle
 	group.PUT("/order/cancel", orderControllerInterface.CancelOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/order/complete", orderControllerInterface.CompleteOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/order/update/payment", orderControllerInterface.UpdateOrderPaymentStatus, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/order/callback/ppob", orderControllerInterface.CallbackPpobTransaction, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func PaymentChannelRoute(e *echo.Echo, jwt config.Jwt, paymentChannelControllerInterface controller.PaymentChannelControllerInterface) {
