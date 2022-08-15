@@ -97,7 +97,7 @@ func (controller *OrderControllerImplementation) FindOrderById(c echo.Context) e
 		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
 
 	case "prepaid_pulsa", "prepaid_data":
-		orderResponse := controller.OrderServiceInterface.FindOrderPrepaidPulsaById(requestId, idOrder)
+		orderResponse := controller.OrderServiceInterface.FindOrderPrepaidPulsaById(requestId, idOrder, productType)
 		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
 
 	case "prepaid_pln":

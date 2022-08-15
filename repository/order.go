@@ -13,7 +13,7 @@ type OrderRepositoryInterface interface {
 	FindOrderById(db *gorm.DB, idOrder string) (*entity.Order, error)
 	FindOrderByRefId(db *gorm.DB, refId string) (*entity.Order, error)
 	UpdateOrderByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
-	FindOrderPrepaidPulsaById(db *gorm.DB, idUser string) (*entity.Order, error)
+	FindOrderPrepaidPulsaById(db *gorm.DB, idUser string, productType string) (*entity.Order, error)
 	FindOrderPrepaidPlnById(db *gorm.DB, idUser string) (*entity.Order, error)
 }
 
@@ -64,9 +64,9 @@ func (repository *OrderRepositoryImplementation) FindOrderByRefId(db *gorm.DB, r
 	return orders, result.Error
 }
 
-func (repository *OrderRepositoryImplementation) FindOrderPrepaidPulsaById(db *gorm.DB, idUser string) (*entity.Order, error) {
+func (repository *OrderRepositoryImplementation) FindOrderPrepaidPulsaById(db *gorm.DB, idUser string, productType string) (*entity.Order, error) {
 	orders := &entity.Order{}
-	result := db.Find(orders, "id = ?", idUser)
+	result := db.Where("product_type = ?", productType).Find(orders, "id = ?", idUser)
 	return orders, result.Error
 }
 

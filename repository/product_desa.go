@@ -13,6 +13,7 @@ type ProductDesaRepositoryInterface interface {
 	FindProductsDesaByPromo(db *gorm.DB, IdDesa string, IdPromo string) ([]entity.ProductsDesa, error)
 	FindProductDesaById(db *gorm.DB, IdProductDesa string) (*entity.ProductsDesa, error)
 	UpdateProductStock(db *gorm.DB, idProductDesa string, productDesa *entity.ProductsDesa) error
+	FindListPackageByIdProductDesa(db *gorm.DB, idProductDesa string) ([]entity.ProductsPackageItems, error)
 }
 
 type ProductDesaRepositoryImplementation struct {
@@ -25,6 +26,13 @@ func NewProductDesaRepository(
 	return &ProductDesaRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *ProductDesaRepositoryImplementation) FindListPackageByIdProductDesa(db *gorm.DB, IdProductDesa string) ([]entity.ProductsPackageItems, error) {
+	productsDesa := []entity.ProductsPackageItems{}
+	result := db.
+		Find(&productsDesa, "id_product_primary = ?", IdProductDesa)
+	return productsDesa, result.Error
 }
 
 func (repository *ProductDesaRepositoryImplementation) FindProductsDesa(db *gorm.DB, IdDesa string) ([]entity.ProductsDesa, error) {

@@ -9,6 +9,7 @@ type FindProductsDesaResponse struct {
 	IdBrand         int     `json:"id_brand"`
 	IdCategory      int     `json:"id_category"`
 	IdSubCategory   int     `json:"id_sub_category"`
+	IdType          int     `json:"id_type"`
 	IdUnit          int     `json:"id_unit"`
 	NoSku           string  `json:"no_sku"`
 	ProductName     string  `json:"product_name"`
@@ -29,6 +30,7 @@ func ToFindProductsDesaResponse(productsDesas []entity.ProductsDesa, AccountType
 		productsDesaResponse := FindProductsDesaResponse{}
 		productsDesaResponse.Id = productDesa.Id
 		productsDesaResponse.IdBrand = productDesa.ProductsMaster.IdBrand
+		productsDesaResponse.IdType = productDesa.IdType
 		productsDesaResponse.IdCategory = productDesa.ProductsMaster.IdCategory
 		productsDesaResponse.IdSubCategory = productDesa.ProductsMaster.IdSubCategory
 		productsDesaResponse.IdUnit = productDesa.ProductsMaster.IdUnit
@@ -37,11 +39,11 @@ func ToFindProductsDesaResponse(productsDesas []entity.ProductsDesa, AccountType
 		productsDesaResponse.FlagPromo = productDesa.IsPromo
 		if AccountType == 1 {
 			if productDesa.IsPromo == 1 {
-				productsDesaResponse.Price = productDesa.ProductsMaster.Price
+				productsDesaResponse.Price = productDesa.Price
 				productsDesaResponse.PricePromo = productDesa.PricePromo
 				productsDesaResponse.PromoPercentage = productDesa.PercentagePromo
 			} else {
-				productsDesaResponse.Price = productDesa.ProductsMaster.Price
+				productsDesaResponse.Price = productDesa.Price
 				productsDesaResponse.PricePromo = 0
 				productsDesaResponse.PromoPercentage = 0
 			}
@@ -50,7 +52,7 @@ func ToFindProductsDesaResponse(productsDesas []entity.ProductsDesa, AccountType
 		} else if AccountType == 2 {
 			productsDesaResponse.AccountType = "User Merchant"
 			productsDesaResponse.PriceInfo = "Krama Harga Grosir"
-			productsDesaResponse.Price = productDesa.ProductsMaster.PriceGrosir
+			productsDesaResponse.Price = productDesa.PriceGrosir
 		}
 		productsDesaResponse.Description = productDesa.ProductsMaster.Description
 		productsDesaResponse.PictureUrl = productDesa.ProductsMaster.PictureUrl

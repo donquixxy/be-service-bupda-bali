@@ -32,8 +32,13 @@ func (repository *UserRepositoryImplementation) CreateUser(db *gorm.DB, user *en
 	return result.Error
 }
 
-func (repository *UserRepositoryImplementation) UpdateUser(db *gorm.DB, idUser string, user *entity.User) error {
-	return nil
+func (repository *UserRepositoryImplementation) UpdateUser(db *gorm.DB, idUser string, userUpdate *entity.User) error {
+	user := &entity.User{}
+	result := db.
+		Model(user).
+		Where("id = ?", idUser).
+		Updates(userUpdate)
+	return result.Error
 }
 
 func (repository *UserRepositoryImplementation) FindUserById(db *gorm.DB, idUser string) (*entity.UserProfile, error) {
@@ -49,6 +54,7 @@ func (repository *UserRepositoryImplementation) FindUserByPhone(db *gorm.DB, pho
 	user := &entity.User{}
 	result := db.
 		Where("phone = ?", phone).
+		Where("is_delete = ?", 0).
 		Find(user)
 	return user, result.Error
 }

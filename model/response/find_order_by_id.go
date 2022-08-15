@@ -266,11 +266,11 @@ type OrdersItemsPostpaidPln struct {
 }
 
 type PostpaidPlnDetail struct {
-	Periode     string  `json:"periode"`
+	Periode     string  `json:"period"`
 	NilaiTgihan string  `json:"nilai_tagihan"`
-	Admin       string  `json:"admin"`
+	Admin       string  `json:"admin_fee"`
 	Denda       string  `json:"denda"`
-	Total       float64 `json:"total"`
+	Total       float64 `json:"bill_amount"`
 }
 
 func ToFindOrderPostpaidPlnByIdResponse(order *entity.Order, orderItemPpob *entity.OrderItemPpob, detailPpobPostpaidPln *entity.PpobDetailPostpaidPln, payment *entity.PaymentChannel, detailTagihans []ppob.InquiryPostpaidPlnDetail) (orderResponse FindOrderPostpaidPlnByIdResponse) {
@@ -353,7 +353,7 @@ type OrdersItemsPostpaidPdam struct {
 }
 
 type PostpaidPdamDetail struct {
-	Periode    string  `json:"periode"`
+	Periode    string  `json:"period"`
 	FirstMeter int     `json:"first_meter"`
 	LastMeter  int     `json:"last_meter"`
 	Penalty    float64 `json:"penalty"`

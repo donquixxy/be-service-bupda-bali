@@ -40,16 +40,15 @@ type OrderServiceInterface interface {
 	CreateOrderPostpaidPln(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse)
 	FindOrderByUser(requestId, idUser string, orderStatus int) (orderResponses []response.FindOrderByUserResponse)
 	FindOrderSembakoById(requestId, idOrder string) (orderResponse response.FindOrderSembakoByIdResponse)
-	FindOrderPrepaidPulsaById(requestId, idOrder string) (orderResponse response.FindOrderPrepaidPulsaByIdResponse)
+	FindOrderPrepaidPulsaById(requestId, idOrder string, productType string) (orderResponse response.FindOrderPrepaidPulsaByIdResponse)
 	FindOrderPrepaidPlnById(requestId, idOrder string) (orderResponse response.FindOrderPrepaidPlnByIdResponse)
 	FindOrderPostpaidPdamById(requestId, idOrder string) (orderResponse response.FindOrderPostpaidPdamByIdResponse)
 	FindOrderPostpaidPlnById(requestId, idOrder string) (orderResponse response.FindOrderPostpaidPlnByIdResponse)
 	CancelOrderById(requestId string, orderRequest *request.OrderIdRequest)
 	CompleteOrderById(requestId string, orderRequest *request.OrderIdRequest)
 	UpdatePaymentStatusOrder(requestId string, orderRequest *request.UpdatePaymentStatusOrderRequest)
-	GenerateNumberOrder() (numberOrder string)
+	GenerateNumberOrder(idDesa string) (numberOrder string)
 	PrepaidPulsaTopup(requestId string, customerId, refId, productCode string) *ppob.TopupPrepaidPulsaResponse
-	// PostpaidTopupPdam(requestId string, customerId string, TrId int, productCode string)
 	OrderInquiryPrepaidPln(requestId string, customerId string) (inquiryPrepaidPlnResponse response.InquiryPrepaidPlnResponse)
 	CallbackPpobTransaction(requestId string, ppobCallbackRequest *request.PpobCallbackRequest)
 }
@@ -69,6 +68,7 @@ type OrderServiceImplementation struct {
 	OperatorPrefixRepositoryInterface repository.OperatorPrefixRepositoryInterface
 	OrderItemPpobRepositoryInterface  repository.OrderItemPpobRepositoryInterface
 	PpobDetailRepositoryInterface     repository.PpobDetailRepositoryInterface
+	DesaRepositoryInterface           repository.DesaRepositoryInterface
 }
 
 func NewOrderService(
@@ -86,6 +86,7 @@ func NewOrderService(
 	operatorPrefixRepositoryInterface repository.OperatorPrefixRepositoryInterface,
 	orderItemPpobRepositoryInterface repository.OrderItemPpobRepositoryInterface,
 	ppobDetailRepositoryInterface repository.PpobDetailRepositoryInterface,
+	desaRepositoryInterface repository.DesaRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
 		DB:                                db,
@@ -102,15 +103,21 @@ func NewOrderService(
 		OperatorPrefixRepositoryInterface: operatorPrefixRepositoryInterface,
 		OrderItemPpobRepositoryInterface:  orderItemPpobRepositoryInterface,
 		PpobDetailRepositoryInterface:     ppobDetailRepositoryInterface,
+		DesaRepositoryInterface:           desaRepositoryInterface,
 	}
 }
 
-func (service *OrderServiceImplementation) GenerateNumberOrder() (numberOrder string) {
+func (service *OrderServiceImplementation) GenerateNumberOrder(idDesa string) (numberOrder string) {
 	now := time.Now()
+	desa, err := service.DesaRepositoryInterface.FindDesaById(service.DB, idDesa)
+	exceptions.PanicIfError(err, "", service.Logger)
+	if len(desa.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("desa not found"), "", []string{"desa not found"}, service.Logger)
+	}
 	for {
 		rand.Seed(time.Now().UTC().UnixNano())
 		generateCode := 100000 + rand.Intn(999999-100000)
-		numberOrder = "ORDER/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
+		numberOrder = "ORDER/" + desa.KodeTrx + "/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
 
 		// Check number order if exist
 		order, _ := service.OrderRepositoryInterface.FindOrderByNumberOrder(service.DB, numberOrder)
@@ -138,7 +145,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 	orderEntity := &entity.Order{}
 
 	// Generate number and id order
-	numberOrder := service.GenerateNumberOrder()
+	numberOrder := service.GenerateNumberOrder(idDesa)
 	orderEntity.Id = utilities.RandomUUID()
 	orderEntity.IdUser = idUser
 	orderEntity.IdDesa = idDesa
@@ -386,7 +393,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 	orderEntity := &entity.Order{}
 
 	// Generate number and id order
-	numberOrder := service.GenerateNumberOrder()
+	numberOrder := service.GenerateNumberOrder(idDesa)
 	orderEntity.Id = utilities.RandomUUID()
 	orderEntity.IdUser = idUser
 	orderEntity.IdDesa = idDesa
@@ -635,7 +642,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	orderEntity := &entity.Order{}
 
 	// Generate number and id order
-	numberOrder := service.GenerateNumberOrder()
+	numberOrder := service.GenerateNumberOrder(idDesa)
 	orderEntity.Id = utilities.RandomUUID()
 	orderEntity.IdUser = idUser
 	orderEntity.IdDesa = idDesa
@@ -893,7 +900,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	orderEntity := &entity.Order{}
 
 	// Generate number and id order
-	numberOrder := service.GenerateNumberOrder()
+	numberOrder := service.GenerateNumberOrder(idDesa)
 	orderEntity.Id = utilities.RandomUUID()
 	orderEntity.IdUser = idUser
 	orderEntity.IdDesa = idDesa
@@ -1148,7 +1155,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity := &entity.Order{}
 
 	// Generate number and id order
-	numberOrder := service.GenerateNumberOrder()
+	numberOrder := service.GenerateNumberOrder(idDesa)
 	orderEntity.Id = utilities.RandomUUID()
 	orderEntity.IdUser = idUser
 	orderEntity.NumberOrder = numberOrder
@@ -1189,7 +1196,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		orderItemsEntity.Description = item.ProductsDesa.ProductsMaster.Description
 		orderItemsEntity.Qty = item.Qty
 		if accountType == 1 {
-			orderItemsEntity.Price = item.ProductsDesa.ProductsMaster.Price
+			orderItemsEntity.Price = item.ProductsDesa.Price
 			if item.ProductsDesa.IsPromo == 1 {
 				orderItemsEntity.PriceAfterDiscount = item.ProductsDesa.PricePromo
 				orderItemsEntity.TotalPrice = float64(orderItemsEntity.Qty) * item.ProductsDesa.PricePromo
@@ -1388,11 +1395,11 @@ func (service *OrderServiceImplementation) FindOrderSembakoById(requestId, idOrd
 	return orderResponse
 }
 
-func (service *OrderServiceImplementation) FindOrderPrepaidPulsaById(requestId, idOrder string) (orderResponse response.FindOrderPrepaidPulsaByIdResponse) {
+func (service *OrderServiceImplementation) FindOrderPrepaidPulsaById(requestId, idOrder string, productType string) (orderResponse response.FindOrderPrepaidPulsaByIdResponse) {
 	var err error
 
 	// Get order by id order
-	order, err := service.OrderRepositoryInterface.FindOrderPrepaidPulsaById(service.DB, idOrder)
+	order, err := service.OrderRepositoryInterface.FindOrderPrepaidPulsaById(service.DB, idOrder, productType)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(order.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
@@ -1427,7 +1434,7 @@ func (service *OrderServiceImplementation) FindOrderPrepaidPlnById(requestId, id
 	var err error
 
 	// Get order by id order
-	order, err := service.OrderRepositoryInterface.FindOrderPrepaidPulsaById(service.DB, idOrder)
+	order, err := service.OrderRepositoryInterface.FindOrderById(service.DB, idOrder)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(order.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
@@ -1462,7 +1469,7 @@ func (service *OrderServiceImplementation) FindOrderPostpaidPlnById(requestId, i
 	var err error
 
 	// Get order by id order
-	order, err := service.OrderRepositoryInterface.FindOrderPrepaidPulsaById(service.DB, idOrder)
+	order, err := service.OrderRepositoryInterface.FindOrderById(service.DB, idOrder)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(order.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
@@ -1617,6 +1624,8 @@ func (service *OrderServiceImplementation) UpdatePaymentStatusOrder(requestId st
 				PaymentSuccessDate: null.NewTime(time.Now(), true),
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
+
+			service.ProductDesaServiceInterface.UpdateProductStock(requestId, order.Id, service.DB)
 
 			// Update stock
 		} else if order.OrderType == 2 {
@@ -1931,7 +1940,9 @@ func (service *OrderServiceImplementation) OrderInquiryPrepaidPln(requestId stri
 func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId string, ppobCallbackRequest *request.PpobCallbackRequest) {
 	var err error
 
-	order, err := service.OrderRepositoryInterface.FindOrderByRefId(service.DB, ppobCallbackRequest.RefId)
+	fmt.Println("request = ", ppobCallbackRequest)
+
+	order, err := service.OrderRepositoryInterface.FindOrderByRefId(service.DB, ppobCallbackRequest.Data.RefId)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(order.RefId) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
@@ -1940,7 +1951,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 	signCheck := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(order.RefId)))
 
 	// cek sign dari iak dengan signcheck
-	if hex.EncodeToString(signCheck[:]) != ppobCallbackRequest.Sign {
+	if hex.EncodeToString(signCheck[:]) != ppobCallbackRequest.Data.Sign {
 		exceptions.PanicIfBadRequest(errors.New("sign not match"), requestId, []string{"sign not match"}, service.Logger)
 	}
 
@@ -1959,7 +1970,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 		}
 
 		// transaksi sukses
-		if ppobCallbackRequest.Status == "1" {
+		if ppobCallbackRequest.Data.Status == "1" {
 			// update order
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:        5,
@@ -1967,7 +1978,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPulsaById(service.DB, detailPrepaidPulsa.Id, &entity.PpobDetailPrepaidPulsa{
 				StatusTopUp:      1,
@@ -1975,7 +1986,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 				LastBalance:      balance,
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
-		} else if ppobCallbackRequest.Status == "2" {
+		} else if ppobCallbackRequest.Data.Status == "2" {
 			// Transaksi failed
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:       9,
@@ -1983,7 +1994,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPulsaById(service.DB, detailPrepaidPulsa.Id, &entity.PpobDetailPrepaidPulsa{
 				StatusTopUp:     2,
@@ -2003,7 +2014,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			exceptions.PanicIfRecordNotFound(errors.New("detail prepaid pln not found"), requestId, []string{"detail prepaid pln not found"}, service.Logger)
 		}
 
-		if ppobCallbackRequest.Status == "1" {
+		if ppobCallbackRequest.Data.Status == "1" {
 			// update order
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:        5,
@@ -2011,23 +2022,23 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, detailPrepaidPln.Id, &entity.PpobDetailPrepaidPln{
 				StatusTopUp:      1,
 				TopupSuccessDate: null.NewTime(time.Now(), true),
 				LastBalance:      balance,
-				NoToken:          ppobCallbackRequest.Sn,
+				NoToken:          ppobCallbackRequest.Data.Sn,
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
-		} else if ppobCallbackRequest.Status == "2" {
+		} else if ppobCallbackRequest.Data.Status == "2" {
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:       9,
 				OrderCanceledDate: null.NewTime(time.Now(), true),
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, detailPrepaidPln.Id, &entity.PpobDetailPrepaidPln{
 				StatusTopUp:     2,
@@ -2046,7 +2057,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			exceptions.PanicIfRecordNotFound(errors.New("detail postpaid pln not found"), requestId, []string{"detail postpaid pln not found"}, service.Logger)
 		}
 
-		if ppobCallbackRequest.Status == "1" {
+		if ppobCallbackRequest.Data.Status == "1" {
 			// update order
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:        5,
@@ -2054,7 +2065,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPlnById(service.DB, detailPostpaidPln.Id, &entity.PpobDetailPostpaidPln{
 				StatusTopUp:      1,
@@ -2062,14 +2073,14 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 				LastBalance:      balance,
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
-		} else if ppobCallbackRequest.Status == "2" {
+		} else if ppobCallbackRequest.Data.Status == "2" {
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:       9,
 				OrderCanceledDate: null.NewTime(time.Now(), true),
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPlnById(service.DB, detailPostpaidPln.Id, &entity.PpobDetailPostpaidPln{
 				StatusTopUp:     2,
@@ -2088,7 +2099,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			exceptions.PanicIfRecordNotFound(errors.New("detail postpaid pln not found"), requestId, []string{"detail postpaid pln not found"}, service.Logger)
 		}
 
-		if ppobCallbackRequest.Status == "1" {
+		if ppobCallbackRequest.Data.Status == "1" {
 			// update order
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:        5,
@@ -2096,7 +2107,7 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPdamById(service.DB, detailPostpaidPdam.Id, &entity.PpobDetailPostpaidPdam{
 				StatusTopUp:      1,
@@ -2104,14 +2115,14 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 				LastBalance:      balance,
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
-		} else if ppobCallbackRequest.Status == "2" {
+		} else if ppobCallbackRequest.Data.Status == "2" {
 			err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, order.Id, &entity.Order{
 				OrderStatus:       9,
 				OrderCanceledDate: null.NewTime(time.Now(), true),
 			})
 			exceptions.PanicIfError(err, requestId, service.Logger)
 
-			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Balance, 32)
+			balance, _ := strconv.ParseFloat(ppobCallbackRequest.Data.Balance, 32)
 
 			err = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPdamById(service.DB, detailPostpaidPdam.Id, &entity.PpobDetailPostpaidPdam{
 				StatusTopUp:     2,

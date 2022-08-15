@@ -94,6 +94,7 @@ func main() {
 		validate,
 		logrusLogger,
 		otpManagerRepository,
+		userRepository,
 	)
 	kecamatanService := service.NewKecamatanService(
 		DBConn,
@@ -167,6 +168,7 @@ func main() {
 		operatorPrefixRepository,
 		orderItemPpobRepository,
 		ppobDetailRepository,
+		desaRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,

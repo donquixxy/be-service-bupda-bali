@@ -82,36 +82,49 @@ func (repository *PpobDetailRepositoryImplementation) FindPpobDetailPostpaidPdam
 }
 
 func (repository *PpobDetailRepositoryImplementation) UpdatePpobPrepaidPulsaById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePrepaidPulsa *entity.PpobDetailPrepaidPulsa) error {
-	ppobDetailPrepaidPulsa := &entity.PpobDetailPrepaidPulsa{}
+	updatePrepaidPulsa := make(map[string]interface{})
+	updatePrepaidPulsa["status_topup"] = ppobDetailUpdatePrepaidPulsa.StatusTopUp
+	updatePrepaidPulsa["topup_proccesing_date"] = ppobDetailUpdatePrepaidPulsa.TopupProccesingDate
+	updatePrepaidPulsa["last_balance"] = ppobDetailUpdatePrepaidPulsa.LastBalance
 	result := db.
-		Model(ppobDetailPrepaidPulsa).
+		Model(entity.PpobDetailPrepaidPulsa{}).
 		Where("id = ?", idOrderItemPpob).
-		Updates(ppobDetailUpdatePrepaidPulsa)
+		Updates(updatePrepaidPulsa)
 	return result.Error
 }
 
 func (repository *PpobDetailRepositoryImplementation) UpdatePpobPrepaidPlnById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePrepaidPln *entity.PpobDetailPrepaidPln) error {
-	ppobDetailPrepaidPln := &entity.PpobDetailPrepaidPln{}
+	updatePrepaidPln := make(map[string]interface{})
+	updatePrepaidPln["status_topup"] = ppobDetailUpdatePrepaidPln.StatusTopUp
+	updatePrepaidPln["topup_proccesing_date"] = ppobDetailUpdatePrepaidPln.TopupProccesingDate
+	updatePrepaidPln["last_balance"] = ppobDetailUpdatePrepaidPln.LastBalance
+	updatePrepaidPln["no_token"] = ppobDetailUpdatePrepaidPln.NoToken
 	result := db.
-		Model(ppobDetailPrepaidPln).
+		Model(entity.PpobDetailPrepaidPln{}).
 		Where("id = ?", idOrderItemPpob).
-		Updates(ppobDetailUpdatePrepaidPln)
+		Updates(updatePrepaidPln)
 	return result.Error
 }
 
 func (repository *PpobDetailRepositoryImplementation) UpdatePpobPostpaidPlnById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePostpaidPln *entity.PpobDetailPostpaidPln) error {
-	ppobDetailPostpaidPln := &entity.PpobDetailPostpaidPln{}
+	updatePostpaidPln := make(map[string]interface{})
+	updatePostpaidPln["status_topup"] = ppobDetailUpdatePostpaidPln.StatusTopUp
+	updatePostpaidPln["topup_proccesing_date"] = ppobDetailUpdatePostpaidPln.TopupProccesingDate
+	updatePostpaidPln["last_balance"] = ppobDetailUpdatePostpaidPln.LastBalance
 	result := db.
-		Model(ppobDetailPostpaidPln).
+		Model(entity.PpobDetailPostpaidPln{}).
 		Where("id = ?", idOrderItemPpob).
-		Updates(ppobDetailUpdatePostpaidPln)
+		Updates(updatePostpaidPln)
 	return result.Error
 }
 
 func (repository *PpobDetailRepositoryImplementation) UpdatePpobPostpaidPdamById(db *gorm.DB, idOrderItemPpob string, ppobDetailUpdatePostpaidPdam *entity.PpobDetailPostpaidPdam) error {
-	ppobDetailPostpaidPdam := &entity.PpobDetailPostpaidPdam{}
+	updatePostpaidPdam := make(map[string]interface{})
+	updatePostpaidPdam["status_topup"] = ppobDetailUpdatePostpaidPdam.StatusTopUp
+	updatePostpaidPdam["topup_proccesing_date"] = ppobDetailUpdatePostpaidPdam.TopupProccesingDate
+	updatePostpaidPdam["last_balance"] = ppobDetailUpdatePostpaidPdam.LastBalance
 	result := db.
-		Model(ppobDetailPostpaidPdam).
+		Model(entity.PpobDetailPostpaidPdam{}).
 		Where("id = ?", idOrderItemPpob).
 		Updates(ppobDetailUpdatePostpaidPdam)
 	return result.Error

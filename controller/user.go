@@ -14,6 +14,7 @@ import (
 type UserControllerInterface interface {
 	CreateUserNonSuveyed(c echo.Context) error
 	FindUserById(c echo.Context) error
+	DeleteUserById(c echo.Context) error
 }
 
 type UserControllerImplementation struct {
@@ -43,5 +44,13 @@ func (controller *UserControllerImplementation) FindUserById(c echo.Context) err
 	idUser := middleware.TokenClaimsIdUser(c)
 	userResponse := controller.UserServiceInterface.FindUserById(requestId, idUser)
 	responses := response.Response{Code: 200, Mssg: "success", Data: userResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
+func (controller *UserControllerImplementation) DeleteUserById(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	idUser := middleware.TokenClaimsIdUser(c)
+	controller.UserServiceInterface.DeleteUserById(requestId, idUser)
+	responses := response.Response{Code: 200, Mssg: "success", Data: "delete user success", Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

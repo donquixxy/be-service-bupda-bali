@@ -7,18 +7,22 @@ import (
 )
 
 type PpobCallbackRequest struct {
-	RefId       string `json:"ref_id" form:"ref_id"`
-	Status      string `json:"status" form:"status"`
-	ProductCode string `json:"product_code" form:"ref_id"`
-	CustomerId  string `json:"customer_id" form:"customer_id"`
-	Price       string `json:"price" form:"price"`
-	Message     string `json:"message" form:"message"`
-	Sn          string `json:"sn" form:"sn"`
-	Pin         string `json:"pin" form:"pin"`
-	Balance     string `json:"balance" form:"balance"`
-	TrId        string `json:"tr_id" form:"tr_id"`
-	Rc          string `json:"rc" form:"rc"`
-	Sign        string `json:"sign" form:"sign"`
+	Data PpobCallbackRequestData `json:"data"`
+}
+
+type PpobCallbackRequestData struct {
+	RefId       string `json:"ref_id"`
+	Status      string `json:"status"`
+	ProductCode string `json:"product_code"`
+	CustomerId  string `json:"customer_id"`
+	Price       string `json:"price"`
+	Message     string `json:"message"`
+	Sn          string `json:"sn"`
+	Pin         string `json:"pin"`
+	Balance     string `json:"balance"`
+	TrId        string `json:"tr_id"`
+	Rc          string `json:"rc"`
+	Sign        string `json:"sign"`
 }
 
 func ReadFromPpobCallbackRequestRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *PpobCallbackRequest {

@@ -21,6 +21,8 @@ type User struct {
 	MerchantCode    string    `gorm:"column:merchant_code;"`
 	TokenDevice     string    `gorm:"column:token_device;"`
 	IsActive        int       `gorm:"column:is_active;"`
+	IsDelete        int       `gorm:"column:is_delete;"`
+	IsDeleteDate    null.Time `gorm:"column:is_delete_date;"`
 	CreatedDate     time.Time `gorm:"column:created_at;"`
 }
 

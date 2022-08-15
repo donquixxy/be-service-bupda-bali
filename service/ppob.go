@@ -281,6 +281,10 @@ func (service *PpobServiceImplementation) InquiryPostpaidPln(requestId string, i
 		exceptions.PanicIfBadRequest(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
 	}
 
+	if inquiryPostpaidPln.Data.ResponseCode == "01" {
+		exceptions.PanicIfBadRequest(errors.New(inquiryPostpaidPln.Data.Message), requestId, []string{inquiryPostpaidPln.Data.Message}, service.Logger)
+	}
+
 	inquiryPostpaidPlnResponse = response.ToInquiryPostpaidPlnResponse(inquiryPostpaidPln, inquiryPostpaidPln.Data.Desc.Tagihan.Detail, refId)
 
 	return inquiryPostpaidPlnResponse
@@ -393,6 +397,10 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 
 	if err = json.Unmarshal([]byte(data), &inquiryPostpaidPdam); err != nil {
 		exceptions.PanicIfBadRequest(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
+	}
+
+	if inquiryPostpaidPdam.Data.ResponseCode == "01" {
+		exceptions.PanicIfBadRequest(errors.New(inquiryPostpaidPdam.Data.Message), requestId, []string{inquiryPostpaidPdam.Data.Message}, service.Logger)
 	}
 
 	inquiryPostpaidPdamResponse = response.ToInquiryPostpaidPdamResponse(inquiryPostpaidPdam, inquiryPostpaidPdam.Data.Desc.Bill.Detail, refId)

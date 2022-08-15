@@ -26,7 +26,7 @@ func ToFindOrderByUserResponse(orders []entity.Order) (orderResponses []FindOrde
 		orderResponse.OrderType = order.OrderType
 		orderResponse.OrderStatus = order.OrderStatus
 		orderResponse.OrderedDate = order.OrderedDate
-		orderResponse.TotalBill = order.TotalBill
+		orderResponse.TotalBill = order.TotalBill + order.PaymentFee
 		orderResponses = append(orderResponses, orderResponse)
 	}
 	return orderResponses

@@ -1,9 +1,14 @@
 package service
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math/rand"
+	"net/http"
 	"strings"
 	"time"
 
@@ -34,7 +39,7 @@ type OtpManagerServiceImplementation struct {
 	Logger                        *logrus.Logger
 	OtpManagerRepositoryInterface repository.OtpManagerRepositoryInterface
 	AuthServiceInterface          AuthServiceInterface
-	SmsServiceInterface           SmsServiceInterface
+	UserRepositoryInterface       repository.UserRepositoryInterface
 }
 
 func NewOtpManagerService(
@@ -43,6 +48,7 @@ func NewOtpManagerService(
 	validate *validator.Validate,
 	logger *logrus.Logger,
 	otpManaOtpManagerServiceInterface repository.OtpManagerRepositoryInterface,
+	userRepositoryInterface repository.UserRepositoryInterface,
 ) OtpManagerServiceInterface {
 	return &OtpManagerServiceImplementation{
 		DB:                            db,
@@ -50,6 +56,7 @@ func NewOtpManagerService(
 		Validate:                      validate,
 		Logger:                        logger,
 		OtpManagerRepositoryInterface: otpManaOtpManagerServiceInterface,
+		UserRepositoryInterface:       userRepositoryInterface,
 	}
 }
 
@@ -76,40 +83,50 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 	resultOtp, err := service.OtpManagerRepositoryInterface.FindOtpByPhone(service.DB, sendOtpBySmsRequest.Phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 
+	// Find user by phone
+	user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, resultOtp.Phone)
+	if len(user.Id) != 0 {
+		exceptions.PanicIfBadRequest(errors.New("phone already user"), requestId, []string{"phone already user"}, service.Logger)
+	}
+
 	// validasi data
 	if len(resultOtp.Id) == 0 {
 		otpManagerEntity := &entity.OtpManager{}
 		otpManagerEntity.Id = utilities.RandomUUID()
-		// otpManagerEntity.OtpCode = GenerateRandomOtpCode()
-		otpManagerEntity.OtpCode = "123456"
+		otpManagerEntity.OtpCode = GenerateRandomOtpCode()
+		// otpManagerEntity.OtpCode = "123456"
 		otpManagerEntity.Phone = sendOtpBySmsRequest.Phone
 		otpManagerEntity.PhoneLimit = 5
 		otpManagerEntity.IpAddressLimit = 5
 		otpManagerEntity.OtpExperiedAt = time.Now().Add(time.Minute * 5)
 		otpManagerEntity.CreatedDate = time.Now()
 
+		// Send OTP
+		go SendOTP(requestId, sendOtpBySmsRequest.Phone, otpManagerEntity.OtpCode)
+
 		createOtpErr := service.OtpManagerRepositoryInterface.CreateOtp(service.DB, otpManagerEntity)
 		exceptions.PanicIfError(createOtpErr, requestId, service.Logger)
 
-		// Send OTP
-		// go service.SmsServiceInterface.SendOTP(requestId, otpManagerEntity.Phone, otpManagerEntity.OtpCode)
 	} else {
 		if resultOtp.PhoneLimit <= 0 {
 			exceptions.PanicIfBadRequest(errors.New("phone daily limit"), requestId, []string{"phone daily limit"}, service.Logger)
 		}
+
 		otpManagerEntity := &entity.OtpManager{}
-		// otpManagerEntity.OtpCode = GenerateRandomOtpCode()
-		otpManagerEntity.OtpCode = "123456"
+		otpManagerEntity.OtpCode = GenerateRandomOtpCode()
+		// otpManagerEntity.OtpCode = "123456"
 		otpManagerEntity.PhoneLimit = resultOtp.PhoneLimit - 1
 		otpManagerEntity.OtpExperiedAt = time.Now().Add(time.Minute * 5)
 		otpManagerEntity.UpdatedDate = null.NewTime(time.Now(), true)
 
+		// Send OTP
+		go SendOTP(requestId, sendOtpBySmsRequest.Phone, otpManagerEntity.OtpCode)
+
 		// Update OTP
 		updateOtpErr := service.OtpManagerRepositoryInterface.UpdateOtp(service.DB, resultOtp.Id, otpManagerEntity)
 		exceptions.PanicIfError(updateOtpErr, requestId, service.Logger)
+		fmt.Println("masuk")
 
-		// Send OTP
-		// go service.SmsServiceInterface.SendOTP(requestId, otpManagerEntity.Phone, otpManagerEntity.OtpCode)
 	}
 }
 
@@ -155,4 +172,36 @@ func (service *OtpManagerServiceImplementation) GenerateFormToken(user modelServ
 		return "", err
 	}
 	return token, err
+}
+
+func SendOTP(requestId string, phone string, otpCode string) {
+	message := fmt.Sprintf("Kode Verifikasi Akun Bupda Bali Anda adalah: %s *JANGAN BERIKAN KODE INI KEPADA SIAPAPUN, TERMASUK PIHAK BUPDA BALI* Hubungi xxxxxxxx untuk bantuan.", otpCode)
+
+	// fmt.Println("userkey = ", config.GetConfig().Sms.UserKey)
+	// fmt.Println("passkey = ", config.GetConfig().Sms.PassKey)
+	// fmt.Println("to = ", phone)
+	// fmt.Println("message = ", message)
+
+	postBody, _ := json.Marshal(map[string]string{
+		"userkey": config.GetConfig().Sms.UserKey,
+		"passkey": config.GetConfig().Sms.PassKey,
+		"to":      phone,
+		"message": message,
+	})
+
+	responseBody := bytes.NewBuffer(postBody)
+	//Leverage Go's HTTP Post function to make request
+	resp, err := http.Post("https://console.zenziva.net/masking/api/sendOTP", "application/json", responseBody)
+	//Handle Error
+	if err != nil {
+		log.Fatalf("An Error Occured %v", err)
+	}
+	defer resp.Body.Close()
+	//Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	sb := string(body)
+	fmt.Printf(sb)
 }

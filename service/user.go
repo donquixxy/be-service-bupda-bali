@@ -17,12 +17,14 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/guregu/null.v4"
 	"gorm.io/gorm"
 )
 
 type UserServiceInterface interface {
 	CreateUserNonSuveyed(requestId string, createUserRequest *request.CreateUserRequest)
 	FindUserById(requestId string, idUser string) (userResponse response.FindUserIdResponse)
+	DeleteUserById(requestId string, idUser string)
 }
 
 type UserServiceImplementation struct {
@@ -71,6 +73,14 @@ func (service *UserServiceImplementation) VerifyFormToken(requestId, token strin
 			exceptions.PanicIfUnauthorized(err, requestId, []string{"invalid token"}, service.Logger)
 		}
 	}
+}
+
+func (service *UserServiceImplementation) DeleteUserById(requestId string, idUser string) {
+	err := service.UserRepositoryInterface.UpdateUser(service.DB, idUser, &entity.User{
+		IsDelete:     1,
+		IsDeleteDate: null.NewTime(time.Now(), true),
+	})
+	exceptions.PanicIfError(err, requestId, service.Logger)
 }
 
 func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string, createUserRequest *request.CreateUserRequest) {

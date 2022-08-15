@@ -33,6 +33,7 @@ func (repository *UserProfileRepositoryImplementation) FindUserByEmail(db *gorm.
 	userProfile := &entity.UserProfile{}
 	result := db.
 		Joins("User").
+		Where("users.is_delete = ?", 0).
 		Find(userProfile, "users_profile.email = ?", email)
 	return userProfile, result.Error
 }
@@ -41,6 +42,7 @@ func (repository *UserProfileRepositoryImplementation) FindUserByNoIdentitas(db 
 	userProfile := &entity.UserProfile{}
 	result := db.
 		Joins("User").
+		Where("users.is_delete = ?", 0).
 		Find(userProfile, "users_profile.no_identitas = ?", NoIdentitas)
 	return userProfile, result.Error
 }

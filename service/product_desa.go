@@ -91,13 +91,22 @@ func (service *ProductDesaServiceImplementation) FindProductsDesaByPromo(request
 	return productsDesaResponses
 }
 
-func (service *ProductDesaServiceImplementation) FindProductDesaById(requestid string, IdDesa string, AccountType int) (productDesaResponse response.FindProductDesaByIdResponse) {
-	productDesa, err := service.ProductDesaRepositoryInterface.FindProductDesaById(service.DB, IdDesa)
+func (service *ProductDesaServiceImplementation) FindProductDesaById(requestid string, IdProductDesaDesa string, AccountType int) (productDesaResponse response.FindProductDesaByIdResponse) {
+	var errr error
+	productDesa, err := service.ProductDesaRepositoryInterface.FindProductDesaById(service.DB, IdProductDesaDesa)
 	exceptions.PanicIfError(err, requestid, service.Logger)
 	if len(productDesa.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("not found"), requestid, []string{"data not found"}, service.Logger)
 	}
-	productDesaResponse = response.ToFindProductDesaByIdResponse(productDesa, AccountType)
+
+	var ListItemsPackage []entity.ProductsPackageItems
+
+	if productDesa.IdType == 2 {
+		ListItemsPackage, errr = service.ProductDesaRepositoryInterface.FindListPackageByIdProductDesa(service.DB, IdProductDesaDesa)
+		exceptions.PanicIfError(errr, requestid, service.Logger)
+	}
+
+	productDesaResponse = response.ToFindProductDesaByIdResponse(productDesa, AccountType, ListItemsPackage)
 	return productDesaResponse
 }
 

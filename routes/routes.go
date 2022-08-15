@@ -43,6 +43,7 @@ func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.
 	group := e.Group("api/v1")
 	group.POST("/user/non_surveyed", userControllerInterface.CreateUserNonSuveyed, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/user", userControllerInterface.FindUserById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.DELETE("/user/delete", userControllerInterface.DeleteUserById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterface controller.ProductDesaControllerInterface) {
