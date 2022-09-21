@@ -147,7 +147,9 @@ func (service *AuthServiceImplementation) GenerateToken(user modelService.User) 
 func (service *AuthServiceImplementation) GenerateRefreshToken(user modelService.User) (token string, err error) {
 	// Create the Claims
 	claims := modelService.TokenClaims{
-		Id: user.Id,
+		Id:          user.Id,
+		IdDesa:      user.IdDesa,
+		AccountType: user.AccountType,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().AddDate(0, 0, int(service.ConfigJwt.Refreshtokenexpiredtime)).Unix(),
 			Issuer:    "cyrilia",

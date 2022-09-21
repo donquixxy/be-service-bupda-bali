@@ -42,8 +42,13 @@ func InfoDesaRoute(e *echo.Echo, jwt config.Jwt, infoDesaControllerInterface con
 func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.UserControllerInterface) {
 	group := e.Group("api/v1")
 	group.POST("/user/non_surveyed", userControllerInterface.CreateUserNonSuveyed, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/user/bigis", userControllerInterface.FindUserFromBigis, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/user", userControllerInterface.FindUserById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.DELETE("/user/delete", userControllerInterface.DeleteUserById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.PUT("/user/update/password", userControllerInterface.UpdateUserPassword, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.PUT("/user/update/forgotpassword", userControllerInterface.UpdateUserForgotPassword, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.PUT("/user/update/profile", userControllerInterface.UpdateUserProfile, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.PUT("/user/update/phone", userControllerInterface.UpdateUserPhone, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterface controller.ProductDesaControllerInterface) {

@@ -1221,10 +1221,14 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity.SubTotal = totalPrice
 
 	// Checking total bill from FE
+	log.Println("Harga kalkulasi server 1 = ", totalPrice+orderRequest.ShippingCost)
+	log.Println("Harga dari client 1 = ", orderRequest.TotalBill+orderRequest.PaymentPoint)
 	if (totalPrice + orderRequest.ShippingCost) != (orderRequest.TotalBill + orderRequest.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama"), requestId, []string{"harga tidak sama"}, service.Logger, tx)
 	}
 
+	log.Println("Harga kalkulasi server 2 = ", totalPrice+orderRequest.ShippingCost+orderRequest.PaymentFee)
+	log.Println("Harga dari client 2 = ", (orderRequest.TotalBill+orderRequest.PaymentFee)+orderRequest.PaymentPoint)
 	// Checking total payment from FE
 	if (totalPrice + orderRequest.ShippingCost + orderRequest.PaymentFee) != ((orderRequest.TotalBill + orderRequest.PaymentFee) + orderRequest.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama dengan payment cash"), requestId, []string{"harga tidak sama dengan payment cash"}, service.Logger, tx)

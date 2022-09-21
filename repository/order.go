@@ -44,9 +44,9 @@ func (repository *OrderRepositoryImplementation) FindOrderByUser(db *gorm.DB, id
 	var result *gorm.DB
 	order := []entity.Order{}
 	if orderStatus >= 0 {
-		result = db.Find(&order, "id_user = ? AND order_status = ?", idUser, orderStatus)
+		result = db.Order("order_date desc").Find(&order, "id_user = ? AND order_status = ?", idUser, orderStatus)
 	} else {
-		result = db.Find(&order, "id_user = ?", idUser)
+		result = db.Order("order_date desc").Find(&order, "id_user = ?", idUser)
 	}
 
 	return order, result.Error

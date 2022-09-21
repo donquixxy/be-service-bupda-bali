@@ -1,7 +1,14 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 
@@ -10,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/bigis"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
@@ -25,6 +33,11 @@ type UserServiceInterface interface {
 	CreateUserNonSuveyed(requestId string, createUserRequest *request.CreateUserRequest)
 	FindUserById(requestId string, idUser string) (userResponse response.FindUserIdResponse)
 	DeleteUserById(requestId string, idUser string)
+	UpdateUserPassword(reqeustId string, idUser string, updateUserPasswordRequest *request.UpdateUserPasswordRequest)
+	UpdateUserForgotPassword(reqeustId string, updateUserForgotPasswordRequest *request.UpdateUserForgotPasswordRequest)
+	UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest)
+	UpdateUserPhone(requestId string, idUser string, updateUserPhoneRequest *request.UpdateUserPhoneRequest)
+	FindUserFromBigis(requestId string, requestUser *request.FindBigisResponsesRequest) (userBigisResponse response.FindUserFromBigisResponse)
 }
 
 type UserServiceImplementation struct {
@@ -55,6 +68,54 @@ func NewUserService(
 		UserProfileRepositoryInterface: userProfileRepositoryInterface,
 		PointRepositoryInterface:       pointRepositoryInterface,
 	}
+}
+
+func (service *UserServiceImplementation) FindUserFromBigis(requestId string, requestUser *request.FindBigisResponsesRequest) (userBigisResponse response.FindUserFromBigisResponse) {
+	// Create Request
+	body, _ := json.Marshal(map[string]interface{}{
+		"nik": requestUser.Nik,
+	})
+
+	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+
+	urlString := "http://117.53.44.216:9070/api/v1/response"
+	// URL
+	url, _ := url.Parse(urlString)
+
+	req := &http.Request{
+		Method: "POST",
+		URL:    url,
+		Header: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+		Body: reqBody,
+	}
+
+	reqDump, _ := httputil.DumpRequestOut(req, true)
+	fmt.Printf("REQUEST:\n%s", string(reqDump))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("An Error Occured %v", err)
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	// Read response body
+	data, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Printf("body: %s\n", data)
+
+	defer resp.Body.Close()
+
+	userFromBigis := &bigis.Response{}
+	// fmt.Printf("body: %s\n", prepaidPriceList)
+
+	if err = json.Unmarshal([]byte(data), &userFromBigis); err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	userBigisResponse = response.ToFindUserFromBigisResponse(userFromBigis)
+
+	return userBigisResponse
 }
 
 func (service *UserServiceImplementation) VerifyFormToken(requestId, token string) {
@@ -167,9 +228,92 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 }
 
-func (service *UserServiceImplementation) FindUserById(requestid string, idUser string) (userResponse response.FindUserIdResponse) {
+func (service *UserServiceImplementation) FindUserById(requestId string, idUser string) (userResponse response.FindUserIdResponse) {
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
-	exceptions.PanicIfError(err, requestid, service.Logger)
+	exceptions.PanicIfError(err, requestId, service.Logger)
 	userResponse = response.ToFindUserIdResponse(user)
 	return userResponse
+}
+
+func (service *UserServiceImplementation) UpdateUserPassword(requestId string, idUser string, updateUserPasswordRequest *request.UpdateUserPasswordRequest) {
+	var err error
+
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(user.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("data user not found"), requestId, []string{"data user not found"}, service.Logger)
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.User.Password), []byte(updateUserPasswordRequest.PasswordLama))
+	exceptions.PanicIfBadRequest(err, requestId, []string{"Invalid Credentials"}, service.Logger)
+
+	password := strings.ReplaceAll(updateUserPasswordRequest.PasswordBaru, " ", "")
+	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+
+	userEntity := &entity.User{
+		Password: string(bcryptPassword),
+	}
+
+	err = service.UserRepositoryInterface.UpdateUser(service.DB, idUser, userEntity)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+}
+
+func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId string, updateUserForgotPasswordRequest *request.UpdateUserForgotPasswordRequest) {
+	var err error
+
+	// validate request
+	request.ValidateRequest(service.Validate, updateUserForgotPasswordRequest, requestId, service.Logger)
+
+	// validate form token
+	service.VerifyFormToken(requestId, updateUserForgotPasswordRequest.FormToken)
+
+	user, err := service.UserRepositoryInterface.FindUserByPhone(service.DB, updateUserForgotPasswordRequest.Phone)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(user.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("data user not found"), requestId, []string{"data user not found"}, service.Logger)
+	}
+
+	password := strings.ReplaceAll(updateUserForgotPasswordRequest.PasswordBaru, " ", "")
+	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+
+	userEntity := &entity.User{
+		Password: string(bcryptPassword),
+	}
+
+	err = service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+}
+
+func (service *UserServiceImplementation) UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest) {
+	var err error
+
+	// validate reqeust
+	request.ValidateRequest(service.Validate, updateUserProfileRequest, requestId, service.Logger)
+
+	userProfileEntity := &entity.UserProfile{
+		NamaLengkap: updateUserProfileRequest.NamaLengkap,
+		Email:       updateUserProfileRequest.Email,
+	}
+
+	err = service.UserProfileRepositoryInterface.UpdateUserProfile(service.DB, idUser, userProfileEntity)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+}
+
+func (service *UserServiceImplementation) UpdateUserPhone(requestId string, idUser string, updateUserPhoneRequest *request.UpdateUserPhoneRequest) {
+	var err error
+
+	// validate reqeust
+	request.ValidateRequest(service.Validate, updateUserPhoneRequest, requestId, service.Logger)
+
+	// validate form token
+	service.VerifyFormToken(requestId, updateUserPhoneRequest.FormToken)
+
+	userEntity := &entity.User{
+		Phone: updateUserPhoneRequest.Phone,
+	}
+
+	err = service.UserRepositoryInterface.UpdateUser(service.DB, idUser, userEntity)
+	exceptions.PanicIfError(err, requestId, service.Logger)
 }

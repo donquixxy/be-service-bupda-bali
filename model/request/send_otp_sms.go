@@ -7,7 +7,8 @@ import (
 )
 
 type SendOtpBySmsRequest struct {
-	Phone string `json:"phone" form:"phone" validate:"required"`
+	Phone   string `json:"phone" form:"phone" validate:"required"`
+	TypeOtp int    `json:"type_otp" form:"type_otp" validate:"required"`
 }
 
 func ReadFromSendOtpBySmsRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *SendOtpBySmsRequest {

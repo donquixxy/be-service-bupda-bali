@@ -84,9 +84,11 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 	exceptions.PanicIfError(err, requestId, service.Logger)
 
 	// Find user by phone
-	user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, resultOtp.Phone)
-	if len(user.Id) != 0 {
-		exceptions.PanicIfBadRequest(errors.New("phone already user"), requestId, []string{"phone already user"}, service.Logger)
+	if sendOtpBySmsRequest.TypeOtp == 1 {
+		user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, resultOtp.Phone)
+		if len(user.Id) != 0 {
+			exceptions.PanicIfBadRequest(errors.New("phone already user"), requestId, []string{"phone already user"}, service.Logger)
+		}
 	}
 
 	// validasi data
@@ -147,9 +149,7 @@ func (service *OtpManagerServiceImplementation) VerifyOtp(requestId string, veri
 	}
 	var userModelService modelService.User
 	userModelService.Phone = otp.Phone
-	fmt.Println("masuk ke sini")
 	token, _ := service.GenerateFormToken(userModelService)
-
 	verifyOtpResponse := response.ToVerifyOtpResponse(token)
 
 	return &verifyOtpResponse

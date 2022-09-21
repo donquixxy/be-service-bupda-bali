@@ -10,6 +10,7 @@ type UserProfileRepositoryInterface interface {
 	CreateUserProfile(db *gorm.DB, userProfile *entity.UserProfile) error
 	FindUserByEmail(db *gorm.DB, email string) (*entity.UserProfile, error)
 	FindUserByNoIdentitas(db *gorm.DB, NoIdentitas string) (*entity.UserProfile, error)
+	UpdateUserProfile(db *gorm.DB, idUser string, userProfileUpdate *entity.UserProfile) error
 }
 
 type UserProfileRepositoryImplementation struct {
@@ -24,6 +25,15 @@ func NewUserProfileRepository(
 	}
 }
 
+func (repository *UserProfileRepositoryImplementation) UpdateUserProfile(db *gorm.DB, idUser string, userProfileUpdate *entity.UserProfile) error {
+	userProfile := &entity.UserProfile{}
+	result := db.
+		Model(userProfile).
+		Where("id_user = ?", idUser).
+		Updates(userProfileUpdate)
+	return result.Error
+}
+
 func (repository *UserProfileRepositoryImplementation) CreateUserProfile(db *gorm.DB, userProfile *entity.UserProfile) error {
 	result := db.Create(userProfile)
 	return result.Error
@@ -33,7 +43,7 @@ func (repository *UserProfileRepositoryImplementation) FindUserByEmail(db *gorm.
 	userProfile := &entity.UserProfile{}
 	result := db.
 		Joins("User").
-		Where("users.is_delete = ?", 0).
+		Where("User.is_delete = ?", 0).
 		Find(userProfile, "users_profile.email = ?", email)
 	return userProfile, result.Error
 }
@@ -42,7 +52,7 @@ func (repository *UserProfileRepositoryImplementation) FindUserByNoIdentitas(db 
 	userProfile := &entity.UserProfile{}
 	result := db.
 		Joins("User").
-		Where("users.is_delete = ?", 0).
+		Where("User.is_delete = ?", 0).
 		Find(userProfile, "users_profile.no_identitas = ?", NoIdentitas)
 	return userProfile, result.Error
 }
