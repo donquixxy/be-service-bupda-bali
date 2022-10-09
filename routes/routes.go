@@ -42,6 +42,7 @@ func InfoDesaRoute(e *echo.Echo, jwt config.Jwt, infoDesaControllerInterface con
 func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.UserControllerInterface) {
 	group := e.Group("api/v1")
 	group.POST("/user/non_surveyed", userControllerInterface.CreateUserNonSuveyed, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/user/surveyed", userControllerInterface.CreateUserSuveyed, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/user/bigis", userControllerInterface.FindUserFromBigis, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/user", userControllerInterface.FindUserById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.DELETE("/user/delete", userControllerInterface.DeleteUserById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
@@ -75,6 +76,12 @@ func CartRoute(e *echo.Echo, jwt config.Jwt, cartControllerInterface controller.
 	group.GET("/cart/user", cartControllerInterface.FindCartByUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
+func MerchantRoute(e *echo.Echo, jwt config.Jwt, merchantControllerInterface controller.MerchantControllerInterface) {
+	group := e.Group("api/v1")
+	group.POST("/merchant/request_approve", merchantControllerInterface.CreateMerchantApproveList, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/merchant/status_approve", merchantControllerInterface.FindMerchantStatusApproveByUserResponse, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
 func PointRoute(e *echo.Echo, jwt config.Jwt, pointControllerInterface controller.PointControllerInterface) {
 	group := e.Group("api/v1")
 	group.GET("/point", pointControllerInterface.FindPointByUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
@@ -99,6 +106,14 @@ func PaymentChannelRoute(e *echo.Echo, jwt config.Jwt, paymentChannelControllerI
 func SettingRoute(e *echo.Echo, jwt config.Jwt, settingControllerInterface controller.SettingControllerInterface) {
 	group := e.Group("api/v1")
 	group.GET("/setting/shippingcost", settingControllerInterface.FindSettingShippingCost, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/version/android", settingControllerInterface.FindAndroidVersion, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/version/ios", settingControllerInterface.FindIosVersion, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
+func BannerRoute(e *echo.Echo, jwt config.Jwt, bannerControllerInterface controller.BannerControllerInterface) {
+	group := e.Group("api/v1")
+	group.GET("/banner", bannerControllerInterface.FindBannerByDesa, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/banner/no_token", bannerControllerInterface.FindBannerAll, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func UserShippingAddressRoute(e *echo.Echo, jwt config.Jwt, userShippingAddress controller.UserShippingAddressControllerInterface) {

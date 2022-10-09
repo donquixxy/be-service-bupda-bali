@@ -16,6 +16,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/controller"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/routes"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/service"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
@@ -48,11 +49,16 @@ func main() {
 		ErrorMessage: "Request Timeout",
 		Timeout:      15 * time.Second,
 	}))
-	e.Use(middleware.Recover())
+	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		DisableStackAll:   true,
+		DisablePrintStack: true,
+	}))
 	e.HTTPErrorHandler = exceptions.ErrorHandler
 	e.Use(middleware.RequestID())
 
 	// Repository
+	inveliRegistrationRepository := invelirepository.NewInveliRegistarationRepository()
+	merchantRepository := repository.NewMerchantRepository(&appConfig.Database)
 	userRepository := repository.NewUserRepository(&appConfig.Database)
 	userProfileRepository := repository.NewUserProfileRepository(&appConfig.Database)
 	otpManagerRepository := repository.NewOtpManagerRepository(&appConfig.Database)
@@ -73,8 +79,22 @@ func main() {
 	operatorPrefixRepository := repository.NewOperatorPrefixRepository(&appConfig.Database)
 	ppobDetailRepository := repository.NewPpobDetailRepository(&appConfig.Database)
 	infoDesaRepository := repository.NewInfoDesaRepository(&appConfig.Database)
+	bannerRepository := repository.NewBannerRepository(&appConfig.Database)
 
 	// Service
+	bannerService := service.NewBannerService(
+		DBConn,
+		validate,
+		logrusLogger,
+		bannerRepository,
+	)
+	merchantService := service.NewMerchantService(
+		DBConn,
+		validate,
+		logrusLogger,
+		userProfileRepository,
+		merchantRepository,
+	)
 	infoDesaService := service.NewInfoDesaService(
 		DBConn,
 		validate,
@@ -122,6 +142,8 @@ func main() {
 		userRepository,
 		userProfileRepository,
 		pointRepository,
+		desaRepository,
+		inveliRegistrationRepository,
 	)
 	productDesaService := service.NewProductDesaService(
 		DBConn,
@@ -137,6 +159,7 @@ func main() {
 		logrusLogger,
 		cartRepository,
 		productDesaRepository,
+		settingRepository,
 	)
 	promoService := service.NewPromoService(
 		DBConn,
@@ -196,10 +219,18 @@ func main() {
 		orderService,
 	)
 
+	// Controller
+	bannerController := controller.NewBannerController(
+		logrusLogger,
+		bannerService,
+	)
+	merchantController := controller.NewMerchantController(
+		logrusLogger,
+		merchantService,
+	)
 	infoDesaController := controller.NewInfoDesaController(
 		infoDesaService,
 	)
-	// Controller
 	authController := controller.NewAuthController(
 		logrusLogger,
 		authService,
@@ -255,6 +286,8 @@ func main() {
 	)
 
 	// Route
+	routes.BannerRoute(e, appConfig.Jwt, bannerController)
+	routes.MerchantRoute(e, appConfig.Jwt, merchantController)
 	routes.InfoDesaRoute(e, appConfig.Jwt, infoDesaController)
 	routes.AuthRoute(e, authController)
 	routes.OtpManagerRoute(e, otpManagerController)

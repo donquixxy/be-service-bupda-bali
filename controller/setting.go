@@ -11,6 +11,8 @@ import (
 
 type SettingControllerInterface interface {
 	FindSettingShippingCost(c echo.Context) error
+	FindAndroidVersion(c echo.Context) error
+	FindIosVersion(c echo.Context) error
 }
 
 type SettingControllerImplementation struct {
@@ -28,6 +30,20 @@ func (controller *SettingControllerImplementation) FindSettingShippingCost(c ech
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	idDesa := middleware.TokenClaimsIdDesa(c)
 	settingResponse := controller.SettingServiceInterface.FindSettingShippingCost(requestId, idDesa)
+	responses := response.Response{Code: 200, Mssg: "success", Data: settingResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
+func (controller *SettingControllerImplementation) FindAndroidVersion(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	settingResponse := controller.SettingServiceInterface.FindAndroidVersion(requestId)
+	responses := response.Response{Code: 200, Mssg: "success", Data: settingResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
+func (controller *SettingControllerImplementation) FindIosVersion(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	settingResponse := controller.SettingServiceInterface.FindIosVersion(requestId)
 	responses := response.Response{Code: 200, Mssg: "success", Data: settingResponse, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

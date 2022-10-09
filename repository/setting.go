@@ -8,6 +8,9 @@ import (
 
 type SettingRepositoryInterface interface {
 	FindSettingShippingCost(db *gorm.DB, idDesa string) (*entity.Setting, error)
+	FindVerAppByOS(db *gorm.DB, os string) (*entity.Setting, error)
+	FindAndroidVersion(db *gorm.DB) (*entity.Setting, error)
+	FindIosVersion(db *gorm.DB) (*entity.Setting, error)
 }
 
 type SettingRepositoryImplementation struct {
@@ -20,6 +23,30 @@ func NewSettingRepository(
 	return &SettingRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (service *SettingRepositoryImplementation) FindAndroidVersion(db *gorm.DB) (*entity.Setting, error) {
+	setting := &entity.Setting{}
+	result := db.
+		Where("settings_title = ?", "android").
+		Find(setting)
+	return setting, result.Error
+}
+
+func (service *SettingRepositoryImplementation) FindIosVersion(db *gorm.DB) (*entity.Setting, error) {
+	setting := &entity.Setting{}
+	result := db.
+		Where("settings_title = ?", "ios").
+		Find(setting)
+	return setting, result.Error
+}
+
+func (service *SettingRepositoryImplementation) FindVerAppByOS(db *gorm.DB, os string) (*entity.Setting, error) {
+	setting := &entity.Setting{}
+	result := db.
+		Where("settings_name = ?", os).
+		Find(setting)
+	return setting, result.Error
 }
 
 func (service *SettingRepositoryImplementation) FindSettingShippingCost(db *gorm.DB, idDesa string) (*entity.Setting, error) {

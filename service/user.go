@@ -19,10 +19,12 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/bigis"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/inveli"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	modelService "github.com/tensuqiuwulu/be-service-bupda-bali/model/service"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/guregu/null.v4"
@@ -31,6 +33,7 @@ import (
 
 type UserServiceInterface interface {
 	CreateUserNonSuveyed(requestId string, createUserRequest *request.CreateUserRequest)
+	CreateUserSuveyed(requestId string, createUserSurveyedRequest *request.CreateUserSurveyedRequest)
 	FindUserById(requestId string, idUser string) (userResponse response.FindUserIdResponse)
 	DeleteUserById(requestId string, idUser string)
 	UpdateUserPassword(reqeustId string, idUser string, updateUserPasswordRequest *request.UpdateUserPasswordRequest)
@@ -48,6 +51,8 @@ type UserServiceImplementation struct {
 	UserRepositoryInterface        repository.UserRepositoryInterface
 	UserProfileRepositoryInterface repository.UserProfileRepositoryInterface
 	PointRepositoryInterface       repository.PointRepositoryInterface
+	DesaRepositoryInterface        repository.DesaRepositoryInterface
+	InveliRepositoryInterface      invelirepository.InveliRegistarationRepositoryInterface
 }
 
 func NewUserService(
@@ -58,6 +63,8 @@ func NewUserService(
 	userRepositoryInterface repository.UserRepositoryInterface,
 	userProfileRepositoryInterface repository.UserProfileRepositoryInterface,
 	pointRepositoryInterface repository.PointRepositoryInterface,
+	desaRepositoryInterface repository.DesaRepositoryInterface,
+	inveliRepositoryInterface invelirepository.InveliRegistarationRepositoryInterface,
 ) UserServiceInterface {
 	return &UserServiceImplementation{
 		DB:                             db,
@@ -67,6 +74,8 @@ func NewUserService(
 		UserRepositoryInterface:        userRepositoryInterface,
 		UserProfileRepositoryInterface: userProfileRepositoryInterface,
 		PointRepositoryInterface:       pointRepositoryInterface,
+		DesaRepositoryInterface:        desaRepositoryInterface,
+		InveliRepositoryInterface:      inveliRepositoryInterface,
 	}
 }
 
@@ -113,7 +122,17 @@ func (service *UserServiceImplementation) FindUserFromBigis(requestId string, re
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	userBigisResponse = response.ToFindUserFromBigisResponse(userFromBigis)
+	if len(userFromBigis.DataResponse.Nik) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user tidak ditemukan"), requestId, []string{"user tidak ditemukan"}, service.Logger)
+	}
+
+	desa, err := service.DesaRepositoryInterface.FindOneDesaByIdKelu(service.DB, userFromBigis.DataResponse.IdKelu)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(desa.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("desa tidak ditemukan"), requestId, []string{"desa tidak ditemukan"}, service.Logger)
+	}
+
+	userBigisResponse = response.ToFindUserFromBigisResponse(userFromBigis, desa)
 
 	return userBigisResponse
 }
@@ -144,6 +163,103 @@ func (service *UserServiceImplementation) DeleteUserById(requestId string, idUse
 	exceptions.PanicIfError(err, requestId, service.Logger)
 }
 
+func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, createUserRequest *request.CreateUserSurveyedRequest) {
+	var err error
+
+	request.ValidateRequest(service.Validate, createUserRequest, requestId, service.Logger)
+
+	// Check No Identitas
+	NoIdentitasCheck, err := service.UserProfileRepositoryInterface.FindUserByNoIdentitas(service.DB, createUserRequest.NoIdentitas)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(NoIdentitasCheck.Id) != 0 {
+		exceptions.PanicIfRecordAlreadyExists(errors.New("no identitas already exist"), requestId, []string{"no identitas sudah digunakan"}, service.Logger)
+	}
+
+	// Check email if exsict
+	var emailLowerCase string
+	emailLowerCase = strings.ToLower(createUserRequest.Email)
+	emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(emailChek.Id) != 0 {
+		exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
+	}
+
+	if createUserRequest.Email == " " {
+		emailLowerCase = "bupdabali@gmail.com"
+	}
+
+	// Check No Hp
+	phoneCheck, err := service.UserRepositoryInterface.FindUserByPhone(service.DB, createUserRequest.Phone)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(phoneCheck.Id) != 0 {
+		exceptions.PanicIfRecordAlreadyExists(errors.New("phone already exist"), requestId, []string{"phone sudah digunakan"}, service.Logger)
+	}
+
+	// Hash password
+	password := strings.ReplaceAll(createUserRequest.Password, " ", "")
+	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+
+	// Begin Transcation
+	tx := service.DB.Begin()
+	exceptions.PanicIfError(tx.Error, requestId, service.Logger)
+
+	userEntity := &entity.User{
+		Id:              utilities.RandomUUID(),
+		Phone:           createUserRequest.Phone,
+		Password:        string(bcryptPassword),
+		IdDesa:          createUserRequest.IdDesa,
+		IsActive:        1,
+		IdLimitPayLater: "1006588e-da08-4e1b-8cd4-c14fff9059e1", //default limit 0
+		AccountType:     1,                                      // 1 Normal 2 Merchant
+		StatusSurvey:    1,                                      // 0 Blum survey 1 sudah survey
+		CreatedDate:     time.Now(),
+	}
+
+	// Save user to database
+	err = service.UserRepositoryInterface.CreateUser(tx, userEntity)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create user"}, service.Logger, service.DB)
+
+	userProfileEntity := &entity.UserProfile{
+		Id:                    utilities.RandomUUID(),
+		IdUser:                userEntity.Id,
+		NoIdentitas:           createUserRequest.NoIdentitas,
+		NamaLengkap:           createUserRequest.NamaLengkap,
+		AlamatSesuaiIdentitas: createUserRequest.Alamat,
+		Email:                 emailLowerCase,
+		CreatedDate:           time.Now(),
+	}
+
+	// Save user profile to database
+	err = service.UserProfileRepositoryInterface.CreateUserProfile(tx, userProfileEntity)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create user profile"}, service.Logger, service.DB)
+
+	pointEntity := &entity.Point{
+		Id:          utilities.RandomUUID(),
+		IdUser:      userEntity.Id,
+		JmlPoint:    0,
+		StatusPoint: 1,
+		CreatedDate: time.Now(),
+	}
+
+	// Save point to database
+	err = service.PointRepositoryInterface.CreatePoint(tx, pointEntity)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create point"}, service.Logger, service.DB)
+
+	inveliRegistrationModel := &inveli.InveliRegistrationModel{
+		Email:      emailLowerCase,
+		Phone:      createUserRequest.Phone,
+		NIK:        createUserRequest.NoIdentitas,
+		Address:    createUserRequest.Alamat,
+		MemberName: createUserRequest.NamaLengkap,
+	}
+
+	service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+}
+
 func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string, createUserRequest *request.CreateUserRequest) {
 	var err error
 
@@ -160,11 +276,16 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	}
 
 	// Check email if exsict
-	emailLowerCase := strings.ToLower(createUserRequest.Email)
+	var emailLowerCase string
+	emailLowerCase = strings.ToLower(createUserRequest.Email)
 	emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(emailChek.Id) != 0 {
 		exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
+	}
+
+	if createUserRequest.Email == " " {
+		emailLowerCase = "bupdabali@gmail.com"
 	}
 
 	// Check No Hp

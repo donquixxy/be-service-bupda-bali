@@ -110,25 +110,49 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 		exceptions.PanicIfError(createOtpErr, requestId, service.Logger)
 
 	} else {
+		log.Println("phone limit = ", resultOtp.PhoneLimit)
+
 		if resultOtp.PhoneLimit <= 0 {
-			exceptions.PanicIfBadRequest(errors.New("phone daily limit"), requestId, []string{"phone daily limit"}, service.Logger)
+			if resultOtp.FreezeDueDate.Time.Before(time.Now()) {
+				otpManagerEntity := &entity.OtpManager{}
+				otpManagerEntity.Id = resultOtp.Id
+				otpManagerEntity.OtpCode = GenerateRandomOtpCode()
+				// otpManagerEntity.OtpCode = "123456"
+				otpManagerEntity.Phone = resultOtp.Phone
+				otpManagerEntity.PhoneLimit = 5
+				otpManagerEntity.IpAddressLimit = 5
+				otpManagerEntity.OtpExperiedAt = time.Now().Add(time.Minute * 5)
+				otpManagerEntity.CreatedDate = time.Now()
+
+				// Send OTP
+				go SendOTP(requestId, resultOtp.Phone, otpManagerEntity.OtpCode)
+
+				updateOtpErr := service.OtpManagerRepositoryInterface.UpdateOtp(service.DB, resultOtp.Id, otpManagerEntity)
+				exceptions.PanicIfError(updateOtpErr, requestId, service.Logger)
+
+			} else {
+				exceptions.PanicIfBadRequest(errors.New("phone daily limit"), requestId, []string{"phone daily limit"}, service.Logger)
+			}
+		} else {
+			otpManagerEntity := &entity.OtpManager{}
+			otpManagerEntity.Id = resultOtp.Id
+			otpManagerEntity.OtpCode = GenerateRandomOtpCode()
+			// otpManagerEntity.OtpCode = "123456"
+			otpManagerEntity.Phone = resultOtp.Phone
+			if resultOtp.PhoneLimit <= 1 {
+				otpManagerEntity.FreezeDueDate = null.NewTime(time.Now().Add(time.Hour*24), true)
+			}
+			otpManagerEntity.PhoneLimit = resultOtp.PhoneLimit - 1
+			otpManagerEntity.IpAddressLimit = 5
+			otpManagerEntity.OtpExperiedAt = time.Now().Add(time.Minute * 5)
+			otpManagerEntity.CreatedDate = time.Now()
+
+			// Send OTP
+			go SendOTP(requestId, resultOtp.Phone, otpManagerEntity.OtpCode)
+
+			updateOtpErr := service.OtpManagerRepositoryInterface.UpdateOtp(service.DB, resultOtp.Id, otpManagerEntity)
+			exceptions.PanicIfError(updateOtpErr, requestId, service.Logger)
 		}
-
-		otpManagerEntity := &entity.OtpManager{}
-		otpManagerEntity.OtpCode = GenerateRandomOtpCode()
-		// otpManagerEntity.OtpCode = "123456"
-		otpManagerEntity.PhoneLimit = resultOtp.PhoneLimit - 1
-		otpManagerEntity.OtpExperiedAt = time.Now().Add(time.Minute * 5)
-		otpManagerEntity.UpdatedDate = null.NewTime(time.Now(), true)
-
-		// Send OTP
-		go SendOTP(requestId, sendOtpBySmsRequest.Phone, otpManagerEntity.OtpCode)
-
-		// Update OTP
-		updateOtpErr := service.OtpManagerRepositoryInterface.UpdateOtp(service.DB, resultOtp.Id, otpManagerEntity)
-		exceptions.PanicIfError(updateOtpErr, requestId, service.Logger)
-		fmt.Println("masuk")
-
 	}
 }
 
@@ -175,7 +199,7 @@ func (service *OtpManagerServiceImplementation) GenerateFormToken(user modelServ
 }
 
 func SendOTP(requestId string, phone string, otpCode string) {
-	message := fmt.Sprintf("Kode Verifikasi Akun Bupda Bali Anda adalah: %s *JANGAN BERIKAN KODE INI KEPADA SIAPAPUN, TERMASUK PIHAK BUPDA BALI* Hubungi xxxxxxxx untuk bantuan.", otpCode)
+	message := fmt.Sprintf("Kode Verifikasi Akun Bupda Bali Anda adalah: %s *JANGAN BERIKAN KODE INI KEPADA SIAPAPUN, TERMASUK PIHAK BUPDA BALI* Hubungi 085960144218 untuk bantuan.", otpCode)
 
 	// fmt.Println("userkey = ", config.GetConfig().Sms.UserKey)
 	// fmt.Println("passkey = ", config.GetConfig().Sms.PassKey)
@@ -194,13 +218,13 @@ func SendOTP(requestId string, phone string, otpCode string) {
 	resp, err := http.Post("https://console.zenziva.net/masking/api/sendOTP", "application/json", responseBody)
 	//Handle Error
 	if err != nil {
-		log.Fatalf("An Error Occured %v", err)
+		log.Println("An Error Occured %v", err)
 	}
 	defer resp.Body.Close()
 	//Read the response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	sb := string(body)
 	fmt.Printf(sb)

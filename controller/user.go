@@ -13,6 +13,7 @@ import (
 
 type UserControllerInterface interface {
 	CreateUserNonSuveyed(c echo.Context) error
+	CreateUserSuveyed(c echo.Context) error
 	FindUserById(c echo.Context) error
 	DeleteUserById(c echo.Context) error
 	UpdateUserPassword(c echo.Context) error
@@ -41,6 +42,14 @@ func (controller *UserControllerImplementation) FindUserFromBigis(c echo.Context
 	request := request.ReadFromFindBigisResponsesRequestBody(c, requestId, controller.Logger)
 	userResponse := controller.UserServiceInterface.FindUserFromBigis(requestId, request)
 	responses := response.Response{Code: 200, Mssg: "success", Data: userResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
+func (controller *UserControllerImplementation) CreateUserSuveyed(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	request := request.ReadFromCreateUserSurveyedRequestBody(c, requestId, controller.Logger)
+	controller.UserServiceInterface.CreateUserSuveyed(requestId, request)
+	responses := response.Response{Code: 200, Mssg: "success", Data: nil, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }
 

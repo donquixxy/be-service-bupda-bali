@@ -1158,6 +1158,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	numberOrder := service.GenerateNumberOrder(idDesa)
 	orderEntity.Id = utilities.RandomUUID()
 	orderEntity.IdUser = idUser
+	orderEntity.IdDesa = idDesa
 	orderEntity.NumberOrder = numberOrder
 	orderEntity.NamaLengkap = userProfile.NamaLengkap
 	orderEntity.Email = userProfile.Email
@@ -1243,7 +1244,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 	switch orderRequest.PaymentMethod {
 	case "cod":
-		orderEntity.OrderStatus = 0
+		orderEntity.OrderStatus = 1
 		orderEntity.PaymentCash = orderRequest.TotalBill
 		orderEntity.PaymentName = "Cash On Delivery"
 	case "point":
@@ -1350,7 +1351,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error delete items in cart"}, service.Logger, tx)
 
 	// update stock jika payment methodnya point
-	if orderRequest.PaymentMethod == "point" {
+	if orderRequest.PaymentMethod == "point" || orderRequest.PaymentMethod == "cod" {
 		service.ProductDesaServiceInterface.UpdateProductStock(requestId, orderEntity.Id, tx)
 	}
 

@@ -55,8 +55,9 @@ func (controller *CartControllerImplementation) UpdateCart(c echo.Context) error
 func (controller *CartControllerImplementation) FindCartByUser(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	idUser := middleware.TokenClaimsIdUser(c)
+	idDesa := middleware.TokenClaimsIdDesa(c)
 	accountType := middleware.TokenClaimsAccountType(c)
-	cartResponse := controller.CartServiceInterface.FindCartByUser(requestId, idUser, accountType)
+	cartResponse := controller.CartServiceInterface.FindCartByUser(requestId, idUser, accountType, idDesa)
 	responses := response.Response{Code: 200, Mssg: "success", Data: cartResponse, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

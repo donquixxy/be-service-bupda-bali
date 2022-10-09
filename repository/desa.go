@@ -9,6 +9,7 @@ import (
 type DesaRepositoryInterface interface {
 	FindDesaByIdKelu(db *gorm.DB, idKelu int) ([]entity.Desa, error)
 	FindDesaById(db *gorm.DB, idDesa string) (*entity.Desa, error)
+	FindOneDesaByIdKelu(db *gorm.DB, idKelu int) (*entity.Desa, error)
 }
 
 type DesaRepositoryImplementation struct {
@@ -29,6 +30,14 @@ func (service *DesaRepositoryImplementation) FindDesaByIdKelu(db *gorm.DB, idKel
 		Where("id_kelurahan = ?", idKelu).
 		Find(&desas)
 	return desas, results.Error
+}
+
+func (service *DesaRepositoryImplementation) FindOneDesaByIdKelu(db *gorm.DB, idKelu int) (*entity.Desa, error) {
+	desa := &entity.Desa{}
+	results := db.
+		Where("id_kelurahan = ?", idKelu).
+		Find(&desa)
+	return desa, results.Error
 }
 
 func (service *DesaRepositoryImplementation) FindDesaById(db *gorm.DB, idDesa string) (*entity.Desa, error) {

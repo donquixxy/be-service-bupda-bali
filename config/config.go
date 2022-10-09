@@ -14,7 +14,7 @@ type Application struct {
 type Webserver struct {
 	Port      uint `yaml:"port"`
 	Timeout   uint `yaml:"timeout"`
-	RateLimit uint `yaml:"rate_limit"`
+	RateLimit uint `yaml:"ratelimit"`
 }
 
 type Database struct {
