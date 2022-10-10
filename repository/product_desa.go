@@ -57,6 +57,7 @@ func (repository *ProductDesaRepositoryImplementation) FindProductsDesaBySubCate
 	result := db.
 		Joins("ProductsMaster").
 		Where("ProductsMaster.id_sub_category = ?", IdSubCategory).
+		Order("products_desa.stock_opname = 0, ProductsMaster.product_name asc").
 		Find(&productsDesa, "products_desa.id_desa = ?", IdDesa)
 	return productsDesa, result.Error
 }

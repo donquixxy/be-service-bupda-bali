@@ -178,14 +178,14 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	// Check email if exsict
 	var emailLowerCase string
 	emailLowerCase = strings.ToLower(createUserRequest.Email)
-	emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
-	exceptions.PanicIfError(err, requestId, service.Logger)
-	if len(emailChek.Id) != 0 {
-		exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
-	}
-
-	if createUserRequest.Email == " " {
+	if len(emailLowerCase) == 0 {
 		emailLowerCase = "bupdabali@gmail.com"
+	} else {
+		emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
+		exceptions.PanicIfError(err, requestId, service.Logger)
+		if len(emailChek.Id) != 0 {
+			exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
+		}
 	}
 
 	// Check No Hp
@@ -278,14 +278,14 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	// Check email if exsict
 	var emailLowerCase string
 	emailLowerCase = strings.ToLower(createUserRequest.Email)
-	emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
-	exceptions.PanicIfError(err, requestId, service.Logger)
-	if len(emailChek.Id) != 0 {
-		exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
-	}
-
-	if createUserRequest.Email == " " {
+	if len(emailLowerCase) == 0 {
 		emailLowerCase = "bupdabali@gmail.com"
+	} else {
+		emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
+		exceptions.PanicIfError(err, requestId, service.Logger)
+		if len(emailChek.Id) != 0 {
+			exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
+		}
 	}
 
 	// Check No Hp
