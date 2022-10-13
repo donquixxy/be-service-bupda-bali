@@ -1,5 +1,5 @@
 # builder image
-FROM golang:1.18.4-alpine as builder
+FROM golang:1.18.7-alpine as builder
 WORKDIR /build
 COPY . .
 RUN apk add git && CGO_ENABLED=0 GOOS=linux go build -o be-service-bupda-bali .
