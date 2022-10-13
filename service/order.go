@@ -254,6 +254,9 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 
 	totalHarga = trxData.Data.Price
 
+	log.Println("total harga client = ", totalHarga+orderRequest.PaymentFee)
+	log.Println("total harga server = ", orderRequest.TotalBill+orderRequest.PaymentFee+orderEntity.PaymentPoint)
+
 	if (totalHarga + orderRequest.PaymentFee) != (orderRequest.TotalBill + orderRequest.PaymentFee + orderEntity.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama"), requestId, []string{"harga tidak sama"}, service.Logger, tx)
 	}

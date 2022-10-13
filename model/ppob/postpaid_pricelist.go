@@ -59,7 +59,7 @@ type InquiryPostpaidPlnDetail struct {
 	Total       float64 `json:"total"`
 }
 
-//  Inquiry Postpaid PDAM
+// Inquiry Postpaid PDAM
 type InquiryPostpaidPdam struct {
 	Data InquiryPostpaidPdamData `json:"data"`
 }
@@ -194,4 +194,14 @@ type TopupPostaidPlnDataResponse struct {
 	Balance      float64                `json:"balance"`
 	NoRef        string                 `json:"noref"`
 	Desc         InquiryPostpaidPlnDesc `json:"desc"`
+}
+
+type PostpaidErrorResponse struct {
+	Data PostpaidErrorDataResponse `json:"data"`
+	Meta []string                  `json:"meta"`
+}
+
+type PostpaidErrorDataResponse struct {
+	ResponseCode string `json:"response_code"`
+	Message      string `json:"message"`
 }

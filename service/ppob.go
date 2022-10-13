@@ -276,13 +276,20 @@ func (service *PpobServiceImplementation) InquiryPostpaidPln(requestId string, i
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPostpaidPln := &ppob.InquiryPostpaidPln{}
+	postpaidErrorResponse := &ppob.PostpaidErrorResponse{}
 
 	if err = json.Unmarshal([]byte(data), &inquiryPostpaidPln); err != nil {
-		exceptions.PanicIfBadRequest(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
+		if err = json.Unmarshal([]byte(data), &postpaidErrorResponse); err != nil {
+			exceptions.PanicIfRecordNotFound(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
+		}
 	}
 
 	if inquiryPostpaidPln.Data.ResponseCode == "01" {
-		exceptions.PanicIfBadRequest(errors.New(inquiryPostpaidPln.Data.Message), requestId, []string{inquiryPostpaidPln.Data.Message}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New(inquiryPostpaidPln.Data.Message), requestId, []string{inquiryPostpaidPln.Data.Message}, service.Logger)
+	}
+
+	if inquiryPostpaidPln.Data.ResponseCode == "14" {
+		exceptions.PanicIfRecordNotFound(errors.New(inquiryPostpaidPln.Data.Message), requestId, []string{inquiryPostpaidPln.Data.Message}, service.Logger)
 	}
 
 	inquiryPostpaidPlnResponse = response.ToInquiryPostpaidPlnResponse(inquiryPostpaidPln, inquiryPostpaidPln.Data.Desc.Tagihan.Detail, refId)
@@ -394,19 +401,24 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPostpaidPdam := &ppob.InquiryPostpaidPdam{}
-
+	postpaidErrorResponse := &ppob.PostpaidErrorResponse{}
 	if err = json.Unmarshal([]byte(data), &inquiryPostpaidPdam); err != nil {
-		exceptions.PanicIfBadRequest(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
+		if err = json.Unmarshal([]byte(data), &postpaidErrorResponse); err != nil {
+			exceptions.PanicIfBadRequest(errors.New("INVALID DATA"), requestId, []string{"INVALID DATA"}, service.Logger)
+		}
 	}
 
 	if inquiryPostpaidPdam.Data.ResponseCode == "01" {
 		exceptions.PanicIfBadRequest(errors.New(inquiryPostpaidPdam.Data.Message), requestId, []string{inquiryPostpaidPdam.Data.Message}, service.Logger)
 	}
 
+	if inquiryPostpaidPdam.Data.ResponseCode == "14" {
+		exceptions.PanicIfBadRequest(errors.New(inquiryPostpaidPdam.Data.Message), requestId, []string{inquiryPostpaidPdam.Data.Message}, service.Logger)
+	}
+
 	inquiryPostpaidPdamResponse = response.ToInquiryPostpaidPdamResponse(inquiryPostpaidPdam, inquiryPostpaidPdam.Data.Desc.Bill.Detail, refId)
 
 	return inquiryPostpaidPdamResponse
-
 }
 
 func (service *PpobServiceImplementation) PrepaidCheckStatusTransaction(requestId, refId string) {
@@ -449,5 +461,4 @@ func (service *PpobServiceImplementation) PrepaidCheckStatusTransaction(requestI
 	// Read response body
 	data, _ := ioutil.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
-
 }
