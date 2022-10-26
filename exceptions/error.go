@@ -94,3 +94,12 @@ func PanicIfRecordAlreadyExistsWIthRollback(err error, requestId string, errorSt
 		panic(string(out))
 	}
 }
+
+func PanicPPOBHandler(err error, requestId string, message string, errorString []string, logger *logrus.Logger) {
+	if err != nil {
+		out, errr := json.Marshal(ErrorStruct{Code: 409, Mssg: message, Error: errorString})
+		PanicIfError(errr, requestId, logger)
+		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
+		panic(string(out))
+	}
+}

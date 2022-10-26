@@ -12,8 +12,8 @@ type CreateUserRequest struct {
 	Phone       string `json:"phone" form:"phone" validate:"required"`
 	Email       string `json:"email" form:"email"`
 	IdDesa      string `json:"id_desa" form:"id_desa" validate:"required"`
-	Password    string `json:"password" form:"password" validate:"required"`
-	FormToken   string `json:"form_token" form:"form_token" validate:"required"`
+	// Password    string `json:"password" form:"password" validate:"required"`
+	FormToken string `json:"form_token" form:"form_token" validate:"required"`
 }
 
 func ReadFromCreateUserRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *CreateUserRequest {
@@ -30,8 +30,8 @@ type CreateUserSurveyedRequest struct {
 	Phone       string `json:"phone" form:"phone" validate:"required"`
 	Email       string `json:"email" form:"email"`
 	IdDesa      string `json:"id_desa" form:"id_desa" validate:"required"`
-	Password    string `json:"password" form:"password" validate:"required"`
-	Alamat      string `json:"alamat" form:"alamat" validate:"required"`
+	// Password    string `json:"password" form:"password" validate:"required"`
+	Alamat string `json:"alamat" form:"alamat" validate:"required"`
 }
 
 func ReadFromCreateUserSurveyedRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *CreateUserSurveyedRequest {

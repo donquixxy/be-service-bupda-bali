@@ -3,12 +3,18 @@ package response
 import "github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 
 type FindVersionResponse struct {
-	SettingTitle string `json:"os"`
-	SettingName  string `json:"version"`
+	OSName  string `json:"os"`
+	Current string `json:"current"`
+	New     string `json:"new"`
 }
 
-func ToFindVersionResponse(setting *entity.Setting) (settingResponse FindVersionResponse) {
-	settingResponse.SettingTitle = setting.SettingTitle
-	settingResponse.SettingName = setting.SettingName
+func ToFindNewVersionResponse(setting []entity.Setting, os int) (settingResponse FindVersionResponse) {
+	if os == 1 {
+		settingResponse.OSName = "Android"
+	} else {
+		settingResponse.OSName = "iOS"
+	}
+	settingResponse.Current = setting[0].SettingName
+	settingResponse.New = setting[1].SettingName
 	return settingResponse
 }

@@ -1,9 +1,12 @@
 package controller
 
 import (
+	"context"
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/machinebox/graphql"
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/middleware"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
@@ -21,6 +24,7 @@ type UserControllerInterface interface {
 	UpdateUserProfile(c echo.Context) error
 	UpdateUserPhone(c echo.Context) error
 	FindUserFromBigis(c echo.Context) error
+	InveliRegister(c echo.Context) error
 }
 
 type UserControllerImplementation struct {
@@ -35,6 +39,59 @@ func NewUserController(
 	return &UserControllerImplementation{
 		UserServiceInterface: userServiceInterface,
 	}
+}
+
+func (controller *UserControllerImplementation) InveliRegister(c echo.Context) error {
+
+	client := graphql.NewClient("http://api-dev.cardlez.com:8089/register")
+
+	// make a request
+	req := graphql.NewRequest(`
+    mutation ($memberObject: MemberInput!) {
+			registerMember(memberObject: $memberObject) 
+    }
+	`)
+
+	// set any variables
+	req.Var("memberObject", map[string]interface{}{
+		"handphone":          "087762212441",
+		"memberName":         "Uchia Sasuke",
+		"birthPlace":         "Jembrana",
+		"birthDate":          "1963-08-04",
+		"emailAddress":       "",
+		"identityNumber":     "217404040863020",
+		"identityType":       1,
+		"noNPWP":             "242563773777",
+		"gender":             2,
+		"address":            "jakarta",
+		"alamatRumah2":       "",
+		"alamatTempatKerja1": "jakarta",
+		"alamatTempatKerja2": "",
+		"bankCode":           "014",
+		"noInduk":            "",
+		"fileNameFotoKTP":    "",
+		"fileNameFotoSelfie": "",
+		"bankAccountName":    "",
+		"bankAccountNo":      "",
+		"grade":              "bronze",
+		"maritalStatus":      0,
+		"recordStatus":       1,
+		"nationality":        0,
+		"memberType":         1,
+		"isLocked":           false,
+		"virtualAccountNo":   "",
+		"goldStatus":         0,
+		"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
+	})
+
+	// run it and capture the response
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+	}
+
+	return nil
 }
 
 func (controller *UserControllerImplementation) FindUserFromBigis(c echo.Context) error {

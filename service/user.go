@@ -52,7 +52,7 @@ type UserServiceImplementation struct {
 	UserProfileRepositoryInterface repository.UserProfileRepositoryInterface
 	PointRepositoryInterface       repository.PointRepositoryInterface
 	DesaRepositoryInterface        repository.DesaRepositoryInterface
-	InveliRepositoryInterface      invelirepository.InveliRegistarationRepositoryInterface
+	InveliRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 }
 
 func NewUserService(
@@ -64,7 +64,7 @@ func NewUserService(
 	userProfileRepositoryInterface repository.UserProfileRepositoryInterface,
 	pointRepositoryInterface repository.PointRepositoryInterface,
 	desaRepositoryInterface repository.DesaRepositoryInterface,
-	inveliRepositoryInterface invelirepository.InveliRegistarationRepositoryInterface,
+	inveliRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 ) UserServiceInterface {
 	return &UserServiceImplementation{
 		DB:                             db,
@@ -196,18 +196,18 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	}
 
 	// Hash password
-	password := strings.ReplaceAll(createUserRequest.Password, " ", "")
-	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+	// password := strings.ReplaceAll(createUserRequest.Password, " ", "")
+	// bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	// exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
 
 	// Begin Transcation
 	tx := service.DB.Begin()
 	exceptions.PanicIfError(tx.Error, requestId, service.Logger)
 
 	userEntity := &entity.User{
-		Id:              utilities.RandomUUID(),
-		Phone:           createUserRequest.Phone,
-		Password:        string(bcryptPassword),
+		Id:    utilities.RandomUUID(),
+		Phone: createUserRequest.Phone,
+		// Password:        string(bcryptPassword),
 		IdDesa:          createUserRequest.IdDesa,
 		IsActive:        1,
 		IdLimitPayLater: "1006588e-da08-4e1b-8cd4-c14fff9059e1", //default limit 0
@@ -254,7 +254,11 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 		MemberName: createUserRequest.NamaLengkap,
 	}
 
-	service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	// Register to inveli
+	err = service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create data inveli"}, service.Logger, service.DB)
+	}
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
@@ -296,18 +300,18 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	}
 
 	// Hash password
-	password := strings.ReplaceAll(createUserRequest.Password, " ", "")
-	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+	// password := strings.ReplaceAll(createUserRequest.Password, " ", "")
+	// bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	// exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
 
 	// Begin Transcation
 	tx := service.DB.Begin()
 	exceptions.PanicIfError(tx.Error, requestId, service.Logger)
 
 	userEntity := &entity.User{
-		Id:              utilities.RandomUUID(),
-		Phone:           createUserRequest.Phone,
-		Password:        string(bcryptPassword),
+		Id:    utilities.RandomUUID(),
+		Phone: createUserRequest.Phone,
+		// Password:        string(bcryptPassword),
 		IdDesa:          createUserRequest.IdDesa,
 		IsActive:        1,
 		IdLimitPayLater: "1006588e-da08-4e1b-8cd4-c14fff9059e1", //default limit 0
@@ -344,6 +348,20 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	// Save point to database
 	err = service.PointRepositoryInterface.CreatePoint(tx, pointEntity)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create point"}, service.Logger, service.DB)
+
+	inveliRegistrationModel := &inveli.InveliRegistrationModel{
+		Email:      emailLowerCase,
+		Phone:      createUserRequest.Phone,
+		NIK:        createUserRequest.NoIdentitas,
+		Address:    "nil",
+		MemberName: createUserRequest.NamaLengkap,
+	}
+
+	// Register to inveli
+	err = service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create data inveli"}, service.Logger, service.DB)
+	}
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)

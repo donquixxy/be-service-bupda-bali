@@ -17,7 +17,9 @@ type PpobControllerInterface interface {
 	InquiryPrepaidPln(c echo.Context) error
 	InquiryPostpaidPln(c echo.Context) error
 	GetPostpaidPdamProduct(c echo.Context) error
+	GetPostpaidTelcoProduct(c echo.Context) error
 	InquiryPostpaidPdam(c echo.Context) error
+	InquiryPostpaidTelco(c echo.Context) error
 }
 
 type PpobControllerImplementation struct {
@@ -81,10 +83,25 @@ func (controller *PpobControllerImplementation) GetPostpaidPdamProduct(c echo.Co
 	return c.JSON(http.StatusOK, responses)
 }
 
+func (controller *PpobControllerImplementation) GetPostpaidTelcoProduct(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	detailResponses := controller.PpobServiceInterface.GetPostpaidTelcoProduct(requestId)
+	responses := response.Response{Code: 200, Mssg: "success", Data: detailResponses, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
 func (controller *PpobControllerImplementation) InquiryPostpaidPdam(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	inquiryPostpaidPdamRequest := request.ReadFromInquiryPostpaidPdamRequestBody(c, requestId, controller.Logger)
 	detailResponses := controller.PpobServiceInterface.InquiryPostpaidPdam(requestId, inquiryPostpaidPdamRequest)
+	responses := response.Response{Code: 200, Mssg: "success", Data: detailResponses, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
+func (controller *PpobControllerImplementation) InquiryPostpaidTelco(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	inquiryPostpaidTelcoRequest := request.ReadFromInquiryPostpaidTelcoRequestBody(c, requestId, controller.Logger)
+	detailResponses := controller.PpobServiceInterface.InquiryPostpaidTelco(requestId, inquiryPostpaidTelcoRequest)
 	responses := response.Response{Code: 200, Mssg: "success", Data: detailResponses, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

@@ -37,6 +37,7 @@ type OrderServiceInterface interface {
 	CreateOrderPrepaidPulsa(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPrepaidRequest) (createOrderResponse response.CreateOrderResponse)
 	CreateOrderPrepaidPln(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPrepaidRequest) (createOrderResponse response.CreateOrderResponse)
 	CreateOrderPostpaidPdam(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse)
+	CreateOrderPostpaidTelco(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse)
 	CreateOrderPostpaidPln(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse)
 	FindOrderByUser(requestId, idUser string, orderStatus int) (orderResponses []response.FindOrderByUserResponse)
 	FindOrderSembakoById(requestId, idOrder string) (orderResponse response.FindOrderSembakoByIdResponse)
@@ -619,6 +620,252 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 
 	// create ppob detail pdam
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPostpaidPdam(tx, ppobDetailPdam)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+
+	createOrderResponse = response.ToCreateOrderResponse(orderEntity, paymentChannel)
+	return createOrderResponse
+}
+
+func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse) {
+	var err error
+
+	request.ValidateRequest(service.Validate, orderRequest, requestId, service.Logger)
+
+	// Get data user
+	userProfile, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(userProfile.User.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user not found"}, service.Logger)
+	}
+
+	tx := service.DB.Begin()
+	// make object
+	orderEntity := &entity.Order{}
+
+	// Generate number and id order
+	numberOrder := service.GenerateNumberOrder(idDesa)
+	orderEntity.Id = utilities.RandomUUID()
+	orderEntity.IdUser = idUser
+	orderEntity.IdDesa = idDesa
+	orderEntity.RefId = orderRequest.RefId
+	orderEntity.NumberOrder = numberOrder
+	orderEntity.NamaLengkap = userProfile.NamaLengkap
+	orderEntity.Email = userProfile.Email
+	orderEntity.Phone = userProfile.User.Phone
+	orderEntity.ProductType = productType
+	orderEntity.PaymentPoint = orderRequest.PaymentPoint
+	orderEntity.OrderedDate = time.Now()
+	orderEntity.PaymentMethod = orderRequest.PaymentMethod
+	orderEntity.PaymentChannel = orderRequest.PaymentChannel
+	orderEntity.TotalBill = orderRequest.TotalBill
+	orderEntity.PaymentFee = orderRequest.PaymentFee
+	orderEntity.OrderType = 2
+
+	// Check status transaksi
+	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + "cs"))
+	body, _ := json.Marshal(map[string]interface{}{
+		"commands": "checkstatus",
+		"ref_id":   orderRequest.RefId,
+		"username": config.GetConfig().Ppob.Username,
+		"sign":     hex.EncodeToString(sign[:]),
+	})
+
+	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+
+	urlString := config.GetConfig().Ppob.PostpaidUrl
+	// fmt.Println("url = ", urlString)
+	// URL
+	url, _ := url.Parse(urlString)
+
+	req := &http.Request{
+		Method: "POST",
+		URL:    url,
+		Header: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+		Body: reqBody,
+	}
+
+	// cek request
+
+	// reqDump, _ := httputil.DumpRequestOut(req, true)
+	// fmt.Printf("REQUEST:\n%s", string(reqDump))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("An Error Occured %v", err)
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	// Read response body
+	data, _ := ioutil.ReadAll(resp.Body)
+	fmt.Printf("body: %s\n", data)
+
+	defer resp.Body.Close()
+
+	trxData := &ppob.PostpaidCheckTransactionTelco{}
+	if err = json.Unmarshal([]byte(data), &trxData); err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	detailTagihan, _ := json.Marshal(trxData.Data.Desc.Tagihan)
+
+	var totalHarga float64
+	var product []string
+	var qty []int
+	var price []float64
+	// data order items ppob
+	orderItemsPpob := &entity.OrderItemPpob{}
+	orderItemsPpob.Id = utilities.RandomUUID()
+	orderItemsPpob.IdOrder = orderEntity.Id
+	orderItemsPpob.IdUser = userProfile.IdUser
+	orderItemsPpob.ProductCode = trxData.Data.Code
+	orderItemsPpob.ProductType = productType
+	orderItemsPpob.TotalTagihan = trxData.Data.Price
+	orderItemsPpob.TrId = trxData.Data.TrxId
+	orderItemsPpob.RefId = orderRequest.RefId
+	orderItemsPpob.CreatedAt = time.Now()
+	orderItemsPpob.BillDetail = fmt.Sprintf("%s\n", data)
+
+	ppobDetailTelco := &entity.PpobDetailPostpaidTelco{}
+	ppobDetailTelco.Id = utilities.RandomUUID()
+	ppobDetailTelco.IdOrderItemPpob = orderItemsPpob.Id
+	ppobDetailTelco.RefId = orderRequest.RefId
+	ppobDetailTelco.TrId = orderItemsPpob.TrId
+	ppobDetailTelco.CustomerId = trxData.Data.Hp
+	ppobDetailTelco.CustomerName = trxData.Data.TrName
+	ppobDetailTelco.Period = trxData.Data.Period
+	ppobDetailTelco.KodeArea = trxData.Data.Desc.KodeArea
+	ppobDetailTelco.Divre = trxData.Data.Desc.Divre
+	ppobDetailTelco.Datel = trxData.Data.Desc.Datel
+	ppobDetailTelco.StatusTopUp = -1
+	ppobDetailTelco.JsonDetailTagihan = fmt.Sprintf("%s\n", detailTagihan)
+
+	// check if cc
+	if orderRequest.PaymentMethod == "cc" {
+		product = append(product, orderItemsPpob.ProductCode)
+		qty = append(qty, 1)
+		price = append(price, orderItemsPpob.TotalTagihan)
+	}
+
+	totalHarga = trxData.Data.Price
+
+	if (totalHarga + orderRequest.PaymentFee) != (orderRequest.TotalBill + orderRequest.PaymentFee + orderEntity.PaymentPoint) {
+		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama"), requestId, []string{"harga tidak sama"}, service.Logger, tx)
+	}
+
+	// Get detail payment channel
+	paymentChannel, err := service.PaymentChannelRepositoryInterface.FindPaymentChannelByCode(tx, orderRequest.PaymentChannel)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get payment by code"}, service.Logger, tx)
+	if len(paymentChannel.Id) == 0 {
+		exceptions.PanicIfRecordNotFoundWithRollback(err, requestId, []string{"payment not found"}, service.Logger, tx)
+	}
+
+	switch orderRequest.PaymentMethod {
+	case "point":
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Point"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+	case "trf":
+		// buat nomor acak
+		rand.Seed(time.Now().UnixNano())
+		min := 111
+		max := 299
+		rand3Number := rand.Intn(max-min+1) + min
+
+		min2 := 11
+		max2 := 99
+		rand2Number := rand.Intn(max2-min2+1) + min
+
+		sisaPembagi := math.Mod(orderRequest.TotalBill, 1000)
+		var Total float64
+
+		if sisaPembagi < 100 {
+			Total = orderRequest.TotalBill + float64(rand3Number)
+		} else if sisaPembagi >= 100 {
+			Total = orderRequest.TotalBill + float64(rand2Number)
+		}
+
+		orderEntity.OrderStatus = 0
+		orderEntity.PaymentStatus = 0
+		orderEntity.PaymentNo = paymentChannel.NoAccountBank
+		orderEntity.PaymentName = paymentChannel.NamaPemilikBank
+		orderEntity.PaymentDueDate = null.NewTime(time.Now().Add(time.Hour*24), true)
+		orderEntity.PaymentCash = Total
+
+	case "va", "qris":
+		orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
+		res := service.PaymentServiceInterface.VaQrisPay(requestId,
+			&payment.IpaymuQrisVaRequest{
+				Name:           userProfile.NamaLengkap,
+				Phone:          userProfile.User.Phone,
+				Email:          userProfile.Email,
+				Amount:         orderEntity.PaymentCash,
+				ReferenceId:    numberOrder,
+				PaymentMethod:  orderRequest.PaymentMethod,
+				PaymentChannel: orderRequest.PaymentChannel,
+			},
+		)
+
+		if res.Status != 200 {
+			fmt.Println("LOG RESPONSE IPAYMU = ", res)
+			exceptions.PanicIfErrorWithRollback(errors.New("error response ipaymu"), requestId, []string{"Error response ipaymu"}, service.Logger, tx)
+		} else if res.Status == 200 {
+			paymentDueDate, _ := time.Parse("2006-01-02 15:04:05", res.Data.Expired)
+			orderEntity.PaymentStatus = 0
+			orderEntity.TrxId = res.Data.TransactionId
+			orderEntity.PaymentNo = res.Data.PaymentNo
+			orderEntity.PaymentName = res.Data.PaymentName
+			orderEntity.PaymentDueDate = null.NewTime(paymentDueDate, true)
+			orderEntity.OrderStatus = 0
+		}
+
+	case "cc":
+		// tambahkan ongkos kirim
+		product = append(product, "Payment Fee")
+		qty = append(qty, 1)
+		price = append(price, orderRequest.PaymentFee)
+
+		res := service.PaymentServiceInterface.CreditCardPay(requestId,
+			&payment.IpaymuCreditCardRequest{
+				Product:       product,
+				Qty:           qty,
+				Price:         price,
+				ReferenceId:   numberOrder,
+				BuyerName:     userProfile.NamaLengkap,
+				BuyerEmail:    userProfile.Email,
+				BuyerPhone:    userProfile.User.Phone,
+				PaymentMethod: orderRequest.PaymentMethod,
+			},
+		)
+
+		if res.Status != 200 {
+			fmt.Println("LOG RESPONSE IPAYMU = ", res)
+			exceptions.PanicIfErrorWithRollback(errors.New("error response ipaymu"), requestId, []string{"Error response ipaymu"}, service.Logger, tx)
+		} else if res.Status == 200 {
+			orderEntity.PaymentStatus = 0
+			orderEntity.PaymentNo = res.Data.Url
+			orderEntity.PaymentName = "Credit Card"
+			orderEntity.PaymentDueDate = null.NewTime(time.Now().Add(time.Hour*24), true)
+			orderEntity.OrderStatus = 0
+			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
+		}
+	}
+
+	// Create Order
+	err = service.OrderRepositoryInterface.CreateOrder(tx, orderEntity)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order"}, service.Logger, tx)
+
+	// Create order items
+	err = service.OrderItemPpobRepositoryInterface.CreateOrderItemPpob(tx, orderItemsPpob)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	// create ppob detail pdam
+	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPostpaidTelco(tx, ppobDetailTelco)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
 	commit := tx.Commit()

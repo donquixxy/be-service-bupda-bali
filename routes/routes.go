@@ -50,6 +50,7 @@ func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.
 	group.PUT("/user/update/forgotpassword", userControllerInterface.UpdateUserForgotPassword, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/user/update/profile", userControllerInterface.UpdateUserProfile, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/user/update/phone", userControllerInterface.UpdateUserPhone, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/user/inveli/register", userControllerInterface.InveliRegister)
 }
 
 func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterface controller.ProductDesaControllerInterface) {
@@ -106,8 +107,7 @@ func PaymentChannelRoute(e *echo.Echo, jwt config.Jwt, paymentChannelControllerI
 func SettingRoute(e *echo.Echo, jwt config.Jwt, settingControllerInterface controller.SettingControllerInterface) {
 	group := e.Group("api/v1")
 	group.GET("/setting/shippingcost", settingControllerInterface.FindSettingShippingCost, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.GET("/version/android", settingControllerInterface.FindAndroidVersion, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.GET("/version/ios", settingControllerInterface.FindIosVersion, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/version", settingControllerInterface.FindNewVersion, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func BannerRoute(e *echo.Echo, jwt config.Jwt, bannerControllerInterface controller.BannerControllerInterface) {
@@ -131,5 +131,7 @@ func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInter
 	group.POST("/prepaid/inquiry/pln", ppob.InquiryPrepaidPln, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/postpaid/inquiry/pln", ppob.InquiryPostpaidPln, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/postpaid/list/pdam", ppob.GetPostpaidPdamProduct, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/postpaid/list/telco", ppob.GetPostpaidTelcoProduct, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/postpaid/inquiry/pdam", ppob.InquiryPostpaidPdam, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/postpaid/inquiry/telco", ppob.InquiryPostpaidTelco, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }

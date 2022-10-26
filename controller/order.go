@@ -59,6 +59,9 @@ func (controller *OrderControllerImplementation) CreateOrder(c echo.Context) err
 		case "postpaid_pdam":
 			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
 			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPdam(requestId, idUser, idDesa, productType, request)
+		case "postpaid_telco":
+			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
+			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidTelco(requestId, idUser, idDesa, productType, request)
 		case "postpaid_pln":
 			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
 			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPln(requestId, idUser, idDesa, productType, request)
