@@ -201,11 +201,6 @@ func (service *OtpManagerServiceImplementation) GenerateFormToken(user modelServ
 func SendOTP(requestId string, phone string, otpCode string) {
 	message := fmt.Sprintf("Kode Verifikasi Akun Bupda Bali Anda adalah: %s *JANGAN BERIKAN KODE INI KEPADA SIAPAPUN, TERMASUK PIHAK BUPDA BALI* Hubungi 085960144218 untuk bantuan.", otpCode)
 
-	// fmt.Println("userkey = ", config.GetConfig().Sms.UserKey)
-	// fmt.Println("passkey = ", config.GetConfig().Sms.PassKey)
-	// fmt.Println("to = ", phone)
-	// fmt.Println("message = ", message)
-
 	postBody, _ := json.Marshal(map[string]string{
 		"userkey": config.GetConfig().Sms.UserKey,
 		"passkey": config.GetConfig().Sms.PassKey,
@@ -218,7 +213,7 @@ func SendOTP(requestId string, phone string, otpCode string) {
 	resp, err := http.Post("https://console.zenziva.net/masking/api/sendOTP", "application/json", responseBody)
 	//Handle Error
 	if err != nil {
-		log.Println("An Error Occured %v", err)
+		log.Printf("An Error Occured %v", err)
 	}
 	defer resp.Body.Close()
 	//Read the response body
@@ -227,5 +222,5 @@ func SendOTP(requestId string, phone string, otpCode string) {
 		log.Println(err)
 	}
 	sb := string(body)
-	fmt.Printf(sb)
+	log.Println(sb)
 }

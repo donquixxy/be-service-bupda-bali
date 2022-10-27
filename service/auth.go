@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -13,23 +14,27 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	modelService "github.com/tensuqiuwulu/be-service-bupda-bali/model/service"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type AuthServiceInterface interface {
 	Login(requestId string, loginRequest *request.LoginRequest) (loginResponse interface{})
+	LoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse)
+	InveliUbahPin(requestId string, ubahPinRequest *request.LoginInveliRequest) error
 	NewToken(requestId string, refreshToken string) (token string)
 	GenerateToken(user modelService.User) (token string, err error)
 	GenerateRefreshToken(user modelService.User) (token string, err error)
 }
 
 type AuthServiceImplementation struct {
-	DB                      *gorm.DB
-	ConfigJwt               config.Jwt
-	Validate                *validator.Validate
-	Logger                  *logrus.Logger
-	UserRepositoryInterface repository.UserRepositoryInterface
+	DB                            *gorm.DB
+	ConfigJwt                     config.Jwt
+	Validate                      *validator.Validate
+	Logger                        *logrus.Logger
+	UserRepositoryInterface       repository.UserRepositoryInterface
+	InveliAPIRespositoryInterface invelirepository.InveliAPIRepositoryInterface
 }
 
 func NewAuthService(
@@ -38,13 +43,15 @@ func NewAuthService(
 	validate *validator.Validate,
 	logger *logrus.Logger,
 	userRepositoryInterface repository.UserRepositoryInterface,
+	inveliAPIRespositoryInterface invelirepository.InveliAPIRepositoryInterface,
 ) AuthServiceInterface {
 	return &AuthServiceImplementation{
-		DB:                      db,
-		ConfigJwt:               configJwt,
-		Validate:                validate,
-		Logger:                  logger,
-		UserRepositoryInterface: userRepositoryInterface,
+		DB:                            db,
+		ConfigJwt:                     configJwt,
+		Validate:                      validate,
+		Logger:                        logger,
+		UserRepositoryInterface:       userRepositoryInterface,
+		InveliAPIRespositoryInterface: inveliAPIRespositoryInterface,
 	}
 }
 
@@ -87,6 +94,31 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 		exceptions.PanicIfUnauthorized(errors.New("account is not active"), requestId, []string{"not active"}, service.Logger)
 		return nil
 	}
+}
+
+func (service *AuthServiceImplementation) LoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse) {
+
+	request.ValidateRequest(service.Validate, loginInveliRequest, requestId, service.Logger)
+
+	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(loginInveliRequest.Phone, loginInveliRequest.Pin)
+
+	if len(loginResult.AccessToken) == 0 {
+		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"Invalid Credentials Inveli Login"}, service.Logger)
+	}
+
+	loginResponse = response.ToLoginInveliResponse(loginResult.AccessToken, loginResult.UserID)
+
+	return loginResponse
+}
+
+func (service *AuthServiceImplementation) InveliUbahPin(requestId string, ubahPinRequest *request.LoginInveliRequest) error {
+
+	request.ValidateRequest(service.Validate, ubahPinRequest, requestId, service.Logger)
+
+	ubahPinResult := service.InveliAPIRespositoryInterface.InveliUbahPin(ubahPinRequest.Phone, ubahPinRequest.Pin)
+
+	fmt.Println(ubahPinResult)
+	return nil
 }
 
 func (service *AuthServiceImplementation) NewToken(requestId string, refreshToken string) (token string) {

@@ -10,3 +10,14 @@ func ToLoginResponse(token string, refreshToken string) (loginResponse LoginResp
 	loginResponse.RefreshToken = refreshToken
 	return loginResponse
 }
+
+type LoginInveliResponse struct {
+	AccessToken string `json:"access_token"`
+	UserID      string `json:"userID"`
+}
+
+func ToLoginInveliResponse(accessToken string, userID string) (loginInveliResponse LoginInveliResponse) {
+	loginInveliResponse.AccessToken = accessToken
+	loginInveliResponse.UserID = userID
+	return loginInveliResponse
+}

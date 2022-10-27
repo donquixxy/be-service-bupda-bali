@@ -18,3 +18,16 @@ func ReadFromLoginRequestBody(c echo.Context, requestId string, logger *logrus.L
 	}
 	return loginRequest
 }
+
+type LoginInveliRequest struct {
+	Phone string `json:"phone" form:"phone" validate:"required"`
+	Pin   string `json:"pin" form:"pin" validate:"required"`
+}
+
+func ReadFromLoginInveliRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *LoginInveliRequest {
+	loginInveliRequest := &LoginInveliRequest{}
+	if err := c.Bind(loginInveliRequest); err != nil {
+		exceptions.PanicIfError(err, requestId, logger)
+	}
+	return loginInveliRequest
+}

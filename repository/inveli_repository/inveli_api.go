@@ -19,16 +19,23 @@ type InveliAPIRepositoryInterface interface {
 	InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error
 	InveliLogin(username, password string) *inveli.InveliLoginModel
 	InveliUbahPin(id, pin string) error
+	InveliUpdateMember() error
 }
 
 type InveliAPIRepositoryImplementation struct {
 }
 
-func NewInveliRegistarationRepository() InveliAPIRepositoryInterface {
+func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
 }
 
-func (service *InveliAPIRepositoryImplementation) InveliUbahPin(id, pin string) error {
+func (r *InveliAPIRepositoryImplementation) InveliUpdateMember() error {
+	graphql.NewClient("http://api-dev.cardlez.com:8089/query")
+
+	return nil
+}
+
+func (r *InveliAPIRepositoryImplementation) InveliUbahPin(id, pin string) error {
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
 
 	// make a request
@@ -57,7 +64,7 @@ func (service *InveliAPIRepositoryImplementation) InveliUbahPin(id, pin string) 
 	return nil
 }
 
-func (service *InveliAPIRepositoryImplementation) InveliLogin(username, password string) *inveli.InveliLoginModel {
+func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password string) *inveli.InveliLoginModel {
 
 	// Create Request
 	body, _ := json.Marshal(map[string]interface{}{
@@ -105,7 +112,7 @@ func (service *InveliAPIRepositoryImplementation) InveliLogin(username, password
 	return inveliLogin
 }
 
-func (service *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error {
+func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error {
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/register")
 
 	// make a request

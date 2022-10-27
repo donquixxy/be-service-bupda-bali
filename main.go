@@ -57,7 +57,6 @@ func main() {
 	e.Use(middleware.RequestID())
 
 	// Repository
-	inveliRegistrationRepository := invelirepository.NewInveliRegistarationRepository()
 	merchantRepository := repository.NewMerchantRepository(&appConfig.Database)
 	userRepository := repository.NewUserRepository(&appConfig.Database)
 	userProfileRepository := repository.NewUserProfileRepository(&appConfig.Database)
@@ -80,6 +79,7 @@ func main() {
 	ppobDetailRepository := repository.NewPpobDetailRepository(&appConfig.Database)
 	infoDesaRepository := repository.NewInfoDesaRepository(&appConfig.Database)
 	bannerRepository := repository.NewBannerRepository(&appConfig.Database)
+	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
 
 	// Service
 	bannerService := service.NewBannerService(
@@ -107,6 +107,7 @@ func main() {
 		validate,
 		logrusLogger,
 		userRepository,
+		inveliAPIRepository,
 	)
 	otpManagerService := service.NewOtpManagerService(
 		DBConn,
@@ -143,7 +144,7 @@ func main() {
 		userProfileRepository,
 		pointRepository,
 		desaRepository,
-		inveliRegistrationRepository,
+		inveliAPIRepository,
 	)
 	productDesaService := service.NewProductDesaService(
 		DBConn,
