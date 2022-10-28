@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/machinebox/graphql"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/inveli"
 )
 
@@ -54,81 +55,86 @@ func (r *InveliAPIRepositoryImplementation) InveliUbahPassword(id, password, tok
 	return nil
 }
 
-func (r *InveliAPIRepositoryImplementation) InveliUpdateMember() error {
-	graphql.NewClient("http://api-dev.cardlez.com:8089/query")
+func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile) error {
+	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
 
 	// make a request
-	// req := graphql.NewRequest(`
-	//   mutation ($member: MemberInput!, $memberDetail: MemberDetailInput!) {
-	// 		registerMember(member: $member, memberDetail: $memberDetail)
-	//   }{
-	// 		id
-	// 	}
-	// `)
+	req := graphql.NewRequest(`
+	  mutation ($member: MemberInput!, $memberDetail: MemberDetailInput!) {
+			registerMember(member: $member, memberDetail: $memberDetail)
+	  }{
+			id
+		}
+	`)
 
 	// set any variables
-	// req.Var("member", map[string]interface{}{
-	// 	"handphone":          inveliRegistrationModel.Phone,
-	// 	"memberName":         inveliRegistrationModel.MemberName,
-	// 	"birthPlace":         "",
-	// 	"birthDate":          "",
-	// 	"emailAddress":       inveliRegistrationModel.Email,
-	// 	"identityNumber":     inveliRegistrationModel.NIK,
-	// 	"identityType":       1,
-	// 	"noNPWP":             "",
-	// 	"gender":             1,
-	// 	"address":            inveliRegistrationModel.Address,
-	// 	"alamatRumah2":       "",
-	// 	"alamatTempatKerja1": "",
-	// 	"alamatTempatKerja2": "",
-	// 	"bankCode":           "014",
-	// 	"noInduk":            "",
-	// 	"fileNameFotoKTP":    "",
-	// 	"fileNameFotoSelfie": "",
-	// 	"bankAccountName":    "",
-	// 	"bankAccountNo":      "",
-	// 	"grade":              "bronze",
-	// 	"maritalStatus":      0,
-	// 	"recordStatus":       1,
-	// 	"nationality":        0,
-	// 	"memberType":         1,
-	// 	"isLocked":           false,
-	// 	"virtualAccountNo":   "",
-	// 	"goldStatus":         0,
-	// 	"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
-	// })
+	req.Var("member", map[string]interface{}{
+		"id":               user.InveliIDMember,
+		"address":          userProfile.AlamatSesuaiIdentitas,
+		"alamatRumah2":     "",
+		"phone":            user.Phone,
+		"province":         "",
+		"city":             "",
+		"kecamatan":        "",
+		"kelurahan":        "",
+		"kodePos":          "",
+		"isSendToCore":     true,
+		"referralMemberID": "",
+		"bankCode":         "",
+		"bankID":           "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
+		"bankAccountName":  "",
+		"bankAccountNo":    "",
+		"profileImage":     "Ranti Puspita_Selfie_ND2.jpg",
+		"birthDate":        "",
+		"identityNumber":   userProfile.NoIdentitas,
+	})
 
 	// set any variables
-	// req.Var("memberDetail", map[string]interface{}{
-	// 	"handphone":          inveliRegistrationModel.Phone,
-	// 	"memberName":         inveliRegistrationModel.MemberName,
-	// 	"birthPlace":         "",
-	// 	"birthDate":          "",
-	// 	"emailAddress":       inveliRegistrationModel.Email,
-	// 	"identityNumber":     inveliRegistrationModel.NIK,
-	// 	"identityType":       1,
-	// 	"noNPWP":             "",
-	// 	"gender":             1,
-	// 	"address":            inveliRegistrationModel.Address,
-	// 	"alamatRumah2":       "",
-	// 	"alamatTempatKerja1": "",
-	// 	"alamatTempatKerja2": "",
-	// 	"bankCode":           "014",
-	// 	"noInduk":            "",
-	// 	"fileNameFotoKTP":    "",
-	// 	"fileNameFotoSelfie": "",
-	// 	"bankAccountName":    "",
-	// 	"bankAccountNo":      "",
-	// 	"grade":              "bronze",
-	// 	"maritalStatus":      0,
-	// 	"recordStatus":       1,
-	// 	"nationality":        0,
-	// 	"memberType":         1,
-	// 	"isLocked":           false,
-	// 	"virtualAccountNo":   "",
-	// 	"goldStatus":         0,
-	// 	"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
-	// })
+	req.Var("memberDetail", map[string]interface{}{
+		"namaLengkapTanpaSingkatan": userProfile.NamaLengkap,
+		"statusPendidikan":          "",
+		"namaIbuKandung":            "",
+		"namaKontakDarurat":         "",
+		"nomorKontakDarurat":        "",
+		"hubunganKontakDarurat":     "",
+		"provinsi":                  "",
+		"kabupaten":                 "",
+		"kecamatan":                 "",
+		"kelurahan":                 "",
+		"kodePos":                   "",
+		"phone":                     user.Phone,
+		"provinsiTempatKerja":       "",
+		"kabupatenTempatKerja":      "",
+		"kecamatanTempatKerja":      "",
+		"kelurahanTempatKerja":      "",
+		"kodePosTempatKerja":        "",
+		"kodePekerjaan":             "",
+		"namaTempatKerja":           "default temp",
+		"kodeBidangUsaha":           "",
+		"penghasilanKotorPerTahun":  "0",
+		"kodeSumberPenghasilan":     "",
+		"maritalStatus":             "5",
+		"jumlahTanggungan":          "0",
+		"noIdentitasPasangan":       "",
+		"namaPasangan":              "",
+		"tanggalLahirPasangan":      "",
+		"pisahHarta":                "0",
+		"fileNameFotoKTP":           "Ranti Puspita_KTP_ND2.jpg",
+		"fileNameFotoSelfie":        "Ranti Puspita_Selfie_ND2.jpg",
+		"fileNameFotoKTP64":         "",
+		"fileNameFotoSelfie64":      "",
+		"isNewFotoKTP":              true,
+		"isNewFotoSelfie":           true,
+		"fileVideo64":               "",
+	})
+
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return err
+	}
+	fmt.Println(respData)
 
 	return nil
 }
