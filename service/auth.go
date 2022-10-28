@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	modelService "github.com/tensuqiuwulu/be-service-bupda-bali/model/service"
@@ -21,7 +22,8 @@ import (
 
 type AuthServiceInterface interface {
 	Login(requestId string, loginRequest *request.LoginRequest) (loginResponse interface{})
-	LoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse)
+	FirstTimeLoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse)
+	FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UpdateUserPasswordInveliRequest) error
 	InveliUbahPin(requestId string, ubahPinRequest *request.LoginInveliRequest) error
 	NewToken(requestId string, refreshToken string) (token string)
 	GenerateToken(user modelService.User) (token string, err error)
@@ -96,21 +98,53 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 	}
 }
 
-func (service *AuthServiceImplementation) LoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse) {
+func (service *AuthServiceImplementation) FirstTimeLoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse) {
 
 	request.ValidateRequest(service.Validate, loginInveliRequest, requestId, service.Logger)
 
 	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(loginInveliRequest.Phone, loginInveliRequest.Pin)
 
+	fmt.Println("inveli login : ", loginResult)
+
 	if len(loginResult.AccessToken) == 0 {
 		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
+
+	user := &entity.User{
+		InveliAccessToken: loginResult.AccessToken,
+		InveliIDMember:    loginResult.UserID,
+	}
+
+	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, loginInveliRequest.Phone)
+	if len(userResult.Id) == 0 {
+		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"User Not Found"}, service.Logger)
+	}
+
+	service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
 
 	loginResponse = response.ToLoginInveliResponse(loginResult.AccessToken, loginResult.UserID)
 
 	return loginResponse
 }
 
+func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UpdateUserPasswordInveliRequest) error {
+
+	request.ValidateRequest(service.Validate, ubahPasswordInveliRequest, requestId, service.Logger)
+
+	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, ubahPasswordInveliRequest.Phone)
+	if len(userResult.Id) == 0 {
+		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"User Not Found"}, service.Logger)
+	}
+
+	err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, userResult.InveliAccessToken)
+
+	if err != nil {
+		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"cant change password"}, service.Logger)
+	}
+
+	return nil
+
+}
 func (service *AuthServiceImplementation) InveliUbahPin(requestId string, ubahPinRequest *request.LoginInveliRequest) error {
 
 	request.ValidateRequest(service.Validate, ubahPinRequest, requestId, service.Logger)

@@ -10,7 +10,8 @@ import (
 func AuthRoute(e *echo.Echo, authControllerInterface controller.AuthControllerInterface) {
 	group := e.Group("api/v1")
 	group.POST("/auth/login", authControllerInterface.Login, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.POST("/auth/login/inveli", authControllerInterface.LoginInveli, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/auth/login/inveli", authControllerInterface.FirstTimeLoginInveli, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/auth/inveli/ubah-password", authControllerInterface.FirstTimeUbahPasswordInveli, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/auth/new-token", authControllerInterface.NewToken, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 

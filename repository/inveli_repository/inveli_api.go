@@ -18,6 +18,7 @@ import (
 type InveliAPIRepositoryInterface interface {
 	InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error
 	InveliLogin(username, password string) *inveli.InveliLoginModel
+	InveliUbahPassword(id, password, token string) error
 	InveliUbahPin(id, pin string) error
 	InveliUpdateMember() error
 }
@@ -29,8 +30,105 @@ func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
 }
 
+func (r *InveliAPIRepositoryImplementation) InveliUbahPassword(id, password, token string) error {
+	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
+	req := graphql.NewRequest(`
+		mutation UpdatePassword($id: String!, $password: String!) {
+			updatePassword(id: $id, newPassword: $password) {
+				id
+				newPassword
+			}
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer  "+token)
+	req.Var("id", id)
+	req.Var("password", password)
+	ctx := context.Background()
+	var respData map[string]interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
 func (r *InveliAPIRepositoryImplementation) InveliUpdateMember() error {
 	graphql.NewClient("http://api-dev.cardlez.com:8089/query")
+
+	// make a request
+	// req := graphql.NewRequest(`
+	//   mutation ($member: MemberInput!, $memberDetail: MemberDetailInput!) {
+	// 		registerMember(member: $member, memberDetail: $memberDetail)
+	//   }{
+	// 		id
+	// 	}
+	// `)
+
+	// set any variables
+	// req.Var("member", map[string]interface{}{
+	// 	"handphone":          inveliRegistrationModel.Phone,
+	// 	"memberName":         inveliRegistrationModel.MemberName,
+	// 	"birthPlace":         "",
+	// 	"birthDate":          "",
+	// 	"emailAddress":       inveliRegistrationModel.Email,
+	// 	"identityNumber":     inveliRegistrationModel.NIK,
+	// 	"identityType":       1,
+	// 	"noNPWP":             "",
+	// 	"gender":             1,
+	// 	"address":            inveliRegistrationModel.Address,
+	// 	"alamatRumah2":       "",
+	// 	"alamatTempatKerja1": "",
+	// 	"alamatTempatKerja2": "",
+	// 	"bankCode":           "014",
+	// 	"noInduk":            "",
+	// 	"fileNameFotoKTP":    "",
+	// 	"fileNameFotoSelfie": "",
+	// 	"bankAccountName":    "",
+	// 	"bankAccountNo":      "",
+	// 	"grade":              "bronze",
+	// 	"maritalStatus":      0,
+	// 	"recordStatus":       1,
+	// 	"nationality":        0,
+	// 	"memberType":         1,
+	// 	"isLocked":           false,
+	// 	"virtualAccountNo":   "",
+	// 	"goldStatus":         0,
+	// 	"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
+	// })
+
+	// set any variables
+	// req.Var("memberDetail", map[string]interface{}{
+	// 	"handphone":          inveliRegistrationModel.Phone,
+	// 	"memberName":         inveliRegistrationModel.MemberName,
+	// 	"birthPlace":         "",
+	// 	"birthDate":          "",
+	// 	"emailAddress":       inveliRegistrationModel.Email,
+	// 	"identityNumber":     inveliRegistrationModel.NIK,
+	// 	"identityType":       1,
+	// 	"noNPWP":             "",
+	// 	"gender":             1,
+	// 	"address":            inveliRegistrationModel.Address,
+	// 	"alamatRumah2":       "",
+	// 	"alamatTempatKerja1": "",
+	// 	"alamatTempatKerja2": "",
+	// 	"bankCode":           "014",
+	// 	"noInduk":            "",
+	// 	"fileNameFotoKTP":    "",
+	// 	"fileNameFotoSelfie": "",
+	// 	"bankAccountName":    "",
+	// 	"bankAccountNo":      "",
+	// 	"grade":              "bronze",
+	// 	"maritalStatus":      0,
+	// 	"recordStatus":       1,
+	// 	"nationality":        0,
+	// 	"memberType":         1,
+	// 	"isLocked":           false,
+	// 	"virtualAccountNo":   "",
+	// 	"goldStatus":         0,
+	// 	"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
+	// })
 
 	return nil
 }

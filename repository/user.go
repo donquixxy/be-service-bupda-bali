@@ -9,6 +9,7 @@ import (
 type UserRepositoryInterface interface {
 	CreateUser(db *gorm.DB, user *entity.User) error
 	UpdateUser(db *gorm.DB, idUser string, user *entity.User) error
+	SaveUserInveliToken(db *gorm.DB, idUser string, user *entity.User) error
 	FindUserByPhone(db *gorm.DB, phone string) (*entity.User, error)
 	FindUserById(db *gorm.DB, idUser string) (*entity.UserProfile, error)
 	SaveUserRefreshToken(DB *gorm.DB, idUser string, refreshToken string) (int64, error)
@@ -29,6 +30,14 @@ func NewUserRepository(
 
 func (repository *UserRepositoryImplementation) CreateUser(db *gorm.DB, user *entity.User) error {
 	result := db.Create(user)
+	return result.Error
+}
+
+func (repository *UserRepositoryImplementation) SaveUserInveliToken(db *gorm.DB, idUser string, user *entity.User) error {
+	result := db.
+		Model(&entity.User{}).
+		Where("id = ?", idUser).
+		Updates(user)
 	return result.Error
 }
 
