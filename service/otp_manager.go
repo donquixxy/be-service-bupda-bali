@@ -85,7 +85,7 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 
 	// Find user by phone
 	if sendOtpBySmsRequest.TypeOtp == 1 {
-		user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, resultOtp.Phone)
+		user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, sendOtpBySmsRequest.Phone)
 		if len(user.Id) != 0 {
 			exceptions.PanicIfBadRequest(errors.New("phone already user"), requestId, []string{"phone already user"}, service.Logger)
 		}
@@ -110,7 +110,7 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 		exceptions.PanicIfError(createOtpErr, requestId, service.Logger)
 
 	} else {
-		log.Println("phone limit = ", resultOtp.PhoneLimit)
+		// log.Println("phone limit = ", resultOtp.PhoneLimit)
 
 		if resultOtp.PhoneLimit <= 0 {
 			if resultOtp.FreezeDueDate.Time.Before(time.Now()) {

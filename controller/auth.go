@@ -13,7 +13,6 @@ import (
 
 type AuthControllerInterface interface {
 	Login(c echo.Context) error
-	FirstTimeLoginInveli(c echo.Context) error
 	FirstTimeUbahPasswordInveli(c echo.Context) error
 	NewToken(c echo.Context) error
 }
@@ -42,19 +41,11 @@ func (controller *AuthControllerImplementation) Login(c echo.Context) error {
 	return c.JSON(http.StatusOK, respon)
 }
 
-func (controller *AuthControllerImplementation) FirstTimeLoginInveli(c echo.Context) error {
-	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
-	request := request.ReadFromLoginInveliRequestBody(c, requestId, controller.Logger)
-	loginInveliResponse := controller.AuthServiceInterface.FirstTimeLoginInveli(requestId, request)
-	respon := response.Response{Code: 200, Mssg: "success", Data: loginInveliResponse, Error: []string{}}
-	return c.JSON(http.StatusOK, respon)
-}
-
 func (controller *AuthControllerImplementation) FirstTimeUbahPasswordInveli(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
-	request := request.ReadFromUpdateUserPasswordInveliRequestBody(c, requestId, controller.Logger)
-	controller.AuthServiceInterface.FirstTimeUbahPasswordInveli(requestId, request)
-	respon := response.Response{Code: 200, Mssg: "success", Data: nil, Error: []string{}}
+	request := request.ReadFromLoginInveliRequestBody(c, requestId, controller.Logger)
+	loginInveliResponse := controller.AuthServiceInterface.FirstTimeUbahPasswordInveli(requestId, request)
+	respon := response.Response{Code: 200, Mssg: "success", Data: loginInveliResponse, Error: []string{}}
 	return c.JSON(http.StatusOK, respon)
 }
 

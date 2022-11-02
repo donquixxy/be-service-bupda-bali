@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -22,21 +23,20 @@ import (
 
 type AuthServiceInterface interface {
 	Login(requestId string, loginRequest *request.LoginRequest) (loginResponse interface{})
-	FirstTimeLoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse)
-	FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UpdateUserPasswordInveliRequest) error
-	InveliUbahPin(requestId string, ubahPinRequest *request.LoginInveliRequest) error
+	FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UbahPasswordInveliRequest) error
 	NewToken(requestId string, refreshToken string) (token string)
 	GenerateToken(user modelService.User) (token string, err error)
 	GenerateRefreshToken(user modelService.User) (token string, err error)
 }
 
 type AuthServiceImplementation struct {
-	DB                            *gorm.DB
-	ConfigJwt                     config.Jwt
-	Validate                      *validator.Validate
-	Logger                        *logrus.Logger
-	UserRepositoryInterface       repository.UserRepositoryInterface
-	InveliAPIRespositoryInterface invelirepository.InveliAPIRepositoryInterface
+	DB                             *gorm.DB
+	ConfigJwt                      config.Jwt
+	Validate                       *validator.Validate
+	Logger                         *logrus.Logger
+	UserRepositoryInterface        repository.UserRepositoryInterface
+	InveliAPIRespositoryInterface  invelirepository.InveliAPIRepositoryInterface
+	UserProfileRepositoryInterface repository.UserProfileRepositoryInterface
 }
 
 func NewAuthService(
@@ -46,14 +46,16 @@ func NewAuthService(
 	logger *logrus.Logger,
 	userRepositoryInterface repository.UserRepositoryInterface,
 	inveliAPIRespositoryInterface invelirepository.InveliAPIRepositoryInterface,
+	userProfileRepositoryInterface repository.UserProfileRepositoryInterface,
 ) AuthServiceInterface {
 	return &AuthServiceImplementation{
-		DB:                            db,
-		ConfigJwt:                     configJwt,
-		Validate:                      validate,
-		Logger:                        logger,
-		UserRepositoryInterface:       userRepositoryInterface,
-		InveliAPIRespositoryInterface: inveliAPIRespositoryInterface,
+		DB:                             db,
+		ConfigJwt:                      configJwt,
+		Validate:                       validate,
+		Logger:                         logger,
+		UserRepositoryInterface:        userRepositoryInterface,
+		InveliAPIRespositoryInterface:  inveliAPIRespositoryInterface,
+		UserProfileRepositoryInterface: userProfileRepositoryInterface,
 	}
 }
 
@@ -98,16 +100,14 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 	}
 }
 
-func (service *AuthServiceImplementation) FirstTimeLoginInveli(requestId string, loginInveliRequest *request.LoginInveliRequest) (loginResponse response.LoginInveliResponse) {
+func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, passwordFromInveli string) string {
 
-	request.ValidateRequest(service.Validate, loginInveliRequest, requestId, service.Logger)
+	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(phone, passwordFromInveli)
 
-	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(loginInveliRequest.Phone, loginInveliRequest.Pin)
-
-	fmt.Println("inveli login : ", loginResult)
+	// fmt.Println("inveli login : ", loginResult)
 
 	if len(loginResult.AccessToken) == 0 {
-		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"Invalid Credentials Inveli Login"}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
 
 	user := &entity.User{
@@ -115,44 +115,74 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(requestId string,
 		InveliIDMember:    loginResult.UserID,
 	}
 
-	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, loginInveliRequest.Phone)
+	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
 	if len(userResult.Id) == 0 {
-		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"User Not Found"}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
 	}
 
 	service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
 
-	loginResponse = response.ToLoginInveliResponse(loginResult.AccessToken, loginResult.UserID)
+	// loginResponse = response.ToLoginInveliResponse(loginResult.AccessToken, loginResult.UserID)
 
-	return loginResponse
+	return loginResult.AccessToken
 }
 
-func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UpdateUserPasswordInveliRequest) error {
+func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken string) {
+
+}
+
+func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UbahPasswordInveliRequest) error {
 
 	request.ValidateRequest(service.Validate, ubahPasswordInveliRequest, requestId, service.Logger)
 
+	accessToken := service.FirstTimeLoginInveli(ubahPasswordInveliRequest.Phone, ubahPasswordInveliRequest.PasswordFromInveli)
+
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, ubahPasswordInveliRequest.Phone)
 	if len(userResult.Id) == 0 {
-		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"User Not Found"}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("user not found"), requestId, []string{"User Not Found"}, service.Logger)
 	}
 
-	err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, userResult.InveliAccessToken)
+	fmt.Println("userResult : ", userResult)
+
+	resp, err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, accessToken)
 
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("invalid credentials"), requestId, []string{"cant change password"}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{err.Error()}, service.Logger)
+	}
+
+	if resp == nil {
+		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{"error change password inveli"}, service.Logger)
+	}
+
+	// Hash password
+	password := strings.ReplaceAll(ubahPasswordInveliRequest.NewPassword, " ", "")
+	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+
+	userUpdateEntity := &entity.User{
+		Password: string(bcryptPassword),
+	}
+
+	errr := service.UserRepositoryInterface.UpdateUser(service.DB, userResult.Id, userUpdateEntity)
+
+	if errr != nil {
+		exceptions.PanicIfBadRequest(errors.New("failed change password to db"), requestId, []string{"failed to update password user db"}, service.Logger)
+	}
+
+	userProfile, _ := service.UserProfileRepositoryInterface.FindUserProfileByIdUser(service.DB, userResult.Id)
+
+	if len(userProfile.Id) == 0 {
+		exceptions.PanicIfBadRequest(errors.New("user profile not found"), requestId, []string{"User Profile Not Found"}, service.Logger)
+	}
+
+	errrr := service.InveliAPIRespositoryInterface.InveliUpdateMember(userResult, userProfile, accessToken)
+
+	if errrr != nil {
+		exceptions.PanicIfBadRequest(errors.New("failed activate account"), requestId, []string{errrr.Error()}, service.Logger)
 	}
 
 	return nil
 
-}
-func (service *AuthServiceImplementation) InveliUbahPin(requestId string, ubahPinRequest *request.LoginInveliRequest) error {
-
-	request.ValidateRequest(service.Validate, ubahPinRequest, requestId, service.Logger)
-
-	ubahPinResult := service.InveliAPIRespositoryInterface.InveliUbahPin(ubahPinRequest.Phone, ubahPinRequest.Pin)
-
-	fmt.Println(ubahPinResult)
-	return nil
 }
 
 func (service *AuthServiceImplementation) NewToken(requestId string, refreshToken string) (token string) {

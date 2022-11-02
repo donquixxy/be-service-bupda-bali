@@ -47,7 +47,7 @@ func main() {
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Skipper:      nil,
 		ErrorMessage: "Request Timeout",
-		Timeout:      15 * time.Second,
+		Timeout:      50 * time.Second,
 	}))
 	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
 		DisableStackAll:   true,
@@ -108,6 +108,7 @@ func main() {
 		logrusLogger,
 		userRepository,
 		inveliAPIRepository,
+		userProfileRepository,
 	)
 	otpManagerService := service.NewOtpManagerService(
 		DBConn,
@@ -286,6 +287,10 @@ func main() {
 		ppobService,
 	)
 
+	testingInveliController := controller.NewInveliTestingController(
+		logrusLogger,
+	)
+
 	// Route
 	routes.BannerRoute(e, appConfig.Jwt, bannerController)
 	routes.MerchantRoute(e, appConfig.Jwt, merchantController)
@@ -305,6 +310,7 @@ func main() {
 	routes.SettingRoute(e, appConfig.Jwt, settingController)
 	routes.UserShippingAddressRoute(e, appConfig.Jwt, userShippingAddressController)
 	routes.PpobRoute(e, appConfig.Jwt, ppobController)
+	routes.InveliTestRoutes(e, testingInveliController)
 
 	// Careful shutdown
 	go func() {

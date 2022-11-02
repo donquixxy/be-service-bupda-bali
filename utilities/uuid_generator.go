@@ -18,3 +18,10 @@ func GenerateRefId() (refId string) {
 	refId = "PPOB" + fmt.Sprint(generateCode)
 	return refId
 }
+
+func GenerateEmail() (email string) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	generateCode := 100000 + rand.Intn(999999-100000)
+	email = "test" + fmt.Sprint(generateCode) + "@gmail.com"
+	return email
+}

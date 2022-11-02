@@ -10,8 +10,7 @@ import (
 func AuthRoute(e *echo.Echo, authControllerInterface controller.AuthControllerInterface) {
 	group := e.Group("api/v1")
 	group.POST("/auth/login", authControllerInterface.Login, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.POST("/auth/login/inveli", authControllerInterface.FirstTimeLoginInveli, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.POST("/auth/inveli/ubah-password", authControllerInterface.FirstTimeUbahPasswordInveli, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/auth/ubah-password/inveli", authControllerInterface.FirstTimeUbahPasswordInveli, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/auth/new-token", authControllerInterface.NewToken, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
@@ -52,7 +51,12 @@ func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.
 	group.PUT("/user/update/forgotpassword", userControllerInterface.UpdateUserForgotPassword, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/user/update/profile", userControllerInterface.UpdateUserProfile, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/user/update/phone", userControllerInterface.UpdateUserPhone, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.POST("/user/inveli/register", userControllerInterface.InveliRegister)
+	group.POST("/user/account-inveli", userControllerInterface.InveliRegister)
+}
+
+func InveliTestRoutes(e *echo.Echo, inveliTestControllerInterface controller.InveliTestingController) {
+	group := e.Group("api/v1")
+	group.POST("/inveli/test", inveliTestControllerInterface.GetAccountInfo, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterface controller.ProductDesaControllerInterface) {

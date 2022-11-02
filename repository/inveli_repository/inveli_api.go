@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"strings"
 
@@ -19,9 +18,8 @@ import (
 type InveliAPIRepositoryInterface interface {
 	InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error
 	InveliLogin(username, password string) *inveli.InveliLoginModel
-	InveliUbahPassword(id, password, token string) error
-	InveliUbahPin(id, pin string) error
-	InveliUpdateMember() error
+	InveliUbahPassword(id, password, token string) (interface{}, error)
+	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string) error
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -31,53 +29,56 @@ func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
 }
 
-func (r *InveliAPIRepositoryImplementation) InveliUbahPassword(id, password, token string) error {
+func (r *InveliAPIRepositoryImplementation) InveliUbahPassword(id, password, token string) (interface{}, error) {
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
 	req := graphql.NewRequest(`
-		mutation UpdatePassword($id: String!, $password: String!) {
-			updatePassword(id: $id, newPassword: $password) {
-				id
-				newPassword
-			}
+		mutation ($id: String!, $password: String!) {
+			changePassword(id: $id, newPassword: $password)
 		}
 	`)
 
-	req.Header.Set("Authorization", "Bearer  "+token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Var("id", id)
 	req.Var("password", password)
 	ctx := context.Background()
-	var respData map[string]interface{}
+
+	fmt.Println("request : ", req)
+
+	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println(err)
-		return err
+		return respData, err
 	}
 
-	return nil
+	// fmt.Println("response ubah password : ", respData)
+
+	return respData, nil
 }
 
-func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile) error {
+func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string) error {
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
 
 	// make a request
 	req := graphql.NewRequest(`
 	  mutation ($member: MemberInput!, $memberDetail: MemberDetailInput!) {
-			registerMember(member: $member, memberDetail: $memberDetail)
-	  }{
-			id
-		}
+			updateMember(member: $member, memberDetail: $memberDetail) {
+				id
+			}
+	  }
 	`)
 
 	// set any variables
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Var("member", map[string]interface{}{
 		"id":               user.InveliIDMember,
 		"address":          userProfile.AlamatSesuaiIdentitas,
 		"alamatRumah2":     "",
 		"phone":            user.Phone,
-		"province":         "",
-		"city":             "",
-		"kecamatan":        "",
+		"province":         "D1FE2F93-9A39-4710-8C03-E266C9F1BEE1",
+		"city":             "CEABD366-D270-4286-93A9-418B274C9A23",
+		"kecamatan":        "Setia Budi",
 		"kelurahan":        "",
-		"kodePos":          "",
+		"kodePos":          "Kuningan Timur",
 		"isSendToCore":     true,
 		"referralMemberID": "",
 		"bankCode":         "",
@@ -85,34 +86,34 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"bankAccountName":  "",
 		"bankAccountNo":    "",
 		"profileImage":     "Ranti Puspita_Selfie_ND2.jpg",
-		"birthDate":        "",
+		"birthDate":        "2021-08-20 00:00:00.0000000",
 		"identityNumber":   userProfile.NoIdentitas,
 	})
 
 	// set any variables
 	req.Var("memberDetail", map[string]interface{}{
 		"namaLengkapTanpaSingkatan": userProfile.NamaLengkap,
-		"statusPendidikan":          "",
-		"namaIbuKandung":            "",
-		"namaKontakDarurat":         "",
-		"nomorKontakDarurat":        "",
-		"hubunganKontakDarurat":     "",
-		"provinsi":                  "",
-		"kabupaten":                 "",
-		"kecamatan":                 "",
-		"kelurahan":                 "",
-		"kodePos":                   "",
+		"statusPendidikan":          "D73D02FD-4F8A-4AB9-B4AD-4AC01963B8B0",
+		"namaIbuKandung":            "ibu",
+		"namaKontakDarurat":         "ibu",
+		"nomorKontakDarurat":        user.Phone,
+		"hubunganKontakDarurat":     "anak",
+		"provinsi":                  "D1FE2F93-9A39-4710-8C03-E266C9F1BEE1",
+		"kabupaten":                 "58FD0E0F-12F0-45CF-B960-9F0F5951F759",
+		"kecamatan":                 "Jatinegara",
+		"kelurahan":                 "Kampung Melayu",
+		"kodePos":                   "13320",
 		"phone":                     user.Phone,
-		"provinsiTempatKerja":       "",
-		"kabupatenTempatKerja":      "",
-		"kecamatanTempatKerja":      "",
-		"kelurahanTempatKerja":      "",
-		"kodePosTempatKerja":        "",
-		"kodePekerjaan":             "",
+		"provinsiTempatKerja":       "D1FE2F93-9A39-4710-8C03-E266C9F1BEE1",
+		"kabupatenTempatKerja":      "CEABD366-D270-4286-93A9-418B274C9A23",
+		"kecamatanTempatKerja":      "Setia Budi",
+		"kelurahanTempatKerja":      "Kuningan Timur",
+		"kodePosTempatKerja":        "12950",
+		"kodePekerjaan":             "241BEE62-DC7C-4CAE-82AA-F44B75266B94",
 		"namaTempatKerja":           "default temp",
-		"kodeBidangUsaha":           "",
+		"kodeBidangUsaha":           "7342E607-ED2D-4E32-837E-9A41FEB3EC7F",
 		"penghasilanKotorPerTahun":  "0",
-		"kodeSumberPenghasilan":     "",
+		"kodeSumberPenghasilan":     "4C4C1204-514B-42AF-B47C-3E92B4EA05E5",
 		"maritalStatus":             "5",
 		"jumlahTanggungan":          "0",
 		"noIdentitasPasangan":       "",
@@ -128,42 +129,15 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"fileVideo64":               "",
 	})
 
+	fmt.Println("req : ", req)
+
 	ctx := context.Background()
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println(err)
 		return err
 	}
-	fmt.Println(respData)
-
-	return nil
-}
-
-func (r *InveliAPIRepositoryImplementation) InveliUbahPin(id, pin string) error {
-	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
-
-	// make a request
-	req := graphql.NewRequest(`
-		mutation ($object: MemberInput!) {
-			updateMember(member: $object)
-			{
-				id
-			}
-		}
-	`)
-
-	req.Var("memberObject", map[string]interface{}{
-		"id":       id,
-		"loginPin": pin,
-	})
-
-	// run it and capture the response
-	ctx := context.Background()
-	var respData interface{}
-	if err := client.Run(ctx, req, &respData); err != nil {
-		log.Println(err)
-		return err
-	}
+	fmt.Println("Response update member", respData)
 
 	return nil
 }
@@ -192,8 +166,8 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 		Body: reqBody,
 	}
 
-	reqDump, _ := httputil.DumpRequestOut(req, true)
-	fmt.Printf("REQUEST:\n%s", string(reqDump))
+	// reqDump, _ := httputil.DumpRequestOut(req, true)
+	// fmt.Printf("REQUEST:\n%s", string(reqDump))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -202,7 +176,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 
 	// Read response body
 	data, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("body: %s\n", data)
+	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
 
@@ -262,9 +236,11 @@ func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistratio
 	ctx := context.Background()
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
-		log.Println(err)
+		// log.Println(err)
 		return err
 	}
 
 	return nil
 }
+
+func (r *InveliAPIRepositoryImplementation) InveliGetMemberInfo(phone string) {}
