@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -142,7 +141,7 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 		exceptions.PanicIfBadRequest(errors.New("user not found"), requestId, []string{"User Not Found"}, service.Logger)
 	}
 
-	fmt.Println("userResult : ", userResult)
+	// fmt.Println("userResult : ", userResult)
 
 	resp, err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, accessToken)
 

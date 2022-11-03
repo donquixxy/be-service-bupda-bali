@@ -73,7 +73,7 @@ func (service *MerchantServiceImplementation) CreateMerchantApproveList(requestI
 		IdUser:        idUser,
 		IdDesa:        idDesa,
 		NamaLengkap:   userProfile.NamaLengkap,
-		ApproveStatus: 0,
+		ApproveStatus: 1,
 		MerchantName:  createcMerchantApproveListRequest.NamaMerchant,
 		CreatedAt:     time.Now(),
 	}

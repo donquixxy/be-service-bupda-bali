@@ -3,7 +3,6 @@ package invelirepository
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -32,21 +31,27 @@ func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 func (r *InveliAPIRepositoryImplementation) InveliUbahPassword(id, password, token string) (interface{}, error) {
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
 	req := graphql.NewRequest(`
-		mutation ($id: String!, $password: String!) {
-			changePassword(id: $id, newPassword: $password)
+		mutation ($id: String!, $password: String!, $isactivation: Boolean!, $isnewmember: Boolean!) {
+			changePassword(
+				id: $id, 
+				newPassword: $password, 
+				isactivation: $isactivation, 
+				isnewmember: $isnewmember)
 		}
 	`)
 
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Var("id", id)
 	req.Var("password", password)
+	req.Var("isactivation", false)
+	req.Var("isnewmember", true)
 	ctx := context.Background()
 
-	fmt.Println("request : ", req)
+	// fmt.Println("request : ", req)
 
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
-		log.Println(err)
+		log.Println("error change password : ", err)
 		return respData, err
 	}
 
@@ -129,15 +134,15 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"fileVideo64":               "",
 	})
 
-	fmt.Println("req : ", req)
+	// fmt.Println("req : ", req)
 
 	ctx := context.Background()
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
-		log.Println(err)
+		log.Println("error update member inveli : ", err)
 		return err
 	}
-	fmt.Println("Response update member", respData)
+	// fmt.Println("Response update member", respData)
 
 	return nil
 }
@@ -236,7 +241,7 @@ func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistratio
 	ctx := context.Background()
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
-		// log.Println(err)
+		log.Println("error inveli registration : ", err)
 		return err
 	}
 
