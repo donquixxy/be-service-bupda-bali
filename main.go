@@ -82,6 +82,13 @@ func main() {
 	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
 
 	// Service
+	paylaterService := service.NewPaylaterService(
+		DBConn,
+		validate,
+		logrusLogger,
+		userRepository,
+		inveliAPIRepository,
+	)
 	bannerService := service.NewBannerService(
 		DBConn,
 		validate,
@@ -222,6 +229,10 @@ func main() {
 	)
 
 	// Controller
+	paylaterController := controller.NewPaylaterController(
+		logrusLogger,
+		paylaterService,
+	)
 	bannerController := controller.NewBannerController(
 		logrusLogger,
 		bannerService,
@@ -292,6 +303,7 @@ func main() {
 	)
 
 	// Route
+	routes.PaylaterRoute(e, appConfig.Jwt, paylaterController)
 	routes.BannerRoute(e, appConfig.Jwt, bannerController)
 	routes.MerchantRoute(e, appConfig.Jwt, merchantController)
 	routes.InfoDesaRoute(e, appConfig.Jwt, infoDesaController)

@@ -92,6 +92,8 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
+		service.FirstTimeLoginInveli(loginRequest.Phone, loginRequest.Password)
+
 		return loginResponse
 	} else {
 		exceptions.PanicIfUnauthorized(errors.New("account is not active"), requestId, []string{"not active"}, service.Logger)
@@ -120,8 +122,6 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	}
 
 	service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
-
-	// loginResponse = response.ToLoginInveliResponse(loginResult.AccessToken, loginResult.UserID)
 
 	return loginResult.AccessToken
 }

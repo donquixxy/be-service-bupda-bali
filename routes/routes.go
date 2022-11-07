@@ -141,3 +141,8 @@ func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInter
 	group.POST("/postpaid/inquiry/pdam", ppob.InquiryPostpaidPdam, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/postpaid/inquiry/telco", ppob.InquiryPostpaidTelco, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
+
+func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface controller.PaylaterControllerInterface) {
+	group := e.Group("api/v1")
+	group.POST("/paylater/create", paylaterControllerInterface.CreatePaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}

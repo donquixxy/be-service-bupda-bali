@@ -12,8 +12,11 @@ type UserRepositoryInterface interface {
 	SaveUserInveliToken(db *gorm.DB, idUser string, user *entity.User) error
 	FindUserByPhone(db *gorm.DB, phone string) (*entity.User, error)
 	FindUserById(db *gorm.DB, idUser string) (*entity.UserProfile, error)
+	FindUserById2(db *gorm.DB, idUser string) (*entity.User, error)
 	SaveUserRefreshToken(DB *gorm.DB, idUser string, refreshToken string) (int64, error)
 	FindUserByIdAndRefreshToken(DB *gorm.DB, idUser string, refresh_token string) (*entity.User, error)
+	SaveUserAccount(db *gorm.DB, userAccounts []*entity.UserAccount) error
+	GetUserAccountByID(db *gorm.DB, idUser string) (*entity.UserAccount, error)
 }
 
 type UserRepositoryImplementation struct {
@@ -28,6 +31,22 @@ func NewUserRepository(
 	}
 }
 
+func (repository *UserRepositoryImplementation) FindUserById2(db *gorm.DB, idUser string) (*entity.User, error) {
+	user := &entity.User{}
+	result := db.
+		Where("id = ?", idUser).
+		Find(user)
+	return user, result.Error
+}
+
+func (repository *UserRepositoryImplementation) GetUserAccountByID(db *gorm.DB, idUser string) (*entity.UserAccount, error) {
+	userAccounts := &entity.UserAccount{}
+	result := db.
+		Where("id_user = ?", idUser).
+		Find(&userAccounts)
+	return userAccounts, result.Error
+}
+
 func (repository *UserRepositoryImplementation) CreateUser(db *gorm.DB, user *entity.User) error {
 	result := db.Create(user)
 	return result.Error
@@ -38,6 +57,11 @@ func (repository *UserRepositoryImplementation) SaveUserInveliToken(db *gorm.DB,
 		Model(&entity.User{}).
 		Where("id = ?", idUser).
 		Updates(user)
+	return result.Error
+}
+
+func (repository *UserRepositoryImplementation) SaveUserAccount(db *gorm.DB, userAccounts []*entity.UserAccount) error {
+	result := db.Create(&userAccounts)
 	return result.Error
 }
 
