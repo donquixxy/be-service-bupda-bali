@@ -17,6 +17,7 @@ type UserRepositoryInterface interface {
 	FindUserByIdAndRefreshToken(DB *gorm.DB, idUser string, refresh_token string) (*entity.User, error)
 	SaveUserAccount(db *gorm.DB, userAccounts []*entity.UserAccount) error
 	GetUserAccountByID(db *gorm.DB, idUser string) (*entity.UserAccount, error)
+	GetUserAccountPaylaterByID(db *gorm.DB, idUser string) (*entity.UserAccount, error)
 }
 
 type UserRepositoryImplementation struct {
@@ -37,6 +38,15 @@ func (repository *UserRepositoryImplementation) FindUserById2(db *gorm.DB, idUse
 		Where("id = ?", idUser).
 		Find(user)
 	return user, result.Error
+}
+
+func (repository *UserRepositoryImplementation) GetUserAccountPaylaterByID(db *gorm.DB, idUser string) (*entity.UserAccount, error) {
+	userAccount := &entity.UserAccount{}
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("id_product = ?", "BD8F6976-AC73-4EAD-91A0-9B871B30BF8F").
+		Find(userAccount)
+	return userAccount, result.Error
 }
 
 func (repository *UserRepositoryImplementation) GetUserAccountByID(db *gorm.DB, idUser string) (*entity.UserAccount, error) {

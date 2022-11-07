@@ -27,6 +27,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"gopkg.in/guregu/null.v4"
 	"gorm.io/gorm"
@@ -70,6 +71,7 @@ type OrderServiceImplementation struct {
 	OrderItemPpobRepositoryInterface  repository.OrderItemPpobRepositoryInterface
 	PpobDetailRepositoryInterface     repository.PpobDetailRepositoryInterface
 	DesaRepositoryInterface           repository.DesaRepositoryInterface
+	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 }
 
 func NewOrderService(
@@ -88,6 +90,7 @@ func NewOrderService(
 	orderItemPpobRepositoryInterface repository.OrderItemPpobRepositoryInterface,
 	ppobDetailRepositoryInterface repository.PpobDetailRepositoryInterface,
 	desaRepositoryInterface repository.DesaRepositoryInterface,
+	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
 		DB:                                db,
@@ -105,6 +108,7 @@ func NewOrderService(
 		OrderItemPpobRepositoryInterface:  orderItemPpobRepositoryInterface,
 		PpobDetailRepositoryInterface:     ppobDetailRepositoryInterface,
 		DesaRepositoryInterface:           desaRepositoryInterface,
+		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
 	}
 }
 
@@ -359,6 +363,21 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+
+	case "paylater":
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	}
 
 	// Create Order
@@ -608,6 +627,20 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+	case "paylater":
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	}
 
 	// Create Order
@@ -854,6 +887,22 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+
+	case "paylater":
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+
 	}
 
 	// Create Order
@@ -1113,6 +1162,21 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+
+	case "paylater":
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	}
 
 	// Create Order
@@ -1361,6 +1425,21 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+
+	case "paylater":
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	}
 
 	// Create Order
@@ -1586,6 +1665,21 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+
+	case "paylater":
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	}
 
 	// Create Order

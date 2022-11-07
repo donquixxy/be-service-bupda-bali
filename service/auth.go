@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"log"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	modelService "github.com/tensuqiuwulu/be-service-bupda-bali/model/service"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -92,7 +94,12 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
-		service.FirstTimeLoginInveli(loginRequest.Phone, loginRequest.Password)
+		service.FirstTimeLoginInveli(user.Phone, loginRequest.Password)
+
+		accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, user.Id)
+		if len(accountInfo.Id) == 0 {
+			service.GetUserAccountInveli(user.InveliIDMember, user.InveliAccessToken, user.Id)
+		}
 
 		return loginResponse
 	} else {
@@ -126,8 +133,27 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	return loginResult.AccessToken
 }
 
-func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken string) {
+func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken, IdUser string) {
+	accountInfo, _ := service.InveliAPIRespositoryInterface.GetAccountInfo(IDMember, AccessToken)
+	if accountInfo == nil {
+		exceptions.PanicIfBadRequest(errors.New("akun belum aktif"), "requestId", []string{"akun belum aktif"}, service.Logger)
+	}
 
+	var userAccounts []*entity.UserAccount
+	for _, account := range accountInfo {
+		userAccount := &entity.UserAccount{}
+		userAccount.Id = utilities.RandomUUID()
+		userAccount.IdUser = IdUser
+		userAccount.IdAccount = account.ID
+		userAccount.AccountName = account.AccountName2
+		userAccount.IdProduct = account.ProductID
+		userAccounts = append(userAccounts, userAccount)
+	}
+
+	go func() {
+		err := service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
+		log.Println("error save user account : ", err)
+	}()
 }
 
 func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UbahPasswordInveliRequest) error {

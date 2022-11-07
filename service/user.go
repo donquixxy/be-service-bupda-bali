@@ -41,6 +41,7 @@ type UserServiceInterface interface {
 	UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest)
 	UpdateUserPhone(requestId string, idUser string, updateUserPhoneRequest *request.UpdateUserPhoneRequest)
 	FindUserFromBigis(requestId string, requestUser *request.FindBigisResponsesRequest) (userBigisResponse response.FindUserFromBigisResponse)
+	// FindTabunganMobile(requestId string, IdUser string) (userResponse response.FindTabunganMobileResponse)
 }
 
 type UserServiceImplementation struct {
@@ -78,6 +79,14 @@ func NewUserService(
 		InveliRepositoryInterface:      inveliRepositoryInterface,
 	}
 }
+
+// func (service *UserServiceImplementation) FindTabunganMobile(requestId string, IdUser string) (userResponse response.FindTabunganMobileResponse) {
+// 	user, _ := service.UserRepositoryInterface.FindUserById(requestId, IdUser)
+// 	if user == nil {
+// 		exceptions.PanicIfNotFound(errors.New("user not found"), requestId, []string{"user not found"}, service.Logger)
+// 	}
+
+// }
 
 func (service *UserServiceImplementation) FindUserFromBigis(requestId string, requestUser *request.FindBigisResponsesRequest) (userBigisResponse response.FindUserFromBigisResponse) {
 	// Create Request

@@ -201,6 +201,7 @@ func main() {
 		orderItemPpobRepository,
 		ppobDetailRepository,
 		desaRepository,
+		inveliAPIRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,

@@ -20,7 +20,7 @@ type InveliAPIRepositoryInterface interface {
 	InveliLogin(username, password string) *inveli.InveliLoginModel
 	InveliUbahPassword(id, password, token string) (interface{}, error)
 	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string) error
-	GetAccountInfo(IDMember, token string) ([]*inveli.InveliAcountInfo, error)
+	GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error)
 	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64) error
 }
 
@@ -33,15 +33,20 @@ func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 
 func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64) error {
 
+	// log.Println("token : ", token)
+	// log.Println("IDMember : ", IDMember)
+	// log.Println("AccountID : ", AccountID)
+
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
+
 	req := graphql.NewRequest(`
-		mutation ($inputLoanObject: LoanObjectInput!) {
-			createLoan(loanInputParam: $inputLoanObject) {
+		mutation ($loanInputParam: LoanInput!) {
+			createLoan(loanInputParam: $loanInputParam) 
 		}
 	`)
 
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Var("inputLoanObject", map[string]interface{}{
+	req.Var("loanInputParam", map[string]interface{}{
 		"accountID":             AccountID,
 		"memberID":              IDMember,
 		"loanProductID":         "7CC2EEEC-9DC0-4456-A755-53A50F28990C",
@@ -49,7 +54,7 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 		"loanAmount":            Amount,
 		"interestPercent":       0,
 		"isAutoApprove":         true,
-		"memberLoanAttachments": "",
+		"memberLoanAttachments": []string{},
 	})
 
 	ctx := context.Background()
@@ -218,7 +223,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 
 	// Read response body
 	data, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Printf("body: %s\n", data)
+	fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
 
@@ -285,8 +290,13 @@ func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistratio
 	return nil
 }
 
-func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token string) ([]*inveli.InveliAcountInfo, error) {
+func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error) {
+	log.Println("IDMember : ", IDMember)
+	log.Println("token : ", token)
 	client := graphql.NewClient("http://api-dev.cardlez.com:8089/query")
+
+	// keyword := "1793AEF9-ABD4-4333-9CDC-02EDB8C68359"
+	// token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbURhdGUiOiIyMDIyLTExLTA3VDIwOjQzOjExLjcwOCswNzowMCIsImV4cCI6MTY5OTM2NDU5MSwiaWQiOiJNVGM1TTBGRlJqa3RRVUpFTkMwME16TXpMVGxEUkVNdE1ESkZSRUk0UXpZNE16VTUiLCJpc0FkbWluIjpmYWxzZSwiaXNzIjoiQ2FyZGxlekFQSSIsInVzZXJFbWFpbCI6InRlbnN1MTA0Y3JlYXRvcnM5OEBnbWFpbC5jb20iLCJ1c2VySUQiOiIxNzkzQUVGOS1BQkQ0LTQzMzMtOUNEQy0wMkVEQjhDNjgzNTkifQ.KzMA9OyEun46m7mObFhjv5aK9T9Z_z0DQxVV1UK4AJY"
 
 	req := graphql.NewRequest(` 
 		query ($keyword: String!) {	
@@ -322,11 +332,9 @@ func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token strin
 		log.Println(err)
 		return nil, err
 	}
+	log.Println("req ", respData)
 
-	fmt.Println("req", req)
-	fmt.Println("response", respData)
-
-	userInfos := []*inveli.InveliAcountInfo{}
+	userInfos := []inveli.InveliAcountInfo{}
 	for _, value := range respData.(map[string]interface{})["accounts"].([]interface{}) {
 		var userInfo inveli.InveliAcountInfo
 		userInfo.ID = value.(map[string]interface{})["id"].(string)
@@ -342,14 +350,16 @@ func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token strin
 		userInfo.MemberType = int(value.(map[string]interface{})["memberType"].(float64))
 		userInfo.Email = value.(map[string]interface{})["email"].(string)
 		userInfo.Phone = value.(map[string]interface{})["phone"].(string)
-		userInfo.Balance = int(value.(map[string]interface{})["balance"].(float64))
+		userInfo.Balance = float64(value.(map[string]interface{})["balance"].(float64))
 		userInfo.BalanceMerchant = int(value.(map[string]interface{})["balanceMerchant"].(float64))
 		userInfo.ClosingBalance = int(value.(map[string]interface{})["closingBalance"].(float64))
 		userInfo.BlockingBalance = int(value.(map[string]interface{})["blockingBalance"].(float64))
 		userInfo.ProductType = int(value.(map[string]interface{})["productType"].(float64))
 		userInfo.IsPrimary = value.(map[string]interface{})["isPrimary"].(bool)
-		userInfos = append(userInfos, &userInfo)
+		userInfos = append(userInfos, userInfo)
 	}
+
+	fmt.Println(userInfos)
 
 	return userInfos, nil
 }
