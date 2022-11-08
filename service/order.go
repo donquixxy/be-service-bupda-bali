@@ -627,6 +627,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 			orderEntity.OrderStatus = 0
 			orderEntity.PaymentCash = orderRequest.TotalBill + orderEntity.PaymentFee
 		}
+
 	case "paylater":
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -902,6 +903,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
 
 	}
 

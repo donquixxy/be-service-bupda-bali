@@ -49,7 +49,7 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 	req.Var("loanInputParam", map[string]interface{}{
 		"accountID":             AccountID,
 		"memberID":              IDMember,
-		"loanProductID":         "7CC2EEEC-9DC0-4456-A755-53A50F28990C",
+		"loanProductID":         "687145C6-EF15-47D1-AE2B-D1113AB40A0C",
 		"tenor":                 1,
 		"loanAmount":            Amount,
 		"interestPercent":       0,
@@ -127,7 +127,7 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"kelurahan":        "",
 		"kodePos":          "Kuningan Timur",
 		"isSendToCore":     true,
-		"referralMemberID": "",
+		"referralMemberID": "BUPDA Denpasar",
 		"bankCode":         "",
 		"bankID":           "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
 		"bankAccountName":  "",
