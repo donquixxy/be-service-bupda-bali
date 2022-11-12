@@ -20,24 +20,54 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/payment"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
+	"gorm.io/gorm"
 )
 
 type PaymentServiceInterface interface {
 	VaQrisPay(requestId string, paymentRequest *payment.IpaymuQrisVaRequest) *payment.IpaymuQrisVaResponse
 	CreditCardPay(requestId string, paymentRequest *payment.IpaymuCreditCardRequest) *payment.IpaymuCreditCardResponse
 	CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus
+	PayPaylater(requestId, idUser string) error
 }
 
 type PaymentServiceImplementation struct {
-	Logger *logrus.Logger
+	DB                           *gorm.DB
+	Logger                       *logrus.Logger
+	UserRepositoryInterface      repository.UserRepositoryInterface
+	InveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface
 }
 
 func NewPaymentService(
+	db *gorm.DB,
 	logger *logrus.Logger,
+	userRepository repository.UserRepositoryInterface,
+	inveliAPIRepository invelirepository.InveliAPIRepositoryInterface,
 ) PaymentServiceInterface {
 	return &PaymentServiceImplementation{
-		Logger: logger,
+		DB:                           db,
+		Logger:                       logger,
+		UserRepositoryInterface:      userRepository,
+		InveliAPIRepositoryInterface: inveliAPIRepository,
 	}
+}
+
+func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser string) error {
+	var err error
+
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	return nil
 }
 
 func (service *PaymentServiceImplementation) CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus {

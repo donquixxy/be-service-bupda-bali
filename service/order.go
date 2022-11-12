@@ -53,6 +53,7 @@ type OrderServiceInterface interface {
 	PrepaidPulsaTopup(requestId string, customerId, refId, productCode string) *ppob.TopupPrepaidPulsaResponse
 	OrderInquiryPrepaidPln(requestId string, customerId string) (inquiryPrepaidPlnResponse response.InquiryPrepaidPlnResponse)
 	CallbackPpobTransaction(requestId string, ppobCallbackRequest *request.PpobCallbackRequest)
+	FindOrderPayLaterByIdUser(requestId, idUser string) (orderResponse []response.FindOrderByUserResponse)
 }
 
 type OrderServiceImplementation struct {
@@ -131,6 +132,17 @@ func (service *OrderServiceImplementation) GenerateNumberOrder(idDesa string) (n
 		}
 	}
 	return numberOrder
+}
+
+func (service *OrderServiceImplementation) FindOrderPayLaterByIdUser(requestId, idUser string) (orderResponse []response.FindOrderByUserResponse) {
+	orders, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+	fmt.Println("masuk service")
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(orders) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
+	}
+	orderResponse = response.ToFindOrderByUserResponse(orders)
+	return orderResponse
 }
 
 func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse) {
@@ -369,15 +381,57 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
 		}
+
+		log.Println("log tunggakan mulai")
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		log.Println("log tunggakan", tunggakanPaylater)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
+		log.Println("log tunggakan selesai")
+
+		log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
+
+		log.Println("log create paylater mulai")
 		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
 		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+		log.Println("log create paylater selesai")
+
+		log.Println("Masuk sini")
+
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
 		}
 
 		orderEntity.OrderStatus = 1
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		var isMerchant float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -633,15 +687,57 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
 		}
+
+		log.Println("log tunggakan mulai")
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		log.Println("log tunggakan", tunggakanPaylater)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
+		log.Println("log tunggakan selesai")
+
+		log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
+
+		log.Println("log create paylater mulai")
 		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
 		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+		log.Println("log create paylater selesai")
+
+		log.Println("Masuk sini")
+
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
 		}
 
 		orderEntity.OrderStatus = 1
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		var isMerchant float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -894,9 +990,34 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
 		}
+
+		log.Println("log tunggakan mulai")
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		log.Println("log tunggakan", tunggakanPaylater)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
+		log.Println("log tunggakan selesai")
+
+		log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
+
+		log.Println("log create paylater mulai")
 		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
 		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+		log.Println("log create paylater selesai")
+
+		log.Println("Masuk sini")
+
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
 		}
 
 		orderEntity.OrderStatus = 1
@@ -905,6 +1026,21 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
+		var isMerchant float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -1170,15 +1306,57 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
 		}
+
+		log.Println("log tunggakan mulai")
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		log.Println("log tunggakan", tunggakanPaylater)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
+		log.Println("log tunggakan selesai")
+
+		log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
+
+		log.Println("log create paylater mulai")
 		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
 		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+		log.Println("log create paylater selesai")
+
+		log.Println("Masuk sini")
+
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
 		}
 
 		orderEntity.OrderStatus = 1
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		var isMerchant float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -1433,15 +1611,57 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
 		}
+
+		log.Println("log tunggakan mulai")
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		log.Println("log tunggakan", tunggakanPaylater)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
+		log.Println("log tunggakan selesai")
+
+		log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
+
+		log.Println("log create paylater mulai")
 		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
 		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+		log.Println("log create paylater selesai")
+
+		log.Println("Masuk sini")
+
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
 		}
 
 		orderEntity.OrderStatus = 1
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		var isMerchant float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -1506,7 +1726,12 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity.PaymentMethod = orderRequest.PaymentMethod
 	orderEntity.PaymentChannel = orderRequest.PaymentChannel
 	orderEntity.TotalBill = orderRequest.TotalBill
-	orderEntity.PaymentFee = orderRequest.PaymentFee
+	if orderRequest.PaymentMethod == "Paylater" {
+		orderEntity.PaymentFee = 0
+	} else {
+		orderEntity.PaymentFee = orderRequest.PaymentFee
+	}
+
 	orderEntity.OrderType = 1
 
 	// create order items from cart
@@ -1673,15 +1898,57 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
 		}
+
+		log.Println("log tunggakan mulai")
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		log.Println("log tunggakan", tunggakanPaylater)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
+		log.Println("log tunggakan selesai")
+
+		log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
+
+		log.Println("log create paylater mulai")
 		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
 		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+		log.Println("log create paylater selesai")
+
+		log.Println("Masuk sini")
+
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
 		}
 
 		orderEntity.OrderStatus = 1
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		var isMerchant float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order

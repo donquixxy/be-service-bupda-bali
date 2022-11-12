@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ type AuthServiceInterface interface {
 	NewToken(requestId string, refreshToken string) (token string)
 	GenerateToken(user modelService.User) (token string, err error)
 	GenerateRefreshToken(user modelService.User) (token string, err error)
+	GetUserAccountInveli(inveliIDMember string, inveliAccessToken string, userID string)
 }
 
 type AuthServiceImplementation struct {
@@ -96,11 +98,6 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		service.FirstTimeLoginInveli(user.Phone, loginRequest.Password)
 
-		accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, user.Id)
-		if len(accountInfo.Id) == 0 {
-			service.GetUserAccountInveli(user.InveliIDMember, user.InveliAccessToken, user.Id)
-		}
-
 		return loginResponse
 	} else {
 		exceptions.PanicIfUnauthorized(errors.New("account is not active"), requestId, []string{"not active"}, service.Logger)
@@ -112,11 +109,14 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 
 	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(phone, passwordFromInveli)
 
-	// fmt.Println("inveli login : ", loginResult)
-
 	if len(loginResult.AccessToken) == 0 {
-		exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
+		log.Println("login inveli gagal")
+		return ""
+		// exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
+
+	fmt.Println("access token : ", loginResult.AccessToken)
+	fmt.Println("id member : ", loginResult.UserID)
 
 	user := &entity.User{
 		InveliAccessToken: loginResult.AccessToken,
@@ -124,36 +124,51 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	}
 
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
+	fmt.Println("user result : ", userResult)
 	if len(userResult.Id) == 0 {
 		exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
 	}
 
-	service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
+	err := service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
+	fmt.Println("error save user inveli token : ", err)
+	if err != nil {
+		exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
+	}
+	fmt.Println("success save user inveli token")
 
 	return loginResult.AccessToken
 }
 
 func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken, IdUser string) {
 	accountInfo, _ := service.InveliAPIRespositoryInterface.GetAccountInfo(IDMember, AccessToken)
+	// fmt.Println("accountInfo : ", accountInfo)
 	if accountInfo == nil {
-		exceptions.PanicIfBadRequest(errors.New("akun belum aktif"), "requestId", []string{"akun belum aktif"}, service.Logger)
-	}
+		log.Println("akun belum aktif")
+	} else {
+		go func() {
+			codeBIN, err := service.InveliAPIRespositoryInterface.GetKodeBIN(AccessToken)
+			if err != nil {
+				log.Println("Error Get code bin", err.Error())
+			}
+			var userAccounts []*entity.UserAccount
+			for _, account := range accountInfo {
+				userAccount := &entity.UserAccount{}
+				userAccount.Id = utilities.RandomUUID()
+				userAccount.IdUser = IdUser
+				userAccount.IdAccount = account.ID
+				userAccount.AccountName = account.AccountName2
+				userAccount.IdProduct = account.ProductID
+				userAccount.Code = account.Code
+				userAccount.BIN = codeBIN
+				userAccounts = append(userAccounts, userAccount)
+			}
 
-	var userAccounts []*entity.UserAccount
-	for _, account := range accountInfo {
-		userAccount := &entity.UserAccount{}
-		userAccount.Id = utilities.RandomUUID()
-		userAccount.IdUser = IdUser
-		userAccount.IdAccount = account.ID
-		userAccount.AccountName = account.AccountName2
-		userAccount.IdProduct = account.ProductID
-		userAccounts = append(userAccounts, userAccount)
-	}
+			// fmt.Println("userAccounts : ", &userAccounts)
 
-	go func() {
-		err := service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
-		log.Println("error save user account : ", err)
-	}()
+			err = service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
+			log.Println("error save user account : ", err)
+		}()
+	}
 }
 
 func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId string, ubahPasswordInveliRequest *request.UbahPasswordInveliRequest) error {

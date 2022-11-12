@@ -21,3 +21,11 @@ type InveliAcountInfo struct {
 	ProductType     int     `json:"productType"`
 	IsPrimary       bool    `json:"isPrimary"`
 }
+
+type InveliAkunStatusAktif struct {
+	Data struct {
+		Member struct {
+			RecordStatus int `json:"recordStatus"`
+		} `json:"member"`
+	} `json:"data"`
+}

@@ -1,6 +1,8 @@
 package response
 
-import "github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
+import (
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
+)
 
 type FindPaymentChannelResponse struct {
 	Id                 string  `json:"id"`
@@ -13,15 +15,27 @@ type FindPaymentChannelResponse struct {
 	AdminFeePercentage float64 `json:"admin_fee_percentage"`
 }
 
-func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel) (paymentChannelResponses []FindPaymentChannelResponse) {
+func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statusUser bool, biayaTanggungRenteng float64) (paymentChannelResponses []FindPaymentChannelResponse) {
 	for _, paymentChannel := range paymentChannels {
 		paymentChannelResponse := FindPaymentChannelResponse{}
+		if paymentChannel.Code == "paylater" && !statusUser {
+			continue
+		}
 		paymentChannelResponse.Id = paymentChannel.Id
 		paymentChannelResponse.IdPaymentMethod = paymentChannel.IdPaymentMethod
 		paymentChannelResponse.Name = paymentChannel.Name
 		paymentChannelResponse.Code = paymentChannel.Code
 		paymentChannelResponse.Logo = paymentChannel.Logo
 		paymentChannelResponse.MethodCode = paymentChannel.PaymentMethod.MethodCode
+
+		// hasilBagi := strconv.FormatFloat(jmlOrder/1000000, 'f', 0, 64)
+
+		if paymentChannel.Code == "paylater" {
+			paymentChannelResponse.AdminFee = biayaTanggungRenteng
+		} else {
+			paymentChannelResponse.AdminFee = paymentChannel.AdminFee
+		}
+		paymentChannelResponse.AdminFeePercentage = paymentChannel.AdminFeePercentage
 		paymentChannelResponse.AdminFee = paymentChannel.AdminFee
 		paymentChannelResponse.AdminFeePercentage = paymentChannel.AdminFeePercentage
 		paymentChannelResponses = append(paymentChannelResponses, paymentChannelResponse)

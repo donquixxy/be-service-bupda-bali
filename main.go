@@ -153,6 +153,7 @@ func main() {
 		pointRepository,
 		desaRepository,
 		inveliAPIRepository,
+		authService,
 	)
 	productDesaService := service.NewProductDesaService(
 		DBConn,
@@ -169,6 +170,7 @@ func main() {
 		cartRepository,
 		productDesaRepository,
 		settingRepository,
+		desaRepository,
 	)
 	promoService := service.NewPromoService(
 		DBConn,
@@ -183,7 +185,10 @@ func main() {
 		pointRepository,
 	)
 	paymentService := service.NewPaymentService(
+		DBConn,
 		logrusLogger,
+		userRepository,
+		inveliAPIRepository,
 	)
 	orderService := service.NewOrderService(
 		DBConn,
@@ -208,6 +213,9 @@ func main() {
 		validate,
 		logrusLogger,
 		paymentChannelRepository,
+		inveliAPIRepository,
+		userRepository,
+		orderRepository,
 	)
 	settingService := service.NewSettingService(
 		DBConn,
@@ -233,6 +241,7 @@ func main() {
 	paylaterController := controller.NewPaylaterController(
 		logrusLogger,
 		paylaterService,
+		paymentService,
 	)
 	bannerController := controller.NewBannerController(
 		logrusLogger,

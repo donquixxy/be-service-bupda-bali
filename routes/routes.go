@@ -51,12 +51,21 @@ func UserRoute(e *echo.Echo, jwt config.Jwt, userControllerInterface controller.
 	group.PUT("/user/update/forgotpassword", userControllerInterface.UpdateUserForgotPassword, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/user/update/profile", userControllerInterface.UpdateUserProfile, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.PUT("/user/update/phone", userControllerInterface.UpdateUserPhone, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.POST("/user/account-inveli", userControllerInterface.InveliRegister)
+	group.GET("/user/get-balance-paylater", userControllerInterface.GetSimpananKhususBalance, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/user/get-balance-bima", userControllerInterface.GetUserAccountBimaByID, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/user/aktivasi-inveli", userControllerInterface.AktivasiAkunInveli, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/user/get-tunggakan-paylater", userControllerInterface.GetTunggakanPaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/user/get-limit-paylater", userControllerInterface.GetLimitPayLater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/user/get-va-tab-bima", userControllerInterface.GetVATabBimaNasabah, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	// group.GET("/user/get-riwayat-pinjaman", userControllerInterface.GetRiwayatPinjaman, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func InveliTestRoutes(e *echo.Echo, inveliTestControllerInterface controller.InveliTestingController) {
 	group := e.Group("api/v1")
 	group.POST("/inveli/test", inveliTestControllerInterface.GetAccountInfo, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/inveli/test-akun-info", inveliTestControllerInterface.GetStatusAkun, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/inveli/balance", inveliTestControllerInterface.GetBalanceAccount, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/inveli/get-riwayat-pinjaman", inveliTestControllerInterface.GetRiwayatPinjaman, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterface controller.ProductDesaControllerInterface) {
@@ -103,6 +112,7 @@ func OrderRoute(e *echo.Echo, jwt config.Jwt, orderControllerInterface controlle
 	group.PUT("/order/complete", orderControllerInterface.CompleteOrderById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/order/update/payment", orderControllerInterface.UpdateOrderPaymentStatus, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/order/callback/ppob", orderControllerInterface.CallbackPpobTransaction, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/order/paylater", orderControllerInterface.FindOrderPayLater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func PaymentChannelRoute(e *echo.Echo, jwt config.Jwt, paymentChannelControllerInterface controller.PaymentChannelControllerInterface) {
@@ -145,4 +155,6 @@ func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInter
 func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface controller.PaylaterControllerInterface) {
 	group := e.Group("api/v1")
 	group.POST("/paylater/create", paylaterControllerInterface.CreatePaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/paylater/pay", paylaterControllerInterface.PayPaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/paylater/get-tagihan", paylaterControllerInterface.GetTagihanPaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }

@@ -29,6 +29,7 @@ type CartServiceImplementation struct {
 	CartRepositoryInterface     repository.CartRepositoryInterface
 	ProductDesaServiceInterface repository.ProductDesaRepositoryInterface
 	SettingRepositoryInterface  repository.SettingRepositoryInterface
+	DesaRepositoryInterface     repository.DesaRepositoryInterface
 }
 
 func NewCartService(
@@ -38,6 +39,7 @@ func NewCartService(
 	cartRepositoryInterface repository.CartRepositoryInterface,
 	productDesaRepositoryInterface repository.ProductDesaRepositoryInterface,
 	settingRepositoryInterface repository.SettingRepositoryInterface,
+	desaRepositoryInterface repository.DesaRepositoryInterface,
 ) CartServiceInterface {
 	return &CartServiceImplementation{
 		DB:                          db,
@@ -46,6 +48,7 @@ func NewCartService(
 		CartRepositoryInterface:     cartRepositoryInterface,
 		ProductDesaServiceInterface: productDesaRepositoryInterface,
 		SettingRepositoryInterface:  settingRepositoryInterface,
+		DesaRepositoryInterface:     desaRepositoryInterface,
 	}
 }
 
@@ -129,12 +132,12 @@ func (service *CartServiceImplementation) FindCartByUser(requestid string, idUse
 		exceptions.PanicIfRecordNotFound(errors.New("not found"), requestid, []string{"data not found"}, service.Logger)
 	}
 
-	shppingCost, _ := service.SettingRepositoryInterface.FindSettingShippingCost(service.DB, idDesa)
+	desa, err := service.DesaRepositoryInterface.FindDesaById(service.DB, idDesa)
 	exceptions.PanicIfError(err, requestid, service.Logger)
-	if len(shppingCost.SettingName) == 0 {
+	if desa.Ongkir == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("shipping cost not found"), requestid, []string{"shipping cost not found"}, service.Logger)
 	}
 
-	cartResponses = response.ToFindCartByUserResponse(carts, shppingCost.Value, accountType)
+	cartResponses = response.ToFindCartByUserResponse(carts, desa.Ongkir, accountType)
 	return cartResponses
 }

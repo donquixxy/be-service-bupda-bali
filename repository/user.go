@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"gorm.io/gorm"
@@ -18,6 +20,10 @@ type UserRepositoryInterface interface {
 	SaveUserAccount(db *gorm.DB, userAccounts []*entity.UserAccount) error
 	GetUserAccountByID(db *gorm.DB, idUser string) (*entity.UserAccount, error)
 	GetUserAccountPaylaterByID(db *gorm.DB, idUser string) (*entity.UserAccount, error)
+	GetUserAccountBimaByID(db *gorm.DB, idUser string) (*entity.UserAccount, error)
+	GetUserPayLaterFlagThisMonth(db *gorm.DB, idUser string) (*entity.UsersPaylaterFlag, error)
+	CreateUserPayLaterFlag(db *gorm.DB, userPayLaterFlag *entity.UsersPaylaterFlag) error
+	UpdateUserPayLaterFlag(db *gorm.DB, idUser string, userPayLaterFlag *entity.UsersPaylaterFlag) error
 }
 
 type UserRepositoryImplementation struct {
@@ -32,6 +38,37 @@ func NewUserRepository(
 	}
 }
 
+func (repository *UserRepositoryImplementation) UpdateUserPayLaterFlag(db *gorm.DB, idUser string, userPayLaterFlag *entity.UsersPaylaterFlag) error {
+	result := db.
+		Model(&entity.UsersPaylaterFlag{}).
+		Where("id_user = ?", idUser).
+		Updates(userPayLaterFlag)
+	return result.Error
+}
+
+func (repository *UserRepositoryImplementation) CreateUserPayLaterFlag(db *gorm.DB, userPayLaterFlag *entity.UsersPaylaterFlag) error {
+	result := db.Create(userPayLaterFlag)
+	return result.Error
+}
+
+func (repository *UserRepositoryImplementation) GetUserPayLaterFlagThisMonth(db *gorm.DB, idUser string) (*entity.UsersPaylaterFlag, error) {
+	userPayLaterFlag := &entity.UsersPaylaterFlag{}
+	var month time.Month
+	now := time.Now()
+	day := now.Day()
+	if day < 25 {
+		month = now.Month()
+	} else if day >= 25 {
+		month = now.AddDate(0, 1, 0).Month()
+	}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("MONTH(paylater_date) = ?", int(month)).
+		First(userPayLaterFlag)
+	return userPayLaterFlag, result.Error
+}
+
 func (repository *UserRepositoryImplementation) FindUserById2(db *gorm.DB, idUser string) (*entity.User, error) {
 	user := &entity.User{}
 	result := db.
@@ -44,7 +81,16 @@ func (repository *UserRepositoryImplementation) GetUserAccountPaylaterByID(db *g
 	userAccount := &entity.UserAccount{}
 	result := db.
 		Where("id_user = ?", idUser).
-		Where("id_product = ?", "BD8F6976-AC73-4EAD-91A0-9B871B30BF8F").
+		Where("account_name = ?", "Simpanan Khusus").
+		Find(userAccount)
+	return userAccount, result.Error
+}
+
+func (repository *UserRepositoryImplementation) GetUserAccountBimaByID(db *gorm.DB, idUser string) (*entity.UserAccount, error) {
+	userAccount := &entity.UserAccount{}
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("account_name LIKE ?", "%Tabungan Bima%").
 		Find(userAccount)
 	return userAccount, result.Error
 }

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,6 +21,7 @@ type OrderControllerInterface interface {
 	CompleteOrderById(c echo.Context) error
 	UpdateOrderPaymentStatus(c echo.Context) error
 	CallbackPpobTransaction(c echo.Context) error
+	FindOrderPayLater(c echo.Context) error
 }
 
 type OrderControllerImplementation struct {
@@ -34,6 +36,17 @@ func NewOrderController(
 	return &OrderControllerImplementation{
 		OrderServiceInterface: orderServiceInterface,
 	}
+}
+
+func (controller *OrderControllerImplementation) FindOrderPayLater(c echo.Context) error {
+
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	idUser := middleware.TokenClaimsIdUser(c)
+	fmt.Println("masuk")
+	fmt.Println(idUser)
+	orderResponses := controller.OrderServiceInterface.FindOrderPayLaterByIdUser(requestId, idUser)
+	responses := response.Response{Code: 200, Mssg: "success", Data: orderResponses, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
 }
 
 func (controller *OrderControllerImplementation) CreateOrder(c echo.Context) error {

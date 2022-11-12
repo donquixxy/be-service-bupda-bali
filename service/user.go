@@ -41,7 +41,12 @@ type UserServiceInterface interface {
 	UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest)
 	UpdateUserPhone(requestId string, idUser string, updateUserPhoneRequest *request.UpdateUserPhoneRequest)
 	FindUserFromBigis(requestId string, requestUser *request.FindBigisResponsesRequest) (userBigisResponse response.FindUserFromBigisResponse)
-	// FindTabunganMobile(requestId string, IdUser string) (userResponse response.FindTabunganMobileResponse)
+	GetSimpananKhususBalance(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse)
+	GetUserAccountBimaByID(requestId string, idUser string) (userAccountBimaResponse response.FindAccountBalanceResponse)
+	AktivasiAkunInveli(requestId string, idUser string)
+	GetTunggakanPaylater(requestId string, idUser string) (tunggakanPaylaterResponse []response.FindTunggakanPaylater)
+	GetLimitPayLater(requestId string, idUser string) (limitPayLaterResponse response.FindLimitPayLaterResponse)
+	GetVANasabah(requestId string, idUser string) string
 }
 
 type UserServiceImplementation struct {
@@ -54,6 +59,7 @@ type UserServiceImplementation struct {
 	PointRepositoryInterface       repository.PointRepositoryInterface
 	DesaRepositoryInterface        repository.DesaRepositoryInterface
 	InveliRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
+	AuthServiceInterface           AuthServiceInterface
 }
 
 func NewUserService(
@@ -66,6 +72,7 @@ func NewUserService(
 	pointRepositoryInterface repository.PointRepositoryInterface,
 	desaRepositoryInterface repository.DesaRepositoryInterface,
 	inveliRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
+	authServiceInterface AuthServiceInterface,
 ) UserServiceInterface {
 	return &UserServiceImplementation{
 		DB:                             db,
@@ -77,16 +84,115 @@ func NewUserService(
 		PointRepositoryInterface:       pointRepositoryInterface,
 		DesaRepositoryInterface:        desaRepositoryInterface,
 		InveliRepositoryInterface:      inveliRepositoryInterface,
+		AuthServiceInterface:           authServiceInterface,
 	}
 }
 
-// func (service *UserServiceImplementation) FindTabunganMobile(requestId string, IdUser string) (userResponse response.FindTabunganMobileResponse) {
-// 	user, _ := service.UserRepositoryInterface.FindUserById(requestId, IdUser)
-// 	if user == nil {
-// 		exceptions.PanicIfNotFound(errors.New("user not found"), requestId, []string{"user not found"}, service.Logger)
-// 	}
+func (service *UserServiceImplementation) GetVANasabah(requestId string, idUser string) string {
+	userAccount, err := service.UserRepositoryInterface.GetUserAccountBimaByID(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
 
-// }
+	if len(userAccount.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user account bima not found"), requestId, []string{"user account bima not found"}, service.Logger)
+	}
+
+	VANasabah := userAccount.BIN + userAccount.Code
+
+	return VANasabah
+}
+
+func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idUser string) (limitPayLaterResponse response.FindLimitPayLaterResponse) {
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	limitPinjaman, err := service.InveliRepositoryInterface.GetLimitPayLater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		log.Println("pinjaman = ", err.Error())
+	}
+
+	limitPayLaterResponse = response.ToFindLimitPayLaterResponse(limitPinjaman)
+
+	return limitPayLaterResponse
+}
+
+func (service *UserServiceImplementation) GetTunggakanPaylater(reqeustId string, idUser string) (tunggakanPaylaterResponse []response.FindTunggakanPaylater) {
+	account, err := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
+	exceptions.PanicIfError(err, reqeustId, service.Logger)
+	if account == nil {
+		exceptions.PanicIfRecordNotFound(errors.New("user account paylater not found"), reqeustId, []string{"user account paylater not found"}, service.Logger)
+	}
+
+	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+
+	respTunggakan, _ := service.InveliRepositoryInterface.GetTunggakan(account.IdAccount, user.User.InveliAccessToken)
+
+	if respTunggakan == nil {
+		return nil
+	} else {
+		tunggakanPaylaterResponse := response.ToFindTunggakanPaylaterResponse(respTunggakan)
+		return tunggakanPaylaterResponse
+	}
+}
+
+func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, idUser string) {
+	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if len(user.User.InveliIDMember) != 0 {
+		exceptions.PanicIfBadRequest(errors.New("user already activated"), requestId, []string{"user already activated"}, service.Logger)
+	}
+
+	inveliRegistrationModel := &inveli.InveliRegistrationModel{
+		Email:      user.Email,
+		Phone:      user.User.Phone,
+		NIK:        user.NoIdentitas,
+		Address:    user.AlamatSesuaiIdentitas,
+		MemberName: user.NamaLengkap,
+	}
+
+	// Register to inveli
+	errInveli := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	// fmt.Println("register inveli = ", errInveli.Error())
+	if errInveli != nil {
+		exceptions.PanicIfBadRequest(errInveli, requestId, []string{"error inveli"}, service.Logger)
+	}
+}
+
+func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse) {
+	userAccount, err := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(userAccount.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user account not found"), requestId, []string{"user account not found"}, service.Logger)
+	}
+
+	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+
+	accountBalance, _ := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.IdAccount, user.User.InveliAccessToken)
+
+	accountBalanceResponse = response.ToFindAccountBalanceResponse(accountBalance)
+	return accountBalanceResponse
+}
+
+func (service *UserServiceImplementation) GetUserAccountBimaByID(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse) {
+	fmt.Println("masuk", idUser)
+	userAccount, err := service.UserRepositoryInterface.GetUserAccountBimaByID(service.DB, idUser)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(userAccount.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user account not found"), requestId, []string{"user account not found"}, service.Logger)
+	}
+
+	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+
+	accountBalance, err := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.Code, user.User.InveliAccessToken)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"error inveli"}, service.Logger)
+	}
+
+	accountBalanceResponse = response.ToFindAccountBalanceResponse(accountBalance)
+	return accountBalanceResponse
+}
 
 func (service *UserServiceImplementation) FindUserFromBigis(requestId string, requestUser *request.FindBigisResponsesRequest) (userBigisResponse response.FindUserFromBigisResponse) {
 	// Create Request
@@ -360,7 +466,27 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 func (service *UserServiceImplementation) FindUserById(requestId string, idUser string) (userResponse response.FindUserIdResponse) {
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	exceptions.PanicIfError(err, requestId, service.Logger)
-	userResponse = response.ToFindUserIdResponse(user)
+	if len(user.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user tidak ditemukan"}, service.Logger)
+	}
+	statusAktifUser, err := service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		log.Println("error get status account inveli = ", err.Error())
+		// exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	if statusAktifUser {
+		accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
+		// fmt.Println("masuk sini")
+		// fmt.Println("account info = ", accountInfo.Id)
+		if len(accountInfo.Id) == 0 {
+
+			service.AuthServiceInterface.GetUserAccountInveli(user.User.InveliIDMember, user.User.InveliAccessToken, idUser)
+		}
+
+	}
+
+	userResponse = response.ToFindUserIdResponse(user, statusAktifUser)
 	return userResponse
 }
 

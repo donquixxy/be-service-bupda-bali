@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"log"
+	"time"
+
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"gorm.io/gorm"
@@ -15,6 +18,7 @@ type OrderRepositoryInterface interface {
 	UpdateOrderByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
 	FindOrderPrepaidPulsaById(db *gorm.DB, idUser string, productType string) (*entity.Order, error)
 	FindOrderPrepaidPlnById(db *gorm.DB, idUser string) (*entity.Order, error)
+	FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error)
 }
 
 type OrderRepositoryImplementation struct {
@@ -55,6 +59,27 @@ func (repository *OrderRepositoryImplementation) FindOrderByUser(db *gorm.DB, id
 func (repository *OrderRepositoryImplementation) FindOrderById(db *gorm.DB, idUser string) (*entity.Order, error) {
 	orders := &entity.Order{}
 	result := db.Find(orders, "id = ?", idUser)
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error) {
+	log.Println("masuk")
+	orders := []entity.Order{}
+	var month time.Month
+	now := time.Now()
+	day := now.Day()
+	if day < 25 {
+		month = now.Month()
+	} else if day >= 25 {
+		month = now.AddDate(0, 1, 0).Month()
+	}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("payment_method = ?", "paylater").
+		Where("month(order_date) = ?", int(month)).
+		Find(&orders)
+
 	return orders, result.Error
 }
 

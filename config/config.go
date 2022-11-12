@@ -89,6 +89,12 @@ type Ppob struct {
 	PostpaidUrl string `yaml:"postpaidurl"`
 }
 
+type Inveli struct {
+	LoanProductID string `yaml:"loanproductid"`
+	BupdaAccount  string `yaml:"bupdaaccount"`
+	InveliAPI     string `yaml:"inveliapi"`
+}
+
 type ApplicationConfiguration struct {
 	Application   Application
 	Webserver     Webserver
@@ -102,6 +108,7 @@ type ApplicationConfiguration struct {
 	Fcm           Fcm
 	Sms           Sms
 	Ppob          Ppob
+	Inveli        Inveli
 }
 
 var lock = sync.Mutex{}

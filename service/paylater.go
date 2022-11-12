@@ -9,6 +9,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
@@ -17,6 +18,7 @@ import (
 
 type PaylaterServiceInterface interface {
 	CreatePaylater(requestId string, idUser string, requestCreatePaylater *request.CreatePaylaterRequest) error
+	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater)
 }
 
 type PaylaterServiceImplementation struct {
@@ -41,6 +43,22 @@ func NewPaylaterService(
 		UserRepositoryInterface:      userRepositoryInterface,
 		InveliAPIRepositoryInterface: inveliAPIRepositoryInterface,
 	}
+}
+
+func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater) {
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
+	}
+
+	tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		log.Println("error get tagihan inveli", err.Error())
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
+	return tagihanPaylaterResponse
 }
 
 func (service *PaylaterServiceImplementation) CreatePaylater(requestId string, idUser string, requestCreatePaylater *request.CreatePaylaterRequest) error {
