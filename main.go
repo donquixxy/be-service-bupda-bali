@@ -88,6 +88,7 @@ func main() {
 		logrusLogger,
 		userRepository,
 		inveliAPIRepository,
+		orderRepository,
 	)
 	bannerService := service.NewBannerService(
 		DBConn,
@@ -189,6 +190,7 @@ func main() {
 		logrusLogger,
 		userRepository,
 		inveliAPIRepository,
+		orderRepository,
 	)
 	orderService := service.NewOrderService(
 		DBConn,
@@ -307,7 +309,6 @@ func main() {
 		logrusLogger,
 		ppobService,
 	)
-
 	testingInveliController := controller.NewInveliTestingController(
 		logrusLogger,
 	)

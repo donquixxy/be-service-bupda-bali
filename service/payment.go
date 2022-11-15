@@ -19,7 +19,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/payment"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"gorm.io/gorm"
@@ -30,6 +32,7 @@ type PaymentServiceInterface interface {
 	CreditCardPay(requestId string, paymentRequest *payment.IpaymuCreditCardRequest) *payment.IpaymuCreditCardResponse
 	CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus
 	PayPaylater(requestId, idUser string) error
+	GetRiwayatPaylaterPerBulan(requestId, idUser string) (response []response.GetRiwayatPaylaterPerbulanResponse)
 }
 
 type PaymentServiceImplementation struct {
@@ -37,6 +40,7 @@ type PaymentServiceImplementation struct {
 	Logger                       *logrus.Logger
 	UserRepositoryInterface      repository.UserRepositoryInterface
 	InveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface
+	OrderRepositoryInterface     repository.OrderRepositoryInterface
 }
 
 func NewPaymentService(
@@ -44,13 +48,20 @@ func NewPaymentService(
 	logger *logrus.Logger,
 	userRepository repository.UserRepositoryInterface,
 	inveliAPIRepository invelirepository.InveliAPIRepositoryInterface,
+	orderRepository repository.OrderRepositoryInterface,
 ) PaymentServiceInterface {
 	return &PaymentServiceImplementation{
 		DB:                           db,
 		Logger:                       logger,
 		UserRepositoryInterface:      userRepository,
 		InveliAPIRepositoryInterface: inveliAPIRepository,
+		OrderRepositoryInterface:     orderRepository,
 	}
+}
+
+func (service *PaymentServiceImplementation) GetRiwayatPaylaterPerBulan(requestId string, idUser string) (response []response.GetRiwayatPaylaterPerbulanResponse) {
+
+	return nil
 }
 
 func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser string) error {
@@ -62,10 +73,21 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
+	// cek tagihan
+	tagihan, _ := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+
+	if tagihan == nil {
+		exceptions.PanicIfRecordNotFound(errors.New("TAGIHAN NOT FOUND"), requestId, []string{"TAGIHAN NOT FOUND"}, service.Logger)
+	}
+
 	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfError(err, requestId, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{err.Error()}, service.Logger)
 	}
+
+	service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
+		PaylaterPaidStatus: 1,
+	})
 
 	return nil
 }

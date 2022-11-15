@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
@@ -17,7 +18,7 @@ import (
 )
 
 type PaymentChannelServiceInterface interface {
-	FindPaymentChannel(requestId string, idUser string) (paymentChannelResponses []response.FindPaymentChannelResponse)
+	FindPaymentChannel(requestId string, idUser string, requestPayChan *request.GetPaymentChannelRequest) (paymentChannelResponses []response.FindPaymentChannelResponse)
 }
 
 type PaymentChannelServiceImplementation struct {
@@ -50,7 +51,7 @@ func NewPaymentChannelService(
 	}
 }
 
-func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId string, idUser string) (paymentChannelResponses []response.FindPaymentChannelResponse) {
+func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId string, idUser string, requestPayChan *request.GetPaymentChannelRequest) (paymentChannelResponses []response.FindPaymentChannelResponse) {
 	var err error
 	paymentChannelResponse, _ := service.PaymentChannelRepositoryInterface.FindPaymentChannel(service.DB)
 	if paymentChannelResponse == nil {
@@ -75,6 +76,8 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 	for _, v := range jmlOrderPayLate {
 		jmlOrder += v.TotalBill
 	}
+
+	jmlOrder += requestPayChan.TotalBill
 
 	userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
 	if len(userPaylaterFlag.Id) == 0 {

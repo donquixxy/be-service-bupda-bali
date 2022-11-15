@@ -47,6 +47,7 @@ type UserServiceInterface interface {
 	GetTunggakanPaylater(requestId string, idUser string) (tunggakanPaylaterResponse []response.FindTunggakanPaylater)
 	GetLimitPayLater(requestId string, idUser string) (limitPayLaterResponse response.FindLimitPayLaterResponse)
 	GetVANasabah(requestId string, idUser string) string
+	GetNoRekeningNasabah(requestId string, idUser string) string
 }
 
 type UserServiceImplementation struct {
@@ -88,17 +89,35 @@ func NewUserService(
 	}
 }
 
+func (service *UserServiceImplementation) GetNoRekeningNasabah(requestId string, idUser string) string {
+	userAccount, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(service.DB, idUser)
+	if len(userAccount.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user account bima not found"), requestId, []string{"rekening not found"}, service.Logger)
+	}
+
+	return userAccount.Code
+}
+
 func (service *UserServiceImplementation) GetVANasabah(requestId string, idUser string) string {
+	var VANasabah string
 	userAccount, err := service.UserRepositoryInterface.GetUserAccountBimaByID(service.DB, idUser)
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
+	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+
 	if len(userAccount.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("user account bima not found"), requestId, []string{"user account bima not found"}, service.Logger)
 	}
 
-	VANasabah := userAccount.BIN + userAccount.Code
+	if len(user.User.Phone) == 12 {
+		VANasabah = userAccount.BIN + strings.Replace(user.User.Phone, "08", "", 1)
+	} else if len(user.User.Phone) < 12 {
+		VANasabah = userAccount.BIN + "0" + strings.Replace(user.User.Phone, "08", "", 1)
+	} else {
+		exceptions.PanicIfRecordNotFound(errors.New("user phone not valid"), requestId, []string{"user phone not valid"}, service.Logger)
+	}
 
 	return VANasabah
 }
@@ -131,6 +150,7 @@ func (service *UserServiceImplementation) GetTunggakanPaylater(reqeustId string,
 	respTunggakan, _ := service.InveliRepositoryInterface.GetTunggakan(account.IdAccount, user.User.InveliAccessToken)
 
 	if respTunggakan == nil {
+		exceptions.PanicIfRecordNotFound(errors.New("tunggakan paylater not found"), reqeustId, []string{"tunggakan paylater not found"}, service.Logger)
 		return nil
 	} else {
 		tunggakanPaylaterResponse := response.ToFindTunggakanPaylaterResponse(respTunggakan)

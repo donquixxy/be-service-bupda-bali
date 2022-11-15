@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/middleware"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/service"
 )
@@ -27,7 +28,8 @@ func NewPaymentChannelController(
 func (controller *PaymentChannelControllerImplementation) FindPaymentChannel(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	idUser := middleware.TokenClaimsIdUser(c)
-	paymentChannelResponses := controller.PaymentChannelServiceInterface.FindPaymentChannel(requestId, idUser)
+	requestPaymentChan := request.ReadFromGetPaymentChannelRequestBody(c, requestId, nil)
+	paymentChannelResponses := controller.PaymentChannelServiceInterface.FindPaymentChannel(requestId, idUser, requestPaymentChan)
 	responses := response.Response{Code: 200, Mssg: "success", Data: paymentChannelResponses, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

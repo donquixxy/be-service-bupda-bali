@@ -9,7 +9,6 @@ import (
 type FindOrderByUserResponse struct {
 	Id             string    `json:"id_order"`
 	IdUser         string    `json:"id_user"`
-	OrderName      string    `json:"order_name"`
 	ProductType    string    `json:"product_type"`
 	OrderType      int       `json:"order_type"`
 	OrderStatus    int       `json:"order_status"`

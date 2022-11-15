@@ -27,6 +27,7 @@ func (service *InfoDesaRepositoryImplementation) FindInfoDesaByIdDesa(db *gorm.D
 	results := db.
 		Where("id_desa = ?", idDesa).
 		Where("is_active = ?", "1").
+		Order("created_at desc").
 		Find(&infoDesas)
 	return infoDesas, results.Error
 }

@@ -40,6 +40,7 @@ type Order struct {
 	FotoBarangSampai    string    `gorm:"column:foto_barang_sampai;"`
 	FotoBuktiBayar      string    `gorm:"column:foto_bukti_bayar;"`
 	RefId               string    `gorm:"column:ref_id;"`
+	PaylaterPaidStatus  int       `gorm:"column:paylater_paid_status;"`
 }
 
 func (Order) TableName() string {

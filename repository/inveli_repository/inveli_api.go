@@ -22,7 +22,7 @@ type InveliAPIRepositoryInterface interface {
 	InveliUbahPassword(id, password, token string) (interface{}, error)
 	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string) error
 	GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error)
-	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64) error
+	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64) error
 	GetStatusAccount(IDMember, token string) (bool, error)
 	GetBalanceAccount(Code, token string) (*inveli.InveliAcountInfo, error)
 	GetKodeBIN(token string) (string, error)
@@ -305,7 +305,7 @@ func (r *InveliAPIRepositoryImplementation) GetKodeBIN(token string) (string, er
 
 	req := graphql.NewRequest(`
 	{
-		getApplicationConfigByKey(configKey: "BINCodeByNoRek"){
+		getApplicationConfigByKey(configKey: "BINCodeByHp"){
 			configKey
         	configValue
 			}
@@ -362,12 +362,7 @@ func (r *InveliAPIRepositoryImplementation) InquiryVaNasabah(phone, token string
 	return inquiryVaResult, nil
 }
 
-func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64) error {
-
-	// log.Println("IDMember : ", IDMember)
-	// log.Println("AccountID : ", AccountID)
-	// log.Println("Amount : ", Amount)
-	// log.Println("Token : ", token)
+func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64) error {
 
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
@@ -386,7 +381,8 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 		"loanAmount":            Amount,
 		"interestPercent":       0,
 		"isAutoApprove":         true,
-		"paymentInterest":       0,
+		"paymentInterest":       isMerchant,
+		"totalAmount":           totalAmount,
 		"memberLoanAttachments": []string{},
 	})
 

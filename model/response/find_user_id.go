@@ -14,7 +14,7 @@ type FindUserIdResponse struct {
 	IdLimitPayLater   string `json:"id_limit_pay_later"`
 	NamaDesa          string `json:"nama_desa"`
 	NamaBendesa       string `json:"nama_bendesa"`
-	StatusAktifInveli bool   `json:"status_aktif_inveli"`
+	StatusAktifInveli int    `json:"status_aktif_inveli"`
 }
 
 func ToFindUserIdResponse(userProfile *entity.UserProfile, statusAktifUser bool) (userResponse FindUserIdResponse) {
@@ -29,6 +29,6 @@ func ToFindUserIdResponse(userProfile *entity.UserProfile, statusAktifUser bool)
 	userResponse.IdLimitPayLater = userProfile.User.IdLimitPayLater
 	userResponse.NamaDesa = userProfile.User.Desa.NamaDesa
 	userResponse.NamaBendesa = userProfile.User.Desa.NamaBendesa
-	userResponse.StatusAktifInveli = statusAktifUser
+	userResponse.StatusAktifInveli = userProfile.User.StatusPaylater
 	return userResponse
 }

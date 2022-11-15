@@ -28,6 +28,7 @@ type UserControllerInterface interface {
 	GetLimitPayLater(c echo.Context) error
 	GetVATabBimaNasabah(c echo.Context) error
 	// GetTagihanPaylater(c echo.Context) error
+	GetNoRekening(c echo.Context) error
 }
 
 type UserControllerImplementation struct {
@@ -44,125 +45,15 @@ func NewUserController(
 	}
 }
 
-// func (controller *UserControllerImplementation) GetTagihanPaylater(c echo.Context) error {
-// 	// requestId := c.Response().Header().Get(echo.HeaderXRequestID)
-// 	idUser := middleware.TokenClaimsIdUser(c)
-// 	user, _ := controller.UserRepositoryInterface.FindUserById(controller.DB, idUser)
-
-// 	IDMember := user.User.InveliIDMember
-// 	token := user.User.InveliAccessToken
-
-// 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI)
-
-// 	req := graphql.NewRequest(`
-// 		query ($id: String!) {
-// 			loans(memberID: $id){
-//         loanID
-//         code
-//         customerID
-//         customerName
-//         productDesc
-//         loanProductID
-//         startDate
-//         endDate
-//         tenorMonth
-//         loanAmount
-//         interestPercentage
-//         repaymentMethod
-//         accountID
-//         userInsert
-//         dateInsert
-//         dateAuthor
-//         userAuthor
-//         recordStatus
-//         isLiquidated
-//         outstandingAmount
-//         nominalWajib
-//         filePDFName
-//         loanAccountRepayments{
-//             id
-//             loanAccountID
-//             repaymentType
-//             repaymentDate
-//             repaymentInterest
-//             repaymentPrincipal
-//             repaymentAmount
-//             repaymentInterestPaid
-//             repaymentPrincipalPaid
-//             outStandingBakiDebet
-//             tellerId
-//             isPaid
-//             amountPaid
-//             paymentTxnID
-//             recordStatus
-//             userInsert
-//             dateInsert
-//             userUpdate
-//             dateUpdate
-//             loanPassdues{
-//                 loanPassdueID
-//                 loanPassdueNo
-//                 loanAccountRepaymentID
-//                 loanID
-//                 overduePrincipal
-//                 overdueInterest
-//                 overduePenalty
-//                 overdueAmount
-//                 isPaid
-//                 isWaivePenalty
-//                 userInsert
-//                 dateInsert
-//                 userUpdate
-//                 dateUpdate
-//                 passdueCode
-//             }
-//         }
-//     	}
-// 		}
-// 	`)
-
-// 	req.Header.Set("Authorization", "Bearer "+token)
-// 	req.Var("id", IDMember)
-// 	ctx := context.Background()
-// 	var respData interface{}
-// 	if err := client.Run(ctx, req, &respData); err != nil {
-// 		log.Println(err)
-// 		return err
-// 	}
-
-// 	// fmt.Println(respData)
-
-// 	riwayatPinjamans := []inveli.RiwayatPinjaman2{}
-// 	// var data []interface{}
-// 	for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
-// 		riwayatPinjaman := inveli.RiwayatPinjaman2{}
-// 		riwayatPinjaman.ID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["id"].(string)
-// 		riwayatPinjaman.LoanAccountID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanAccountID"].(string)
-// 		riwayatPinjaman.RepaymentDate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
-// 		riwayatPinjaman.RepaymentInterest = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentInterest"].(float64)
-// 		riwayatPinjaman.RepaymentPrincipal = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentPrincipal"].(float64)
-// 		riwayatPinjaman.RepaymentAmount = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentAmount"].(float64)
-// 		riwayatPinjaman.RepaymentInterestPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentInterestPaid"].(float64)
-// 		riwayatPinjaman.RepaymentPrincipalPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentPrincipalPaid"].(float64)
-// 		riwayatPinjaman.OutStandingBakiDebet = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["outStandingBakiDebet"].(float64)
-// 		riwayatPinjaman.TellerID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["tellerId"].(string)
-// 		riwayatPinjaman.IsPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"].(bool)
-// 		riwayatPinjaman.AmountPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["amountPaid"].(float64)
-// 		riwayatPinjaman.PaymentTxnID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["paymentTxnID"].(string)
-// 		riwayatPinjaman.UserInsert = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userInsert"].(string)
-// 		riwayatPinjaman.DateInsert = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateInsert"].(string)
-// 		riwayatPinjaman.UserUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userUpdate"].(string)
-// 		riwayatPinjaman.DateUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string)
-// 		riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
-// 	}
-
-// 	// fmt.Println("riwayatPinjamans", data)
-
-// 	responses := response.Response{Code: 201, Mssg: "success", Data: riwayatPinjamans, Error: []string{}}
-// 	return c.JSON(http.StatusOK, responses)
-// }
-
-// func (controller *UserControllerImplementation) Get
+func (controller *UserControllerImplementation) GetNoRekening(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	idUser := middleware.TokenClaimsIdUser(c)
+	userResponse := controller.UserServiceInterface.GetNoRekeningNasabah(requestId, idUser)
+	responses := response.Response{Code: 200, Mssg: "success", Data: map[string]interface{}{
+		"no_rekening": userResponse,
+	}, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
 
 func (controller *UserControllerImplementation) GetVATabBimaNasabah(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)

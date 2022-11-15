@@ -121,6 +121,7 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	user := &entity.User{
 		InveliAccessToken: loginResult.AccessToken,
 		InveliIDMember:    loginResult.UserID,
+		StatusPaylater:    1,
 	}
 
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
@@ -161,6 +162,16 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 				userAccount.Code = account.Code
 				userAccount.BIN = codeBIN
 				userAccounts = append(userAccounts, userAccount)
+			}
+
+			user := &entity.User{
+				StatusPaylater: 2,
+			}
+
+			service.UserRepositoryInterface.SaveUserInveliToken(service.DB, IdUser, user)
+			fmt.Println("error save user inveli token : ", err)
+			if err != nil {
+				exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
 			}
 
 			// fmt.Println("userAccounts : ", &userAccounts)

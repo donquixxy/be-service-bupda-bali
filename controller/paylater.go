@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
@@ -17,6 +18,8 @@ type PaylaterControllerInterface interface {
 	CreatePaylater(c echo.Context) error
 	PayPaylater(c echo.Context) error
 	GetTagihanPaylater(c echo.Context) error
+	GetRiwayatPaylaterPerBulan(c echo.Context) error
+	GetOrderPaylaterByMonth(c echo.Context) error
 }
 
 type PaylaterControllerImplementation struct {
@@ -35,6 +38,24 @@ func NewPaylaterController(
 		PaylaterServiceInterface: paylaterServiceInterface,
 		PaymentServiceInterface:  paymentServiceInterface,
 	}
+}
+
+func (controller *PaylaterControllerImplementation) GetOrderPaylaterByMonth(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	IdUser := middleware.TokenClaimsIdUser(c)
+	month, _ := strconv.Atoi(c.QueryParam("month"))
+	riwayatResponse := controller.PaylaterServiceInterface.GetOrderPaylaterByMonth(requestId, IdUser, month)
+	responses := response.Response{Code: 200, Mssg: "success", Data: riwayatResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
+}
+
+func (controller *PaylaterControllerImplementation) GetRiwayatPaylaterPerBulan(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	IdUser := middleware.TokenClaimsIdUser(c)
+	// month, _ := strconv.Atoi(c.QueryParam("month"))
+	riwayatResponse := controller.PaylaterServiceInterface.GetOrderPaylaterPerBulan(requestId, IdUser)
+	responses := response.Response{Code: 200, Mssg: "success", Data: riwayatResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
 }
 
 func (controller *PaylaterControllerImplementation) GetTagihanPaylater(c echo.Context) error {

@@ -1,24 +1,24 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 	"log"
 
 	"github.com/go-playground/validator"
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
-	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/request"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
-	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"gorm.io/gorm"
 )
 
 type PaylaterServiceInterface interface {
 	CreatePaylater(requestId string, idUser string, requestCreatePaylater *request.CreatePaylaterRequest) error
 	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater)
+	GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse)
+	GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse)
 }
 
 type PaylaterServiceImplementation struct {
@@ -27,6 +27,7 @@ type PaylaterServiceImplementation struct {
 	Logger                       *logrus.Logger
 	UserRepositoryInterface      repository.UserRepositoryInterface
 	InveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface
+	OrderRepositoryInterface     repository.OrderRepositoryInterface
 }
 
 func NewPaylaterService(
@@ -35,6 +36,7 @@ func NewPaylaterService(
 	logger *logrus.Logger,
 	userRepositoryInterface repository.UserRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
+	orderRepositoryInterface repository.OrderRepositoryInterface,
 ) PaylaterServiceInterface {
 	return &PaylaterServiceImplementation{
 		DB:                           db,
@@ -42,7 +44,41 @@ func NewPaylaterService(
 		Logger:                       logger,
 		UserRepositoryInterface:      userRepositoryInterface,
 		InveliAPIRepositoryInterface: inveliAPIRepositoryInterface,
+		OrderRepositoryInterface:     orderRepositoryInterface,
 	}
+}
+
+func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse) {
+	order, err, _, _ := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, month)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
+	}
+
+	orderResponse = response.ToFindOrderByUserResponse(order)
+	return orderResponse
+}
+
+func (service *PaylaterServiceImplementation) GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse) {
+	for i := 1; i <= 12; i++ {
+
+		orderPaylaterPerBulan, _, start, end := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, i)
+		fmt.Println("data", orderPaylaterPerBulan)
+		if len(orderPaylaterPerBulan) == 0 {
+			continue
+		}
+
+		var responseData = response.GetRiwayatPaylaterPerbulanResponse{}
+		for _, order := range orderPaylaterPerBulan {
+			responseData.StartDate = start
+			responseData.EndDate = end
+			responseData.Month = i
+			responseData.TotalBayar = responseData.TotalBayar + order.TotalBill
+		}
+
+		orderPaylaterPerBulanResponse = append(orderPaylaterPerBulanResponse, responseData)
+	}
+
+	return orderPaylaterPerBulanResponse
 }
 
 func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater) {
@@ -62,50 +98,50 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 }
 
 func (service *PaylaterServiceImplementation) CreatePaylater(requestId string, idUser string, requestCreatePaylater *request.CreatePaylaterRequest) error {
-	var err error
-	var userAccount *entity.UserAccount
+	// var err error
+	// var userAccount *entity.UserAccount
 
-	request.ValidateRequest(service.Validate, requestCreatePaylater, requestId, service.Logger)
+	// request.ValidateRequest(service.Validate, requestCreatePaylater, requestId, service.Logger)
 
-	user, err := service.UserRepositoryInterface.FindUserById2(service.DB, idUser)
-	exceptions.PanicIfError(err, requestId, service.Logger)
-	if len(user.Id) == 0 {
-		exceptions.PanicIfBadRequest(errors.New("user not found"), requestId, []string{"user account not found"}, service.Logger)
-	}
+	// user, err := service.UserRepositoryInterface.FindUserById2(service.DB, idUser)
+	// exceptions.PanicIfError(err, requestId, service.Logger)
+	// if len(user.Id) == 0 {
+	// 	exceptions.PanicIfBadRequest(errors.New("user not found"), requestId, []string{"user account not found"}, service.Logger)
+	// }
 
-	userAccount, err = service.UserRepositoryInterface.GetUserAccountByID(service.DB, idUser)
-	exceptions.PanicIfError(err, requestId, service.Logger)
-	if len(userAccount.Id) == 0 {
+	// userAccount, err = service.UserRepositoryInterface.GetUserAccountByID(service.DB, idUser)
+	// exceptions.PanicIfError(err, requestId, service.Logger)
+	// if len(userAccount.Id) == 0 {
 
-		accountInfo, _ := service.InveliAPIRepositoryInterface.GetAccountInfo(user.InveliAccessToken, user.InveliIDMember)
-		if accountInfo == nil {
-			exceptions.PanicIfBadRequest(errors.New("akun belum aktif"), requestId, []string{"akun belum aktif"}, service.Logger)
-		}
+	// 	accountInfo, _ := service.InveliAPIRepositoryInterface.GetAccountInfo(user.InveliAccessToken, user.InveliIDMember)
+	// 	if accountInfo == nil {
+	// 		exceptions.PanicIfBadRequest(errors.New("akun belum aktif"), requestId, []string{"akun belum aktif"}, service.Logger)
+	// 	}
 
-		log.Println("accountInfo", accountInfo)
+	// 	log.Println("accountInfo", accountInfo)
 
-		var userAccounts []*entity.UserAccount
-		for _, account := range accountInfo {
-			userAccount := &entity.UserAccount{}
-			userAccount.Id = utilities.RandomUUID()
-			userAccount.IdUser = user.Id
-			userAccount.IdAccount = account.ID
-			userAccount.AccountName = account.AccountName2
-			userAccount.IdProduct = account.ProductID
-			userAccounts = append(userAccounts, userAccount)
-		}
+	// 	var userAccounts []*entity.UserAccount
+	// 	for _, account := range accountInfo {
+	// 		userAccount := &entity.UserAccount{}
+	// 		userAccount.Id = utilities.RandomUUID()
+	// 		userAccount.IdUser = user.Id
+	// 		userAccount.IdAccount = account.ID
+	// 		userAccount.AccountName = account.AccountName2
+	// 		userAccount.IdProduct = account.ProductID
+	// 		userAccounts = append(userAccounts, userAccount)
+	// 	}
 
-		errorr := service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
-		if errorr != nil {
-			exceptions.PanicIfBadRequest(errors.New("gagal simpan user account"), "requestId", []string{"Failed Save User Account"}, service.Logger)
-		}
+	// 	errorr := service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
+	// 	if errorr != nil {
+	// 		exceptions.PanicIfBadRequest(errors.New("gagal simpan user account"), "requestId", []string{"Failed Save User Account"}, service.Logger)
+	// 	}
 
-	}
-	userAccount, _ = service.UserRepositoryInterface.GetUserAccountByID(service.DB, idUser)
+	// }
+	// userAccount, _ = service.UserRepositoryInterface.GetUserAccountByID(service.DB, idUser)
 
-	service.InveliAPIRepositoryInterface.InveliCreatePaylater(user.InveliAccessToken, user.InveliIDMember, userAccount.IdAccount, requestCreatePaylater.Amount)
+	// service.InveliAPIRepositoryInterface.InveliCreatePaylater(user.InveliAccessToken, user.InveliIDMember, userAccount.IdAccount, requestCreatePaylater.Amount)
 
-	// Fungsi untuk save history paylater ke database
+	// // Fungsi untuk save history paylater ke database
 
 	return nil
 
