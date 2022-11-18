@@ -20,7 +20,7 @@ type InveliAPIRepositoryInterface interface {
 	InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error
 	InveliLogin(username, password string) *inveli.InveliLoginModel
 	InveliUbahPassword(id, password, token string) (interface{}, error)
-	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string) error
+	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string, groupIdBupda string) error
 	GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error)
 	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64, bunga float64) error
 	GetStatusAccount(IDMember, token string) (bool, error)
@@ -492,7 +492,7 @@ func (r *InveliAPIRepositoryImplementation) InveliUbahPassword(id, password, tok
 	return respData, nil
 }
 
-func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string) error {
+func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string, groupIdBupda string) error {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
 	// make a request
@@ -517,7 +517,7 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"kelurahan":        "",
 		"kodePos":          "Kuningan Timur",
 		"isSendToCore":     true,
-		"referralMemberID": "BUPDA Denpasar",
+		"referralMemberID": groupIdBupda,
 		"bankCode":         "",
 		"bankID":           "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
 		"bankAccountName":  "",

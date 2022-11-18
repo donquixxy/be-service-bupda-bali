@@ -1,7 +1,6 @@
 package response
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
@@ -19,12 +18,15 @@ type FindPaymentChannelResponse struct {
 }
 
 func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statusUser int, biayaTanggungRenteng float64, isPaylater int) (paymentChannelResponses []FindPaymentChannelResponse) {
-	fmt.Println("payment fee", biayaTanggungRenteng)
-	log.Println("status user", statusUser)
 	for _, paymentChannel := range paymentChannels {
 		paymentChannelResponse := FindPaymentChannelResponse{}
 		log.Println("payment channel", paymentChannel.Code)
 		if paymentChannel.Code == "paylater" && statusUser != 2 {
+			log.Println("masuk hahaha")
+			continue
+		}
+
+		if paymentChannel.Code == "paylater" && isPaylater == 0 {
 			log.Println("masuk hahaha")
 			continue
 		}

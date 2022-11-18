@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -60,14 +59,6 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 
 	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 
-	log.Println("status payalter 1 = ", user.User.StatusPaylater)
-
-	// statusUser, err := service.InveliAPIRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
-
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// }
-
 	var jmlOrder float64
 
 	var biayaTanggungRenteng float64
@@ -77,17 +68,13 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 	}
 	jmlOrder = 0
 	for _, v := range jmlOrderPayLate {
-		log.Println("jml total bill = ", v.TotalBill)
 		jmlOrder = jmlOrder + v.TotalBill
 	}
-	log.Println("jmlOrder = 1", int(jmlOrder))
 
 	jmlOrder += requestPayChan.TotalBill
 
 	userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
 	if len(userPaylaterFlag.Id) == 0 {
-		fmt.Println("masuk sini")
-		// create flag
 		err := service.UserRepositoryInterface.CreateUserPayLaterFlag(service.DB, &entity.UsersPaylaterFlag{
 			Id:                  utilities.RandomUUID(),
 			IdUser:              idUser,
@@ -102,20 +89,10 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 
 		biayaTanggungRenteng = 2500
 	} else {
-		log.Println("payment fee", requestPayChan.TotalBill)
-
 		if len(jmlOrderPayLate) == 0 {
-			log.Println("masuk sini")
 			biayaTanggungRenteng = 2500
 		} else {
-			log.Println("jml order sebelumnya", int(jmlOrder))
-			log.Println("jml order request", requestPayChan.TotalBill)
 			if int(jmlOrder) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
-				// update flag
-				// service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
-				// 	TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
-				// })
-
 				biayaTanggungRenteng = 2500
 			} else {
 				biayaTanggungRenteng = 0

@@ -40,6 +40,7 @@ type AuthServiceImplementation struct {
 	UserRepositoryInterface        repository.UserRepositoryInterface
 	InveliAPIRespositoryInterface  invelirepository.InveliAPIRepositoryInterface
 	UserProfileRepositoryInterface repository.UserProfileRepositoryInterface
+	DesaRepositoryInterface        repository.DesaRepositoryInterface
 }
 
 func NewAuthService(
@@ -50,6 +51,7 @@ func NewAuthService(
 	userRepositoryInterface repository.UserRepositoryInterface,
 	inveliAPIRespositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	userProfileRepositoryInterface repository.UserProfileRepositoryInterface,
+	desaRepositoryInterface repository.DesaRepositoryInterface,
 ) AuthServiceInterface {
 	return &AuthServiceImplementation{
 		DB:                             db,
@@ -59,6 +61,7 @@ func NewAuthService(
 		UserRepositoryInterface:        userRepositoryInterface,
 		InveliAPIRespositoryInterface:  inveliAPIRespositoryInterface,
 		UserProfileRepositoryInterface: userProfileRepositoryInterface,
+		DesaRepositoryInterface:        desaRepositoryInterface,
 	}
 }
 
@@ -269,7 +272,11 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 		exceptions.PanicIfBadRequest(errors.New("user profile not found"), requestId, []string{"User Profile Not Found"}, service.Logger)
 	}
 
-	errrr := service.InveliAPIRespositoryInterface.InveliUpdateMember(userResult, userProfile, accessToken)
+	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, userResult.Id)
+
+	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
+
+	errrr := service.InveliAPIRespositoryInterface.InveliUpdateMember(userResult, userProfile, accessToken, desa.GroupIdBupda)
 
 	if errrr != nil {
 		exceptions.PanicIfBadRequest(errors.New("failed activate account"), requestId, []string{errrr.Error()}, service.Logger)

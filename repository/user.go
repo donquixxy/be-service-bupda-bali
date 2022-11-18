@@ -26,6 +26,7 @@ type UserRepositoryInterface interface {
 	CreateUserPayLaterFlag(db *gorm.DB, userPayLaterFlag *entity.UsersPaylaterFlag) error
 	UpdateUserPayLaterFlag(db *gorm.DB, idUser string, userPayLaterFlag *entity.UsersPaylaterFlag) error
 	GetUserPaylaterList(db *gorm.DB, nik string) (*entity.UserGetPaylater, error)
+	UpdateUserForIsPaylater(db *gorm.DB, idUser string, userUpdate *entity.User) error
 }
 
 type UserRepositoryImplementation struct {
@@ -138,6 +139,17 @@ func (repository *UserRepositoryImplementation) UpdateUser(db *gorm.DB, idUser s
 		Model(user).
 		Where("id = ?", idUser).
 		Updates(userUpdate)
+	log.Println("error", result.Error)
+	return result.Error
+}
+
+func (repository *UserRepositoryImplementation) UpdateUserForIsPaylater(db *gorm.DB, idUser string, userUpdate *entity.User) error {
+	user := make(map[string]interface{})
+	user["is_paylater"] = userUpdate.IsPaylater
+	result := db.
+		Model(entity.User{}).
+		Where("id = ?", idUser).
+		Updates(&user)
 	return result.Error
 }
 

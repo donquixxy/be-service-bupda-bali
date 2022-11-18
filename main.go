@@ -117,6 +117,7 @@ func main() {
 		userRepository,
 		inveliAPIRepository,
 		userProfileRepository,
+		desaRepository,
 	)
 	otpManagerService := service.NewOtpManagerService(
 		DBConn,

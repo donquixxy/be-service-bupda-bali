@@ -541,6 +541,45 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 
 	}
 
+	// Get User Paylater List
+	log.Println("is paylater", user.User.IsPaylater)
+	if user.User.IsPaylater == 0 {
+		go func() {
+			log.Println("masuk sini")
+
+			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
+
+			log.Println("nik", user.NoIdentitas)
+			fmt.Println("userPaylaterList", userPaylaterList)
+
+			if len(userPaylaterList.Id) != 0 {
+				log.Println("masuk sini 2")
+				userEntity := &entity.User{
+					IsPaylater: 1,
+				}
+				service.UserRepositoryInterface.UpdateUser(service.DB, user.User.Id, userEntity)
+			}
+
+		}()
+	} else if user.User.IsPaylater == 1 {
+		go func() {
+			log.Println("masuk sini 3")
+			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
+
+			log.Println("nik", user.NoIdentitas)
+			fmt.Println("userPaylaterList", userPaylaterList)
+
+			if len(userPaylaterList.Id) == 0 {
+				log.Println("masuk sini 4")
+				userEntity := &entity.User{
+					IsPaylater: 0,
+				}
+				service.UserRepositoryInterface.UpdateUserForIsPaylater(service.DB, user.User.Id, userEntity)
+			}
+		}()
+
+	}
+
 	userResponse = response.ToFindUserIdResponse(user, statusAktifUser)
 	return userResponse
 }
