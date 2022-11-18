@@ -224,6 +224,7 @@ func main() {
 		validate,
 		logrusLogger,
 		settingRepository,
+		desaRepository,
 	)
 	userShippingAddressService := service.NewUserShippingAddressService(
 		DBConn,

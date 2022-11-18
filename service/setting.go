@@ -19,6 +19,7 @@ type SettingServiceImplementation struct {
 	Validate                   *validator.Validate
 	Logger                     *logrus.Logger
 	SettingRepositoryInterface repository.SettingRepositoryInterface
+	DesaRepositoryInterface    repository.DesaRepositoryInterface
 }
 
 func NewSettingService(
@@ -26,12 +27,14 @@ func NewSettingService(
 	validate *validator.Validate,
 	logger *logrus.Logger,
 	settingServiceInterface repository.SettingRepositoryInterface,
+	desaRepositoryInterface repository.DesaRepositoryInterface,
 ) SettingServiceInterface {
 	return &SettingServiceImplementation{
 		DB:                         db,
 		Validate:                   validate,
 		Logger:                     logger,
 		SettingRepositoryInterface: settingServiceInterface,
+		DesaRepositoryInterface:    desaRepositoryInterface,
 	}
 }
 
@@ -44,7 +47,15 @@ func (service *SettingServiceImplementation) FindNewVersion(requestId string, os
 
 func (service *SettingServiceImplementation) FindSettingShippingCost(requestId string, idDesa string) (settingResponse response.FindSettingShippingCostResponse) {
 	shippingCost, err := service.SettingRepositoryInterface.FindSettingShippingCost(service.DB, idDesa)
-	exceptions.PanicIfRecordNotFound(err, requestId, []string{"Data not found"}, service.Logger)
-	settingResponse = response.ToFindSettingShippingCostResponse(shippingCost)
+	desa, err := service.DesaRepositoryInterface.FindDesaById(service.DB, idDesa)
+	if err != nil {
+		exceptions.PanicIfRecordNotFound(err, requestId, []string{"error get shipping cost : ", err.Error()}, service.Logger)
+	}
+
+	if len(desa.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(err, requestId, []string{"shipping cost not found : ", err.Error()}, service.Logger)
+	}
+
+	settingResponse = response.ToFindSettingShippingCostResponse(shippingCost, desa.Ongkir)
 	return settingResponse
 }

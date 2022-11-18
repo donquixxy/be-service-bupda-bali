@@ -9,10 +9,10 @@ type FindSettingShippingCostResponse struct {
 	Value       float64 `json:"shipping_cost"`
 }
 
-func ToFindSettingShippingCostResponse(setting *entity.Setting) (settingResponse FindSettingShippingCostResponse) {
+func ToFindSettingShippingCostResponse(setting *entity.Setting, shippingCost float64) (settingResponse FindSettingShippingCostResponse) {
 	settingResponse.Id = setting.Id
 	settingResponse.IdDesa = setting.IdDesa
 	settingResponse.SettingName = setting.SettingName
-	settingResponse.Value = setting.Value
+	settingResponse.Value = shippingCost
 	return settingResponse
 }

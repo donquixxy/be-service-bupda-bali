@@ -58,8 +58,8 @@ func ToFindOrderSembakoByIdResponse(order *entity.Order, orderItems []entity.Ord
 	orderResponse.ShippingCost = order.ShippingCost
 	orderResponse.PaymentPoint = order.PaymentPoint
 	orderResponse.PaymentFee = order.PaymentFee
-	orderResponse.PaymentCash = order.PaymentCash
-	orderResponse.TotalBill = order.TotalBill
+	orderResponse.PaymentCash = order.PaymentCash + order.PaymentFee
+	orderResponse.TotalBill = order.TotalBill + order.PaymentFee
 	orderResponse.AlamatPengiriman = order.AlamatPengiriman
 	orderResponse.CatatanKurir = order.Catatan
 	orderResponse.OrderDate = order.OrderedDate

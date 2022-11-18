@@ -98,6 +98,25 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		service.FirstTimeLoginInveli(user.Phone, loginRequest.Password)
 
+		// Get User Paylater List
+		if user.IsPaylater == 0 {
+			go func() {
+				userResult, _ := service.UserRepositoryInterface.FindUserById(service.DB, user.Id)
+
+				userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, userResult.NoIdentitas)
+
+				log.Println("nik", userResult.NoIdentitas)
+				fmt.Println("userPaylaterList", userPaylaterList)
+
+				if len(userPaylaterList.Id) != 0 {
+					userEntity := &entity.User{
+						IsPaylater: 1,
+					}
+					service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+				}
+			}()
+		}
+
 		return loginResponse
 	} else {
 		exceptions.PanicIfUnauthorized(errors.New("account is not active"), requestId, []string{"not active"}, service.Logger)
