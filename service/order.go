@@ -377,61 +377,104 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		}
 
 	case "paylater":
-		// accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
-		// if len(accountUser.Id) == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		var isMerchant float64
+		var totalAmount float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			totalAmount = (orderRequest.TotalBill + orderRequest.PaymentFee) + (orderRequest.TotalBill * 0.02)
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		// log.Println("bunga", bunga)
+		// if bunga == 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
 		// }
 
-		// log.Println("log tunggakan mulai")
-		// tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
-		// log.Println("log tunggakan", tunggakanPaylater)
-		// if errr != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
-		// }
-		// log.Println("log tunggakan selesai")
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
 
-		// log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
-		// if len(tunggakanPaylater) != 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
-		// }
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
 
-		// log.Println("log create paylater mulai")
-		// err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
-		// if err != nil {
-		// 	log.Println("ERROR CREATE PAYLATER = ", err)
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
-		// log.Println("log create paylater selesai")
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
 
-		// log.Println("Masuk sini")
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// if time.Now().Local().Day() < 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
-		// } else if time.Now().Local().Day() >= 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
-		// }
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
+		}
 
-		// orderEntity.OrderStatus = 1
-		// orderEntity.PaymentStatus = 1
-		// orderEntity.PaymentName = "Paylater"
-		// orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		// orderEntity.PaymentCash = orderRequest.TotalBill
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		// var isMerchant float64
-		// // var interestPercent float64
-		// if userProfile.User.AccountType == 1 {
-		// 	isMerchant = 0
-		// 	// interestPercent = 0
-		// } else if userProfile.User.AccountType == 2 {
-		// 	isMerchant = 2
-		// 	// interestPercent = 2
-		// }
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
-		// if err != nil {
-		// 	log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-		// 	// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
+		var jmlOrder float64
+		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		jmlOrder = 0
+		for _, v := range jmlOrderPayLate {
+			log.Println("jml total bill = ", v.TotalBill)
+			jmlOrder = jmlOrder + v.TotalBill
+		}
+
+		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+			})
+		}
+
+	case "tabungan_bima":
+
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Tabungan Bima"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -683,61 +726,104 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		}
 
 	case "paylater":
-		// accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
-		// if len(accountUser.Id) == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		var isMerchant float64
+		var totalAmount float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			totalAmount = (orderRequest.TotalBill + orderRequest.PaymentFee) + (orderRequest.TotalBill * 0.02)
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		// log.Println("bunga", bunga)
+		// if bunga == 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
 		// }
 
-		// log.Println("log tunggakan mulai")
-		// tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
-		// log.Println("log tunggakan", tunggakanPaylater)
-		// if errr != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
-		// }
-		// log.Println("log tunggakan selesai")
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
 
-		// log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
-		// if len(tunggakanPaylater) != 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
-		// }
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
 
-		// log.Println("log create paylater mulai")
-		// err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
-		// if err != nil {
-		// 	log.Println("ERROR CREATE PAYLATER = ", err)
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
-		// log.Println("log create paylater selesai")
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
 
-		// log.Println("Masuk sini")
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// if time.Now().Local().Day() < 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
-		// } else if time.Now().Local().Day() >= 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
-		// }
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
+		}
 
-		// orderEntity.OrderStatus = 1
-		// orderEntity.PaymentStatus = 1
-		// orderEntity.PaymentName = "Paylater"
-		// orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		// orderEntity.PaymentCash = orderRequest.TotalBill
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		// var isMerchant float64
-		// // var interestPercent float64
-		// if userProfile.User.AccountType == 1 {
-		// 	isMerchant = 0
-		// 	// interestPercent = 0
-		// } else if userProfile.User.AccountType == 2 {
-		// 	isMerchant = 2
-		// 	// interestPercent = 2
-		// }
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
-		// if err != nil {
-		// 	log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-		// 	// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
+		var jmlOrder float64
+		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		jmlOrder = 0
+		for _, v := range jmlOrderPayLate {
+			log.Println("jml total bill = ", v.TotalBill)
+			jmlOrder = jmlOrder + v.TotalBill
+		}
+
+		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+			})
+		}
+
+	case "tabungan_bima":
+
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Tabungan Bima"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -986,61 +1072,104 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		}
 
 	case "paylater":
-		// accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
-		// if len(accountUser.Id) == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		var isMerchant float64
+		var totalAmount float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			totalAmount = (orderRequest.TotalBill + orderRequest.PaymentFee) + (orderRequest.TotalBill * 0.02)
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		// log.Println("bunga", bunga)
+		// if bunga == 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
 		// }
 
-		// log.Println("log tunggakan mulai")
-		// tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
-		// log.Println("log tunggakan", tunggakanPaylater)
-		// if errr != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
-		// }
-		// log.Println("log tunggakan selesai")
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
 
-		// log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
-		// if len(tunggakanPaylater) != 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
-		// }
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
 
-		// log.Println("log create paylater mulai")
-		// err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
-		// if err != nil {
-		// 	log.Println("ERROR CREATE PAYLATER = ", err)
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
-		// log.Println("log create paylater selesai")
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
 
-		// log.Println("Masuk sini")
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// if time.Now().Local().Day() < 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
-		// } else if time.Now().Local().Day() >= 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
-		// }
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
+		}
 
-		// orderEntity.OrderStatus = 1
-		// orderEntity.PaymentStatus = 1
-		// orderEntity.PaymentName = "Paylater"
-		// orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		// orderEntity.PaymentCash = orderRequest.TotalBill
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		// var isMerchant float64
-		// // var interestPercent float64
-		// if userProfile.User.AccountType == 1 {
-		// 	isMerchant = 0
-		// 	// interestPercent = 0
-		// } else if userProfile.User.AccountType == 2 {
-		// 	isMerchant = 2
-		// 	// interestPercent = 2
-		// }
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
-		// if err != nil {
-		// 	log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-		// 	// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
+		var jmlOrder float64
+		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		jmlOrder = 0
+		for _, v := range jmlOrderPayLate {
+			log.Println("jml total bill = ", v.TotalBill)
+			jmlOrder = jmlOrder + v.TotalBill
+		}
+
+		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+			})
+		}
+
+	case "tabungan_bima":
+
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Tabungan Bima"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -1302,61 +1431,104 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		}
 
 	case "paylater":
-		// accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
-		// if len(accountUser.Id) == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		var isMerchant float64
+		var totalAmount float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			totalAmount = (orderRequest.TotalBill + orderRequest.PaymentFee) + (orderRequest.TotalBill * 0.02)
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		// log.Println("bunga", bunga)
+		// if bunga == 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
 		// }
 
-		// log.Println("log tunggakan mulai")
-		// tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
-		// log.Println("log tunggakan", tunggakanPaylater)
-		// if errr != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
-		// }
-		// log.Println("log tunggakan selesai")
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
 
-		// log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
-		// if len(tunggakanPaylater) != 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
-		// }
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
 
-		// log.Println("log create paylater mulai")
-		// err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
-		// if err != nil {
-		// 	log.Println("ERROR CREATE PAYLATER = ", err)
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
-		// log.Println("log create paylater selesai")
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
 
-		// log.Println("Masuk sini")
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// if time.Now().Local().Day() < 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
-		// } else if time.Now().Local().Day() >= 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
-		// }
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
+		}
 
-		// orderEntity.OrderStatus = 1
-		// orderEntity.PaymentStatus = 1
-		// orderEntity.PaymentName = "Paylater"
-		// orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		// orderEntity.PaymentCash = orderRequest.TotalBill
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		// var isMerchant float64
-		// // var interestPercent float64
-		// if userProfile.User.AccountType == 1 {
-		// 	isMerchant = 0
-		// 	// interestPercent = 0
-		// } else if userProfile.User.AccountType == 2 {
-		// 	isMerchant = 2
-		// 	// interestPercent = 2
-		// }
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
-		// if err != nil {
-		// 	log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-		// 	// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
+		var jmlOrder float64
+		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		jmlOrder = 0
+		for _, v := range jmlOrderPayLate {
+			log.Println("jml total bill = ", v.TotalBill)
+			jmlOrder = jmlOrder + v.TotalBill
+		}
+
+		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+			})
+		}
+
+	case "tabungan_bima":
+
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Tabungan Bima"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -1607,61 +1779,104 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		}
 
 	case "paylater":
-		// accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
-		// if len(accountUser.Id) == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		var isMerchant float64
+		var totalAmount float64
+		// var interestPercent float64
+		if userProfile.User.AccountType == 1 {
+			totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+			isMerchant = 0
+			// interestPercent = 0
+		} else if userProfile.User.AccountType == 2 {
+			totalAmount = (orderRequest.TotalBill + orderRequest.PaymentFee) + (orderRequest.TotalBill * 0.02)
+			isMerchant = 2
+			// interestPercent = 2
+		}
+
+		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		// log.Println("bunga", bunga)
+		// if bunga == 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
 		// }
 
-		// log.Println("log tunggakan mulai")
-		// tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
-		// log.Println("log tunggakan", tunggakanPaylater)
-		// if errr != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
-		// }
-		// log.Println("log tunggakan selesai")
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
 
-		// log.Println("TUNGGAKAN PAYLATER = ", tunggakanPaylater)
-		// if len(tunggakanPaylater) != 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
-		// }
+		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+		}
 
-		// log.Println("log create paylater mulai")
-		// err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill)
-		// if err != nil {
-		// 	log.Println("ERROR CREATE PAYLATER = ", err)
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
-		// log.Println("log create paylater selesai")
+		if len(tunggakanPaylater) != 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		}
 
-		// log.Println("Masuk sini")
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		if err != nil {
+			log.Println("ERROR CREATE PAYLATER = ", err)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// if time.Now().Local().Day() < 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
-		// } else if time.Now().Local().Day() >= 25 {
-		// 	orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
-		// }
+		if time.Now().Local().Day() < 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
+		} else if time.Now().Local().Day() >= 25 {
+			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
+		}
 
-		// orderEntity.OrderStatus = 1
-		// orderEntity.PaymentStatus = 1
-		// orderEntity.PaymentName = "Paylater"
-		// orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		// orderEntity.PaymentCash = orderRequest.TotalBill
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Paylater"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		// var isMerchant float64
-		// // var interestPercent float64
-		// if userProfile.User.AccountType == 1 {
-		// 	isMerchant = 0
-		// 	// interestPercent = 0
-		// } else if userProfile.User.AccountType == 2 {
-		// 	isMerchant = 2
-		// 	// interestPercent = 2
-		// }
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 
-		// err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
-		// if err != nil {
-		// 	log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-		// 	// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		// }
+		var jmlOrder float64
+		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		jmlOrder = 0
+		for _, v := range jmlOrderPayLate {
+			log.Println("jml total bill = ", v.TotalBill)
+			jmlOrder = jmlOrder + v.TotalBill
+		}
+
+		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+			})
+		}
+
+	case "tabungan_bima":
+
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Tabungan Bima"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
 	}
 
 	// Create Order
@@ -1907,6 +2122,16 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			// interestPercent = 2
 		}
 
+		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		// log.Println("bunga", bunga)
+		// if bunga == 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
+		// }
+
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
@@ -1921,7 +2146,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
@@ -1943,6 +2168,44 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		if err != nil {
 			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
 			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		}
+
+		var jmlOrder float64
+		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		jmlOrder = 0
+		for _, v := range jmlOrderPayLate {
+			log.Println("jml total bill = ", v.TotalBill)
+			jmlOrder = jmlOrder + v.TotalBill
+		}
+
+		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+			})
+		}
+
+	case "tabungan_bima":
+
+		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
+		if len(accountUser.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
+		}
+
+		orderEntity.OrderStatus = 1
+		orderEntity.PaymentStatus = 1
+		orderEntity.PaymentName = "Tabungan Bima"
+		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+		orderEntity.PaymentCash = orderRequest.TotalBill
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		if err != nil {
+			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
 		}
 	}
 

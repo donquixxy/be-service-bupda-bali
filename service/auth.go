@@ -118,26 +118,46 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	fmt.Println("access token : ", loginResult.AccessToken)
 	fmt.Println("id member : ", loginResult.UserID)
 
-	user := &entity.User{
-		InveliAccessToken: loginResult.AccessToken,
-		InveliIDMember:    loginResult.UserID,
-		StatusPaylater:    1,
-	}
-
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
-	fmt.Println("user result : ", userResult)
-	if len(userResult.Id) == 0 {
-		exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
+	if userResult.StatusPaylater == 2 {
+		user := &entity.User{
+			InveliAccessToken: loginResult.AccessToken,
+			InveliIDMember:    loginResult.UserID,
+		}
+		fmt.Println("user result : ", userResult)
+		if len(userResult.Id) == 0 {
+			exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
+		}
+
+		err := service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
+		fmt.Println("error save user inveli token : ", err)
+		if err != nil {
+			exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
+		}
+		fmt.Println("success save user inveli token")
+
+		return loginResult.AccessToken
+	} else {
+		user := &entity.User{
+			InveliAccessToken: loginResult.AccessToken,
+			InveliIDMember:    loginResult.UserID,
+			StatusPaylater:    1,
+		}
+		fmt.Println("user result : ", userResult)
+		if len(userResult.Id) == 0 {
+			exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
+		}
+
+		err := service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
+		fmt.Println("error save user inveli token : ", err)
+		if err != nil {
+			exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
+		}
+		fmt.Println("success save user inveli token")
+
+		return loginResult.AccessToken
 	}
 
-	err := service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
-	fmt.Println("error save user inveli token : ", err)
-	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
-	}
-	fmt.Println("success save user inveli token")
-
-	return loginResult.AccessToken
 }
 
 func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken, IdUser string) {
@@ -174,11 +194,15 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 				exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
 			}
 
+			err = service.UserRepositoryInterface.UpdateUser(service.DB, IdUser, user)
+			log.Println("error save user account : ", err)
+
 			// fmt.Println("userAccounts : ", &userAccounts)
 
 			err = service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
 			log.Println("error save user account : ", err)
 		}()
+
 	}
 }
 

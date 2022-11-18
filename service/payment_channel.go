@@ -60,22 +60,27 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 
 	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 
-	statusUser, err := service.InveliAPIRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
+	log.Println("status payalter 1 = ", user.User.StatusPaylater)
 
-	if err != nil {
-		log.Println(err.Error())
-	}
+	// statusUser, err := service.InveliAPIRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
+
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// }
 
 	var jmlOrder float64
+
 	var biayaTanggungRenteng float64
 	jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
 	if err != nil {
 		log.Println(err.Error())
 	}
-
+	jmlOrder = 0
 	for _, v := range jmlOrderPayLate {
-		jmlOrder += v.TotalBill
+		log.Println("jml total bill = ", v.TotalBill)
+		jmlOrder = jmlOrder + v.TotalBill
 	}
+	log.Println("jmlOrder = 1", int(jmlOrder))
 
 	jmlOrder += requestPayChan.TotalBill
 
@@ -97,18 +102,28 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 
 		biayaTanggungRenteng = 2500
 	} else {
-		if jmlOrder > (float64(userPaylaterFlag.TanggungRentengFlag) * 1000000) {
-			// update flag
-			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
-				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
-			})
+		log.Println("payment fee", requestPayChan.TotalBill)
 
+		if len(jmlOrderPayLate) == 0 {
+			log.Println("masuk sini")
 			biayaTanggungRenteng = 2500
 		} else {
-			biayaTanggungRenteng = 0
+			log.Println("jml order sebelumnya", int(jmlOrder))
+			log.Println("jml order request", requestPayChan.TotalBill)
+			if int(jmlOrder) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+				// update flag
+				// service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+				// 	TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+				// })
+
+				biayaTanggungRenteng = 2500
+			} else {
+				biayaTanggungRenteng = 0
+			}
 		}
+
 	}
 
-	paymentChannelResponses = response.ToFindPaymentChannelResponse(paymentChannelResponse, statusUser, biayaTanggungRenteng)
+	paymentChannelResponses = response.ToFindPaymentChannelResponse(paymentChannelResponse, user.User.StatusPaylater, biayaTanggungRenteng, user.User.IsPaylater)
 	return paymentChannelResponses
 }

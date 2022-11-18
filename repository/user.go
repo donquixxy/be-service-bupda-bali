@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"log"
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
@@ -24,6 +25,7 @@ type UserRepositoryInterface interface {
 	GetUserPayLaterFlagThisMonth(db *gorm.DB, idUser string) (*entity.UsersPaylaterFlag, error)
 	CreateUserPayLaterFlag(db *gorm.DB, userPayLaterFlag *entity.UsersPaylaterFlag) error
 	UpdateUserPayLaterFlag(db *gorm.DB, idUser string, userPayLaterFlag *entity.UsersPaylaterFlag) error
+	GetUserPaylaterList(db *gorm.DB, nik string) (*entity.UserGetPaylater, error)
 }
 
 type UserRepositoryImplementation struct {
@@ -36,6 +38,14 @@ func NewUserRepository(
 	return &UserRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *UserRepositoryImplementation) GetUserPaylaterList(db *gorm.DB, nik string) (*entity.UserGetPaylater, error) {
+	var userPayLaterFlag *entity.UserGetPaylater
+	result := db.
+		Where("nik = ?", nik).
+		Find(&userPayLaterFlag)
+	return userPayLaterFlag, result.Error
 }
 
 func (repository *UserRepositoryImplementation) UpdateUserPayLaterFlag(db *gorm.DB, idUser string, userPayLaterFlag *entity.UsersPaylaterFlag) error {
@@ -123,6 +133,7 @@ func (repository *UserRepositoryImplementation) SaveUserAccount(db *gorm.DB, use
 
 func (repository *UserRepositoryImplementation) UpdateUser(db *gorm.DB, idUser string, userUpdate *entity.User) error {
 	user := &entity.User{}
+	log.Println("userUpdate", userUpdate)
 	result := db.
 		Model(user).
 		Where("id = ?", idUser).

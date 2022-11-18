@@ -323,6 +323,8 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 		}
 	}
 
+	log.Println("emailLowerCase", emailLowerCase)
+
 	// Check No Hp
 	phoneCheck, err := service.UserRepositoryInterface.FindUserByPhone(service.DB, createUserRequest.Phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
@@ -334,6 +336,21 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	tx := service.DB.Begin()
 	exceptions.PanicIfError(tx.Error, requestId, service.Logger)
 
+	// Get User Paylater List
+	var isPaylater int
+	userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(tx, createUserRequest.NoIdentitas)
+
+	log.Println("nik", createUserRequest.NoIdentitas)
+	fmt.Println("userPaylaterList", userPaylaterList)
+
+	if len(userPaylaterList.Id) != 0 {
+		isPaylater = 1
+	} else {
+		isPaylater = 0
+	}
+
+	log.Println("statusPaylaterUser", isPaylater)
+
 	userEntity := &entity.User{
 		Id:              utilities.RandomUUID(),
 		Phone:           createUserRequest.Phone,
@@ -342,6 +359,7 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 		IdLimitPayLater: "1006588e-da08-4e1b-8cd4-c14fff9059e1", //default limit 0
 		AccountType:     1,                                      // 1 Normal 2 Merchant
 		StatusSurvey:    1,                                      // 0 Blum survey 1 sudah survey
+		IsPaylater:      isPaylater,
 		CreatedDate:     time.Now(),
 	}
 
@@ -413,7 +431,7 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	var emailLowerCase string
 	emailLowerCase = strings.ToLower(createUserRequest.Email)
 	if len(emailLowerCase) == 0 {
-		emailLowerCase = "bupdabali@gmail.com"
+		emailLowerCase = utilities.GenerateEmail()
 	} else {
 		emailChek, err := service.UserProfileRepositoryInterface.FindUserByEmail(service.DB, emailLowerCase)
 		exceptions.PanicIfError(err, requestId, service.Logger)
@@ -421,6 +439,8 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 			exceptions.PanicIfRecordAlreadyExists(errors.New("email already exist"), requestId, []string{"Email sudah digunakan"}, service.Logger)
 		}
 	}
+
+	log.Println("emailLowerCase", emailLowerCase)
 
 	// Check No Hp
 	phoneCheck, err := service.UserRepositoryInterface.FindUserByPhone(service.DB, createUserRequest.Phone)
@@ -438,6 +458,20 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	tx := service.DB.Begin()
 	exceptions.PanicIfError(tx.Error, requestId, service.Logger)
 
+	var isPaylater int
+	userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(tx, createUserRequest.NoIdentitas)
+
+	log.Println("nik", createUserRequest.NoIdentitas)
+	fmt.Println("userPaylaterList", userPaylaterList)
+
+	if len(userPaylaterList.Id) != 0 {
+		isPaylater = 1
+	} else {
+		isPaylater = 0
+	}
+
+	log.Println("statusPaylaterUser", isPaylater)
+
 	userEntity := &entity.User{
 		Id:              utilities.RandomUUID(),
 		Phone:           createUserRequest.Phone,
@@ -446,7 +480,8 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 		IsActive:        1,
 		IdLimitPayLater: "1006588e-da08-4e1b-8cd4-c14fff9059e1", //default limit 0
 		AccountType:     1,                                      // 1 Normal 2 Merchant
-		StatusSurvey:    0,                                      // 0 Blum survey 1 sudah survey
+		StatusSurvey:    0,
+		IsPaylater:      isPaylater, // 0 Blum survey 1 sudah survey
 		CreatedDate:     time.Now(),
 	}
 

@@ -1,6 +1,9 @@
 package response
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 )
 
@@ -15,12 +18,21 @@ type FindPaymentChannelResponse struct {
 	AdminFeePercentage float64 `json:"admin_fee_percentage"`
 }
 
-func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statusUser bool, biayaTanggungRenteng float64) (paymentChannelResponses []FindPaymentChannelResponse) {
+func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statusUser int, biayaTanggungRenteng float64, isPaylater int) (paymentChannelResponses []FindPaymentChannelResponse) {
+	fmt.Println("payment fee", biayaTanggungRenteng)
+	log.Println("status user", statusUser)
 	for _, paymentChannel := range paymentChannels {
 		paymentChannelResponse := FindPaymentChannelResponse{}
-		if paymentChannel.Code == "paylater" && !statusUser {
+		log.Println("payment channel", paymentChannel.Code)
+		if paymentChannel.Code == "paylater" && statusUser != 2 {
+			log.Println("masuk hahaha")
 			continue
 		}
+
+		if paymentChannel.Code == "tabungan_bima" && statusUser == 0 {
+			continue
+		}
+
 		paymentChannelResponse.Id = paymentChannel.Id
 		paymentChannelResponse.IdPaymentMethod = paymentChannel.IdPaymentMethod
 		paymentChannelResponse.Name = paymentChannel.Name
@@ -35,8 +47,7 @@ func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statu
 		} else {
 			paymentChannelResponse.AdminFee = paymentChannel.AdminFee
 		}
-		paymentChannelResponse.AdminFeePercentage = paymentChannel.AdminFeePercentage
-		paymentChannelResponse.AdminFee = paymentChannel.AdminFee
+
 		paymentChannelResponse.AdminFeePercentage = paymentChannel.AdminFeePercentage
 		paymentChannelResponses = append(paymentChannelResponses, paymentChannelResponse)
 	}
