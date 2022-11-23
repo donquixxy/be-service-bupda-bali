@@ -211,9 +211,8 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 			}
 
 			service.UserRepositoryInterface.SaveUserInveliToken(service.DB, IdUser, user)
-			fmt.Println("error save user inveli token : ", err)
 			if err != nil {
-				exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
+				exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli : ", err.Error()}, service.Logger)
 			}
 
 			err = service.UserRepositoryInterface.UpdateUser(service.DB, IdUser, user)
@@ -244,7 +243,7 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	resp, err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, accessToken)
 
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{err.Error()}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger)
 	}
 
 	if resp == nil {
@@ -276,10 +275,16 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 
 	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
 
+	fmt.Println("desa : ", desa)
+	log.Println("group id", desa.GroupIdBupda)
+	if len(desa.GroupIdBupda) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("groupd id not found"), requestId, []string{"groupd id not found"}, service.Logger)
+	}
+
 	errrr := service.InveliAPIRespositoryInterface.InveliUpdateMember(userResult, userProfile, accessToken, desa.GroupIdBupda)
 
 	if errrr != nil {
-		exceptions.PanicIfBadRequest(errors.New("failed activate account"), requestId, []string{errrr.Error()}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("failed activate account"), requestId, []string{strings.TrimPrefix(errrr.Error(), "grapql: Internal Core Error : ")}, service.Logger)
 	}
 
 	return nil

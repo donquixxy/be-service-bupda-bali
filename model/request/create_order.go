@@ -13,7 +13,7 @@ type CreateOrderRequest struct {
 	PaymentPoint     float64 `json:"payment_point" form:"payment_point"`
 	AlamatPengiriman string  `json:"alamat_pengiriman" form:"alamat_pengiriman" validate:"required"`
 	CatatanKurir     string  `json:"catatan_kurir" form:"catatan_kurir" validate:"required"`
-	ShippingCost     float64 `json:"shipping_cost" form:"shipping_cost" validate:"required"`
+	ShippingCost     float64 `json:"shipping_cost" form:"shipping_cost"`
 	PaymentFee       float64 `json:"payment_fee" form:"payment_fee"`
 }
 

@@ -189,7 +189,10 @@ func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId str
 
 	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 
-	accountBalance, _ := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.IdAccount, user.User.InveliAccessToken)
+	accountBalance, err := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.IdAccount, user.User.InveliAccessToken)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger)
+	}
 
 	accountBalanceResponse = response.ToFindAccountBalanceResponse(accountBalance)
 	return accountBalanceResponse
@@ -207,7 +210,7 @@ func (service *UserServiceImplementation) GetUserAccountBimaByID(requestId strin
 
 	accountBalance, err := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.Code, user.User.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{"error inveli"}, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger)
 	}
 
 	accountBalanceResponse = response.ToFindAccountBalanceResponse(accountBalance)
@@ -405,7 +408,7 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	errInveli := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
 	// fmt.Println("register inveli = ", errInveli.Error())
 	if errInveli != nil {
-		exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"), requestId, []string{errInveli.Error()}, service.Logger, tx)
+		exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+errInveli.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
 	}
 
 	commit := tx.Commit()
@@ -527,53 +530,38 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 	statusAktifUser, err := service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		log.Println("error get status account inveli = ", err.Error())
-		// exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
 	if statusAktifUser {
 		accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
-		// fmt.Println("masuk sini")
-		// fmt.Println("account info = ", accountInfo.Id)
-		if len(accountInfo.Id) == 0 {
 
+		if len(accountInfo.Id) == 0 {
 			service.AuthServiceInterface.GetUserAccountInveli(user.User.InveliIDMember, user.User.InveliAccessToken, idUser)
 		}
-
 	}
 
-	// Get User Paylater List
-	log.Println("is paylater", user.User.IsPaylater)
 	if user.User.IsPaylater == 0 {
 		go func() {
-			log.Println("masuk sini")
-
 			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
 
-			log.Println("nik", user.NoIdentitas)
-			fmt.Println("userPaylaterList", userPaylaterList)
-
 			if len(userPaylaterList.Id) != 0 {
-				log.Println("masuk sini 2")
 				userEntity := &entity.User{
 					IsPaylater: 1,
 				}
+
 				service.UserRepositoryInterface.UpdateUser(service.DB, user.User.Id, userEntity)
 			}
 
 		}()
 	} else if user.User.IsPaylater == 1 {
 		go func() {
-			log.Println("masuk sini 3")
 			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
 
-			log.Println("nik", user.NoIdentitas)
-			fmt.Println("userPaylaterList", userPaylaterList)
-
 			if len(userPaylaterList.Id) == 0 {
-				log.Println("masuk sini 4")
 				userEntity := &entity.User{
 					IsPaylater: 0,
 				}
+
 				service.UserRepositoryInterface.UpdateUserForIsPaylater(service.DB, user.User.Id, userEntity)
 			}
 		}()
@@ -587,6 +575,7 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 func (service *UserServiceImplementation) UpdateUserPassword(requestId string, idUser string, updateUserPasswordRequest *request.UpdateUserPasswordRequest) {
 	var err error
 
+	tx := service.DB.Begin()
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(user.Id) == 0 {
@@ -604,13 +593,23 @@ func (service *UserServiceImplementation) UpdateUserPassword(requestId string, i
 		Password: string(bcryptPassword),
 	}
 
-	err = service.UserRepositoryInterface.UpdateUser(service.DB, idUser, userEntity)
-	exceptions.PanicIfError(err, requestId, service.Logger)
+	err = service.UserRepositoryInterface.UpdateUser(tx, idUser, userEntity)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.User.InveliIDMember, updateUserPasswordRequest.PasswordBaru, user.User.InveliAccessToken)
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, service.DB)
+	}
+	tx.Commit()
+
 }
 
 func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId string, updateUserForgotPasswordRequest *request.UpdateUserForgotPasswordRequest) {
 	var err error
 
+	tx := service.DB.Begin()
 	// validate request
 	request.ValidateRequest(service.Validate, updateUserForgotPasswordRequest, requestId, service.Logger)
 
@@ -631,8 +630,17 @@ func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId str
 		Password: string(bcryptPassword),
 	}
 
-	err = service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
-	exceptions.PanicIfError(err, requestId, service.Logger)
+	err = service.UserRepositoryInterface.UpdateUser(tx, user.Id, userEntity)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.InveliIDMember, password, user.InveliAccessToken)
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, service.DB)
+	}
+
+	tx.Commit()
 }
 
 func (service *UserServiceImplementation) UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest) {

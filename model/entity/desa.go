@@ -6,7 +6,8 @@ type Desa struct {
 	NamaDesa     string  `gorm:"column:nama_desa;"`
 	NamaBendesa  string  `gorm:"column:nama_bendesa;"`
 	Ongkir       float64 `gorm:"column:ongkir;"`
-	GroupIdBupda string  `gorm:"column:group_id_bupda;"`
+	GroupIdBupda string  `gorm:"column:group_id;"`
+	NoRekening   string  `gorm:"column:no_rekening;"`
 }
 
 func (Desa) TableName() string {

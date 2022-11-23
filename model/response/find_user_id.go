@@ -1,8 +1,6 @@
 package response
 
 import (
-	"log"
-
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 )
 
@@ -23,7 +21,7 @@ type FindUserIdResponse struct {
 }
 
 func ToFindUserIdResponse(userProfile *entity.UserProfile, statusAktifUser bool) (userResponse FindUserIdResponse) {
-	log.Println("status aktif user", userProfile.User.StatusPaylater)
+	// log.Println("status aktif user", userProfile.User.StatusPaylater)
 	userResponse.Id = userProfile.User.Id
 	userResponse.NoIdentitas = userProfile.NoIdentitas
 	userResponse.NamaLengkap = userProfile.NamaLengkap

@@ -20,9 +20,10 @@ type InveliAPIRepositoryInterface interface {
 	InveliResgisration(inveliRegistrationModel *inveli.InveliRegistrationModel) error
 	InveliLogin(username, password string) *inveli.InveliLoginModel
 	InveliUbahPassword(id, password, token string) (interface{}, error)
+	InveliUbahPasswordUserExisting(id, password, token string) error
 	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string, groupIdBupda string) error
 	GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error)
-	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64, bunga float64) error
+	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64, bunga float64, loanProductId string) error
 	GetStatusAccount(IDMember, token string) (bool, error)
 	GetBalanceAccount(Code, token string) (*inveli.InveliAcountInfo, error)
 	GetKodeBIN(token string) (string, error)
@@ -33,6 +34,7 @@ type InveliAPIRepositoryInterface interface {
 	GetTagihanPaylater(IDMember, token string) ([]inveli.RiwayatPinjaman2, error)
 	PayPaylater(loanID, token string) error
 	GetLoanProduct(token string) (float64, error)
+	GetLoanProductId(token string) (string, error)
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -40,6 +42,34 @@ type InveliAPIRepositoryImplementation struct {
 
 func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
+}
+
+func (r *InveliAPIRepositoryImplementation) InveliUbahPasswordUserExisting(id, password, token string) error {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+	req := graphql.NewRequest(`
+		mutation ($id: String!, $password: String!) {
+			changePassword(
+				id: $id, 
+				newPassword: $password)
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("id", id)
+	req.Var("password", password)
+	ctx := context.Background()
+
+	// fmt.Println("request : ", req)
+
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println("error change password : ", err)
+		return err
+	}
+
+	fmt.Println("response ubah password : ", respData)
+
+	return nil
 }
 
 func (r *InveliAPIRepositoryImplementation) PayPaylater(IDMember, token string) error {
@@ -64,12 +94,12 @@ func (r *InveliAPIRepositoryImplementation) PayPaylater(IDMember, token string) 
 	return nil
 }
 
-func (r *InveliAPIRepositoryImplementation) GetLoanProduct(token string) (float64, error) {
+func (r *InveliAPIRepositoryImplementation) GetLoanProductId(token string) (string, error) {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
 	req := graphql.NewRequest(`
 	 {
-loanProducts{
+			loanProducts{
         loanProductID
         loanProductNo
         productName
@@ -88,18 +118,76 @@ loanProducts{
         recordStatus
         companyBranchID
         loanProductCharges{
-            loanProductChargeID
-            loanProductChargeNo
-            parentCOAID
-            description
-            loanProductID
-            amount
-            amountPercentage
-            cOANo
-            recordStatus
+          loanProductChargeID
+          loanProductChargeNo
+          parentCOAID
+          description
+          loanProductID
+          amount
+          amountPercentage
+          cOANo
+          recordStatus
         }
-    }
+    	}
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	var loandProductID string
+	// var data []interface{}
+	for _, v := range respData.(map[string]interface{})["loanProducts"].([]interface{}) {
+		if v.(map[string]interface{})["loanProductNo"].(string) == "LPDCO160012210001" {
+			loandProductID = v.(map[string]interface{})["loanProductID"].(string)
+		}
+	}
+
+	fmt.Println("loan product id ", loandProductID)
+	return loandProductID, nil
 }
+
+func (r *InveliAPIRepositoryImplementation) GetLoanProduct(token string) (float64, error) {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	req := graphql.NewRequest(`
+	 {
+			loanProducts{
+        loanProductID
+        loanProductNo
+        productName
+        interestCalcType
+        interestDayBasisID
+        interestPercentage
+        calcBase
+        schemeType
+        scheduleType
+        collectionType
+        roundingType
+        penaltyTerminationAmount
+        minPenaltyTermination
+        penaltyAmount
+        minLoanAmount
+        recordStatus
+        companyBranchID
+        loanProductCharges{
+          loanProductChargeID
+          loanProductChargeNo
+          parentCOAID
+          description
+          loanProductID
+          amount
+          amountPercentage
+          cOANo
+          recordStatus
+        }
+    	}
+		}
 	`)
 
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -113,7 +201,9 @@ loanProducts{
 	var bunga float64
 	// var data []interface{}
 	for _, v := range respData.(map[string]interface{})["loanProducts"].([]interface{}) {
-		if v.(map[string]interface{})["productName"].(string) == "Kasbon Paylater" {
+		// dev loan no LPDCO160012210001
+		// prod loan no LPDCO160012211001
+		if v.(map[string]interface{})["loanProductNo"].(string) == "LPDCO160012210001" {
 			bunga = v.(map[string]interface{})["interestPercentage"].(float64)
 		}
 	}
@@ -306,6 +396,8 @@ func (r *InveliAPIRepositoryImplementation) GetTunggakan(LoanID, token string) (
 func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccount, token string, amount float64, isMerchant float64) error {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
+	log.Println("credit account api payment: ", creditAccount)
+
 	req := graphql.NewRequest(`
 		mutation ($payment: MemberPaymentInput!) {
 			requestPayment(memberPayment: $payment)
@@ -344,6 +436,8 @@ func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccou
 		"paymentInterest":     isMerchant,
 		"memberPaymentDetail": []string{},
 	})
+
+	fmt.Println("request api payment : ", req)
 
 	ctx := context.Background()
 
@@ -421,9 +515,11 @@ func (r *InveliAPIRepositoryImplementation) InquiryVaNasabah(phone, token string
 	return inquiryVaResult, nil
 }
 
-func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64, bunga float64) error {
+func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64, bunga float64, loanProductId string) error {
 
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	log.Println("loan id di inveli", loanProductId)
 
 	req := graphql.NewRequest(`
 		mutation ($loanInputParam: LoanInput!) {
@@ -435,7 +531,7 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 	req.Var("loanInputParam", map[string]interface{}{
 		"accountID":             AccountID,
 		"memberID":              IDMember,
-		"loanProductID":         config.GetConfig().Inveli.LoanProductID,
+		"loanProductID":         loanProductId,
 		"tenor":                 1,
 		"loanAmount":            Amount,
 		"interestPercent":       bunga,
@@ -503,6 +599,9 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 			}
 	  }
 	`)
+
+	log.Println("groupId :", user.Phone)
+	log.Println("groupId : ", groupIdBupda)
 
 	// set any variables
 	req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -836,5 +935,4 @@ func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string
 	fmt.Println("account balance = ", accountBalance)
 
 	return accountBalance, nil
-
 }

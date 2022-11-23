@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -82,7 +81,7 @@ func (service *ProductDesaServiceImplementation) FindProductsDesaBySubCategory(r
 
 func (service *ProductDesaServiceImplementation) FindProductsDesaByPromo(requestid string, IdDesa string, IdPromo string, AccountType int) (productsDesaResponses []response.FindProductsDesaResponse) {
 	productsDesa, err := service.ProductDesaRepositoryInterface.FindProductsDesaByPromo(service.DB, IdDesa, IdPromo)
-	fmt.Println("product = ", productsDesa)
+	// fmt.Println("product = ", productsDesa)
 	exceptions.PanicIfError(err, requestid, service.Logger)
 	if len(productsDesa) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("not found"), requestid, []string{"data not found"}, service.Logger)

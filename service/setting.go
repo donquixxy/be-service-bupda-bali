@@ -46,7 +46,7 @@ func (service *SettingServiceImplementation) FindNewVersion(requestId string, os
 }
 
 func (service *SettingServiceImplementation) FindSettingShippingCost(requestId string, idDesa string) (settingResponse response.FindSettingShippingCostResponse) {
-	shippingCost, err := service.SettingRepositoryInterface.FindSettingShippingCost(service.DB, idDesa)
+	shippingCost, _ := service.SettingRepositoryInterface.FindSettingShippingCost(service.DB, idDesa)
 	desa, err := service.DesaRepositoryInterface.FindDesaById(service.DB, idDesa)
 	if err != nil {
 		exceptions.PanicIfRecordNotFound(err, requestId, []string{"error get shipping cost : ", err.Error()}, service.Logger)

@@ -134,9 +134,9 @@ func (service *CartServiceImplementation) FindCartByUser(requestid string, idUse
 
 	desa, err := service.DesaRepositoryInterface.FindDesaById(service.DB, idDesa)
 	exceptions.PanicIfError(err, requestid, service.Logger)
-	if desa.Ongkir == 0 {
-		exceptions.PanicIfRecordNotFound(errors.New("shipping cost not found"), requestid, []string{"shipping cost not found"}, service.Logger)
-	}
+	// if desa.Ongkir == 0 {
+	// 	exceptions.PanicIfRecordNotFound(errors.New("shipping cost not found"), requestid, []string{"shipping cost not found"}, service.Logger)
+	// }
 
 	cartResponses = response.ToFindCartByUserResponse(carts, desa.Ongkir, accountType)
 	return cartResponses

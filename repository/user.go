@@ -93,7 +93,7 @@ func (repository *UserRepositoryImplementation) GetUserAccountPaylaterByID(db *g
 	result := db.
 		Where("id_user = ?", idUser).
 		Where("account_name = ?", "Simpanan Khusus").
-		Find(userAccount)
+		First(userAccount)
 	return userAccount, result.Error
 }
 

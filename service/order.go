@@ -392,13 +392,17 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product "+err.Error()), requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
-		// log.Println("bunga", bunga)
-		// if bunga == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
-		// }
+		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id "+err.Error()), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		if len(loandProductID) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
+		}
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -407,14 +411,14 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 
 		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
@@ -432,10 +436,16 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		log.Println("rekening desa = ", desa.NoRekening)
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 		}
 
 		var jmlOrder float64
@@ -445,7 +455,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		}
 		jmlOrder = 0
 		for _, v := range jmlOrderPayLate {
-			log.Println("jml total bill = ", v.TotalBill)
+			// log.Println("jml total bill = ", v.TotalBill)
 			jmlOrder = jmlOrder + v.TotalBill
 		}
 
@@ -472,7 +482,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 
 		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
 		}
 	}
@@ -741,13 +751,17 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product "+err.Error()), requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
-		// log.Println("bunga", bunga)
-		// if bunga == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
-		// }
+		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id "+err.Error()), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		if len(loandProductID) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
+		}
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -756,14 +770,14 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 
 		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
@@ -781,10 +795,16 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		log.Println("rekening desa = ", desa.NoRekening)
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 		}
 
 		var jmlOrder float64
@@ -794,7 +814,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		}
 		jmlOrder = 0
 		for _, v := range jmlOrderPayLate {
-			log.Println("jml total bill = ", v.TotalBill)
+			// log.Println("jml total bill = ", v.TotalBill)
 			jmlOrder = jmlOrder + v.TotalBill
 		}
 
@@ -821,7 +841,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 
 		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
 		}
 	}
@@ -1087,13 +1107,17 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product"), requestId, []string{"error get loan product id : ", errr.Error()}, service.Logger, tx)
 		}
 
-		// log.Println("bunga", bunga)
-		// if bunga == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
-		// }
+		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id"), requestId, []string{"error get loan product id : ", errr.Error()}, service.Logger, tx)
+		}
+
+		if len(loandProductID) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
+		}
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -1102,17 +1126,17 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 
 		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan : ", errr.Error()}, service.Logger, tx)
 		}
 
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create paylater : ", err.Error()}, service.Logger, tx)
 		}
 
 		if time.Now().Local().Day() < 25 {
@@ -1127,10 +1151,16 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		log.Println("rekening desa = ", desa.NoRekening)
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 		}
 
 		var jmlOrder float64
@@ -1140,7 +1170,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		}
 		jmlOrder = 0
 		for _, v := range jmlOrderPayLate {
-			log.Println("jml total bill = ", v.TotalBill)
+			// log.Println("jml total bill = ", v.TotalBill)
 			jmlOrder = jmlOrder + v.TotalBill
 		}
 
@@ -1167,7 +1197,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 
 		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
 		}
 	}
@@ -1446,13 +1476,17 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product"), requestId, []string{"error get loan product id : ", errr.Error()}, service.Logger, tx)
 		}
 
-		// log.Println("bunga", bunga)
-		// if bunga == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
-		// }
+		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id"), requestId, []string{"error get loan product id : ", errr.Error()}, service.Logger, tx)
+		}
+
+		if len(loandProductID) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
+		}
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -1461,17 +1495,17 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 
 		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan : ", errr.Error()}, service.Logger, tx)
 		}
 
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create paylater : ", err.Error()}, service.Logger, tx)
 		}
 
 		if time.Now().Local().Day() < 25 {
@@ -1486,10 +1520,16 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		log.Println("rekening desa = ", desa.NoRekening)
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 		}
 
 		var jmlOrder float64
@@ -1499,7 +1539,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		}
 		jmlOrder = 0
 		for _, v := range jmlOrderPayLate {
-			log.Println("jml total bill = ", v.TotalBill)
+			// log.Println("jml total bill = ", v.TotalBill)
 			jmlOrder = jmlOrder + v.TotalBill
 		}
 
@@ -1526,7 +1566,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 
 		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
 		}
 	}
@@ -1794,13 +1834,17 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product "+err.Error()), requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
-		// log.Println("bunga", bunga)
-		// if bunga == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
-		// }
+		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id "+err.Error()), requestId, []string{errr.Error()}, service.Logger, tx)
+		}
+
+		if len(loandProductID) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
+		}
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -1809,14 +1853,14 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 
 		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
@@ -1834,10 +1878,16 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		log.Println("rekening desa = ", desa.NoRekening)
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 		}
 
 		var jmlOrder float64
@@ -1847,7 +1897,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		}
 		jmlOrder = 0
 		for _, v := range jmlOrderPayLate {
-			log.Println("jml total bill = ", v.TotalBill)
+			// log.Println("jml total bill = ", v.TotalBill)
 			jmlOrder = jmlOrder + v.TotalBill
 		}
 
@@ -1874,9 +1924,10 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 
 		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
 		}
+
 	}
 
 	// Create Order
@@ -1940,12 +1991,8 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity.OrderedDate = time.Now()
 	orderEntity.PaymentMethod = orderRequest.PaymentMethod
 	orderEntity.PaymentChannel = orderRequest.PaymentChannel
-	orderEntity.TotalBill = orderRequest.TotalBill
-	if orderRequest.PaymentMethod == "Paylater" {
-		orderEntity.PaymentFee = 0
-	} else {
-		orderEntity.PaymentFee = orderRequest.PaymentFee
-	}
+	orderEntity.TotalBill = orderRequest.TotalBill + orderRequest.PaymentFee
+	orderEntity.PaymentFee = orderRequest.PaymentFee
 
 	orderEntity.OrderType = 1
 
@@ -2124,13 +2171,17 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{errr.Error()}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
 		}
 
-		// log.Println("bunga", bunga)
-		// if bunga == 0 {
-		// 	exceptions.PanicIfErrorWithRollback(errors.New("asdasd"), requestId, []string{"bunga nol"}, service.Logger, tx)
-		// }
+		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
+		if errr != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
+		}
+
+		if len(loandProductID) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
+		}
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
 		if len(accountUser.Id) == 0 {
@@ -2139,14 +2190,14 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 		tunggakanPaylater, errr := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
 		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error get tunggakan"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{errr.Error()}, service.Logger, tx)
 		}
 
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
-		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga)
+		err := service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			log.Println("ERROR CREATE PAYLATER = ", err)
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
@@ -2162,12 +2213,25 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		orderEntity.PaymentStatus = 1
 		orderEntity.PaymentName = "Paylater"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		orderEntity.PaymentCash = orderRequest.TotalBill
+		orderEntity.PaymentCash = orderRequest.TotalBill + orderRequest.PaymentFee
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		log.Println("NIK = ", userProfile.NoIdentitas)
+		log.Println("User Account = ", accountUser.Code)
+		log.Println("Bupda Account = ", desa.NoRekening)
+		log.Println("GUID = ", accountUser.IdAccount)
+
+		exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+
+		// log.Println("rekening desa = ", desa.NoRekening)
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			// exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
 		}
 
 		var jmlOrder float64
@@ -2177,7 +2241,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		}
 		jmlOrder = 0
 		for _, v := range jmlOrderPayLate {
-			log.Println("jml total bill = ", v.TotalBill)
+			// log.Println("jml total bill = ", v.TotalBill)
 			jmlOrder = jmlOrder + v.TotalBill
 		}
 
@@ -2202,10 +2266,15 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 		orderEntity.PaymentCash = orderRequest.TotalBill
 
-		err = service.InveliAPIRepositoryInterface.ApiPayment(config.GetConfig().Inveli.BupdaAccount, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
+		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+		if len(desa.Id) == 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+		}
+
+		err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, 0)
 		if err != nil {
-			log.Println("LOG ERROR INVELI PAYLATER = ", err.Error())
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("LOG ERROR INVELI API PAYMENT = ", err.Error())
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
 		}
 	}
 
