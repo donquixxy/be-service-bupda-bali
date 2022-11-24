@@ -130,7 +130,7 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 
 	limitPinjaman, err := service.InveliRepositoryInterface.GetLimitPayLater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
-		log.Println("pinjaman = ", err.Error())
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	limitPayLaterResponse = response.ToFindLimitPayLaterResponse(limitPinjaman)
@@ -140,14 +140,24 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 
 func (service *UserServiceImplementation) GetTunggakanPaylater(reqeustId string, idUser string) (tunggakanPaylaterResponse []response.FindTunggakanPaylater) {
 	account, err := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
-	exceptions.PanicIfError(err, reqeustId, service.Logger)
-	if account == nil {
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, reqeustId, []string{err.Error()}, service.Logger)
+	}
+
+	if len(account.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("user account paylater not found"), reqeustId, []string{"user account paylater not found"}, service.Logger)
 	}
 
-	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, reqeustId, []string{err.Error()}, service.Logger)
+	}
 
-	respTunggakan, _ := service.InveliRepositoryInterface.GetTunggakan(account.IdAccount, user.User.InveliAccessToken)
+	respTunggakan, err := service.InveliRepositoryInterface.GetTunggakan(account.IdAccount, user.User.InveliAccessToken)
+
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, reqeustId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+	}
 
 	if respTunggakan == nil {
 		exceptions.PanicIfRecordNotFound(errors.New("tunggakan paylater not found"), reqeustId, []string{"tunggakan paylater not found"}, service.Logger)
@@ -173,16 +183,22 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 	}
 
 	// Register to inveli
-	errInveli := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
-	// fmt.Println("register inveli = ", errInveli.Error())
-	if errInveli != nil {
-		exceptions.PanicIfBadRequest(errInveli, requestId, []string{"error inveli"}, service.Logger)
+	err := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	if err != nil {
+		if strings.TrimPrefix(err.Error(), "graphql: ") == "Email : "+user.Email+" dan HandPhone : "+user.User.Phone+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." || strings.TrimPrefix(err.Error(), "graphql: ") == "Identity Number : "+user.NoIdentitas+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." {
+			exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, service.DB)
+		} else {
+			exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, service.DB)
+		}
 	}
 }
 
 func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse) {
 	userAccount, err := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
-	exceptions.PanicIfError(err, requestId, service.Logger)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{err.Error()}, service.Logger)
+	}
+
 	if len(userAccount.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("user account not found"), requestId, []string{"user account not found"}, service.Logger)
 	}
@@ -191,7 +207,7 @@ func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId str
 
 	accountBalance, err := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.IdAccount, user.User.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	accountBalanceResponse = response.ToFindAccountBalanceResponse(accountBalance)
@@ -199,7 +215,6 @@ func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId str
 }
 
 func (service *UserServiceImplementation) GetUserAccountBimaByID(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse) {
-	fmt.Println("masuk", idUser)
 	userAccount, err := service.UserRepositoryInterface.GetUserAccountBimaByID(service.DB, idUser)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(userAccount.Id) == 0 {
@@ -210,7 +225,7 @@ func (service *UserServiceImplementation) GetUserAccountBimaByID(requestId strin
 
 	accountBalance, err := service.InveliRepositoryInterface.GetBalanceAccount(userAccount.Code, user.User.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	accountBalanceResponse = response.ToFindAccountBalanceResponse(accountBalance)
@@ -326,8 +341,6 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 		}
 	}
 
-	log.Println("emailLowerCase", emailLowerCase)
-
 	// Check No Hp
 	phoneCheck, err := service.UserRepositoryInterface.FindUserByPhone(service.DB, createUserRequest.Phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
@@ -343,16 +356,11 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	var isPaylater int
 	userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(tx, createUserRequest.NoIdentitas)
 
-	log.Println("nik", createUserRequest.NoIdentitas)
-	fmt.Println("userPaylaterList", userPaylaterList)
-
 	if len(userPaylaterList.Id) != 0 {
 		isPaylater = 1
 	} else {
 		isPaylater = 0
 	}
-
-	log.Println("statusPaylaterUser", isPaylater)
 
 	userEntity := &entity.User{
 		Id:              utilities.RandomUUID(),
@@ -405,10 +413,13 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	}
 
 	// Register to inveli
-	errInveli := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
-	// fmt.Println("register inveli = ", errInveli.Error())
-	if errInveli != nil {
-		exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+errInveli.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
+	err = service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	if err != nil {
+		if strings.TrimPrefix(err.Error(), "graphql: ") == "Email : "+emailLowerCase+" dan HandPhone : "+createUserRequest.Phone+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." || strings.TrimPrefix(err.Error(), "graphql: ") == "Identity Number : "+createUserRequest.NoIdentitas+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." {
+			exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
+		} else {
+			exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
+		}
 	}
 
 	commit := tx.Commit()
@@ -443,8 +454,6 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 		}
 	}
 
-	log.Println("emailLowerCase", emailLowerCase)
-
 	// Check No Hp
 	phoneCheck, err := service.UserRepositoryInterface.FindUserByPhone(service.DB, createUserRequest.Phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
@@ -464,16 +473,11 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 	var isPaylater int
 	userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(tx, createUserRequest.NoIdentitas)
 
-	log.Println("nik", createUserRequest.NoIdentitas)
-	fmt.Println("userPaylaterList", userPaylaterList)
-
 	if len(userPaylaterList.Id) != 0 {
 		isPaylater = 1
 	} else {
 		isPaylater = 0
 	}
-
-	log.Println("statusPaylaterUser", isPaylater)
 
 	userEntity := &entity.User{
 		Id:              utilities.RandomUUID(),
@@ -527,6 +531,7 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 	if len(user.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user tidak ditemukan"}, service.Logger)
 	}
+
 	statusAktifUser, err := service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		log.Println("error get status account inveli = ", err.Error())
@@ -603,7 +608,6 @@ func (service *UserServiceImplementation) UpdateUserPassword(requestId string, i
 		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, service.DB)
 	}
 	tx.Commit()
-
 }
 
 func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId string, updateUserForgotPasswordRequest *request.UpdateUserForgotPasswordRequest) {

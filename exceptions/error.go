@@ -33,6 +33,19 @@ func PanicIfErrorWithRollback(err error, requestId string, errorString []string,
 	}
 }
 
+func PanicIfErrorWithRollbackRegister(err error, requestId string, errorString []string, logger *logrus.Logger, DB *gorm.DB) {
+	if err != nil && err != gorm.ErrRecordNotFound {
+		rollback := DB.Rollback()
+		if rollback.Error != nil {
+			PanicIfError(rollback.Error, requestId, logger)
+		}
+		out, errr := json.Marshal(ErrorStruct{Code: 408, Error: errorString})
+		PanicIfError(errr, requestId, logger)
+		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
+		panic(string(out))
+	}
+}
+
 func PanicIfBadRequest(err error, requestId string, errorString []string, logger *logrus.Logger) {
 	if err != nil {
 		out, errr := json.Marshal(ErrorStruct{Code: 400, Mssg: "Bad Request", Error: errorString})

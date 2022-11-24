@@ -66,6 +66,7 @@ func InveliTestRoutes(e *echo.Echo, inveliTestControllerInterface controller.Inv
 	group.POST("/inveli/test-akun-info", inveliTestControllerInterface.GetStatusAkun, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/inveli/balance", inveliTestControllerInterface.GetBalanceAccount, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/inveli/get-riwayat-pinjaman", inveliTestControllerInterface.GetRiwayatPinjaman, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/inveli/get-saldo-bupda", inveliTestControllerInterface.GetSaldoBupda, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 func ProductDesaRoute(e *echo.Echo, jwt config.Jwt, productDesaControllerInterface controller.ProductDesaControllerInterface) {

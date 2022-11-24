@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -108,9 +107,6 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 				userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, userResult.NoIdentitas)
 
-				log.Println("nik", userResult.NoIdentitas)
-				fmt.Println("userPaylaterList", userPaylaterList)
-
 				if len(userPaylaterList.Id) != 0 {
 					userEntity := &entity.User{
 						IsPaylater: 1,
@@ -137,26 +133,22 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 		// exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
 
-	fmt.Println("access token : ", loginResult.AccessToken)
-	fmt.Println("id member : ", loginResult.UserID)
-
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
 	if userResult.StatusPaylater == 2 {
 		user := &entity.User{
 			InveliAccessToken: loginResult.AccessToken,
 			InveliIDMember:    loginResult.UserID,
 		}
-		fmt.Println("user result : ", userResult)
+
 		if len(userResult.Id) == 0 {
 			exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
 		}
 
 		err := service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
-		fmt.Println("error save user inveli token : ", err)
+
 		if err != nil {
 			exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
 		}
-		fmt.Println("success save user inveli token")
 
 		return loginResult.AccessToken
 	} else {
@@ -165,17 +157,16 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 			InveliIDMember:    loginResult.UserID,
 			StatusPaylater:    1,
 		}
-		fmt.Println("user result : ", userResult)
+
 		if len(userResult.Id) == 0 {
 			exceptions.PanicIfBadRequest(errors.New("user tidak ditemukan 1"), "requestId", []string{"User Not Found"}, service.Logger)
 		}
 
 		err := service.UserRepositoryInterface.SaveUserInveliToken(service.DB, userResult.Id, user)
-		fmt.Println("error save user inveli token : ", err)
+
 		if err != nil {
 			exceptions.PanicIfBadRequest(errors.New("gagal update token inveli"), "requestId", []string{"Failed Update Token Inveli"}, service.Logger)
 		}
-		fmt.Println("success save user inveli token")
 
 		return loginResult.AccessToken
 	}
@@ -216,12 +207,14 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 			}
 
 			err = service.UserRepositoryInterface.UpdateUser(service.DB, IdUser, user)
-			log.Println("error save user account : ", err)
-
-			// fmt.Println("userAccounts : ", &userAccounts)
+			if err != nil {
+				log.Println("error update user : ", err.Error())
+			}
 
 			err = service.UserRepositoryInterface.SaveUserAccount(service.DB, userAccounts)
-			log.Println("error save user account : ", err)
+			if err != nil {
+				log.Println("error save user account : ", err.Error())
+			}
 		}()
 
 	}
@@ -243,7 +236,7 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	resp, err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, accessToken)
 
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	if resp == nil {
@@ -275,8 +268,6 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 
 	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
 
-	fmt.Println("desa : ", desa)
-	log.Println("group id", desa.GroupIdBupda)
 	if len(desa.GroupIdBupda) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("groupd id not found"), requestId, []string{"groupd id not found"}, service.Logger)
 	}
@@ -284,7 +275,7 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	errrr := service.InveliAPIRespositoryInterface.InveliUpdateMember(userResult, userProfile, accessToken, desa.GroupIdBupda)
 
 	if errrr != nil {
-		exceptions.PanicIfBadRequest(errors.New("failed activate account"), requestId, []string{strings.TrimPrefix(errrr.Error(), "grapql: Internal Core Error : ")}, service.Logger)
+		exceptions.PanicIfBadRequest(errors.New("failed activate account"), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	return nil

@@ -19,6 +19,7 @@ type InveliTestingController interface {
 	GetStatusAkun(c echo.Context) error
 	GetBalanceAccount(c echo.Context) error
 	GetRiwayatPinjaman(c echo.Context) error
+	GetSaldoBupda(c echo.Context) error
 }
 
 type InveliTestingControllerImplementation struct {
@@ -328,5 +329,40 @@ func (controller *InveliTestingControllerImplementation) GetBalanceAccount(c ech
 	fmt.Println("account balance = ", accountBalance.Code)
 
 	return nil
+}
 
+func (controller *InveliTestingControllerImplementation) GetSaldoBupda(c echo.Context) error {
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbURhdGUiOiIyMDIyLTExLTI0VDAwOjUwOjEwLjczMyswNzowMCIsImV4cCI6MTcwMDc2MTgxMCwiaWQiOiJOVUZDUmpJM016a3RSa0UyTUMwMFJUUTJMVGsyTmtRdFFrTTNRelpFTWtWRVFqSTMiLCJpc0FkbWluIjpmYWxzZSwiaXNzIjoiQ2FyZGxlekFQSSIsInVzZXJFbWFpbCI6InRlc3Q0NzI5NTJAZ21haWwuY29tIiwidXNlcklEIjoiNUFCRjI3MzktRkE2MC00RTQ2LTk2NkQtQkM3QzZEMkVEQjI3In0.st1NnZ0zxuO5umFo0brUg7xxp72bJz3SrgXPVpA293A"
+	groupID := "BUPDA PEDUNGAN DENPASAR"
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	req := graphql.NewRequest(`
+  	query ($groupID: String!) {
+			accountByGroupID(groupID: $groupID) {
+				id
+				code
+				accountName
+				recordStatus
+				balance
+				isPrimary
+			}
+  	}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("groupID", groupID)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Println("resp ", respData)
+	bupdaSaldo := respData.(map[string]interface{})["accountByGroupID"].(map[string]interface{})["balance"].(float64)
+	str := fmt.Sprintf("saldo bupda = %f", bupdaSaldo)
+
+	log.Println(str)
+
+	return nil
 }

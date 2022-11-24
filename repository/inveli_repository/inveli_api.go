@@ -35,6 +35,7 @@ type InveliAPIRepositoryInterface interface {
 	PayPaylater(loanID, token string) error
 	GetLoanProduct(token string) (float64, error)
 	GetLoanProductId(token string) (string, error)
+	GetSaldoBupda(token, groupID string) (float64, error)
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -42,6 +43,36 @@ type InveliAPIRepositoryImplementation struct {
 
 func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
+}
+
+func (r *InveliAPIRepositoryImplementation) GetSaldoBupda(token, groupID string) (float64, error) {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	req := graphql.NewRequest(`
+  	query ($groupID: String!) {
+			accountByGroupID(groupID: $groupID){
+				id
+				code
+				accountName
+				recordStatus
+				balance
+				isPrimary
+			}
+  	}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("groupID", groupID)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	bupdaSaldo := respData.(map[string]interface{})["accountByGroupID"].(map[string]interface{})["balance"].(float64)
+
+	return bupdaSaldo, nil
 }
 
 func (r *InveliAPIRepositoryImplementation) InveliUbahPasswordUserExisting(id, password, token string) error {
@@ -143,7 +174,7 @@ func (r *InveliAPIRepositoryImplementation) GetLoanProductId(token string) (stri
 	var loandProductID string
 	// var data []interface{}
 	for _, v := range respData.(map[string]interface{})["loanProducts"].([]interface{}) {
-		if v.(map[string]interface{})["loanProductNo"].(string) == "LPDCO160012210001" {
+		if v.(map[string]interface{})["loanProductNo"].(string) == "LPDCO160012211001" {
 			loandProductID = v.(map[string]interface{})["loanProductID"].(string)
 		}
 	}
@@ -203,7 +234,7 @@ func (r *InveliAPIRepositoryImplementation) GetLoanProduct(token string) (float6
 	for _, v := range respData.(map[string]interface{})["loanProducts"].([]interface{}) {
 		// dev loan no LPDCO160012210001
 		// prod loan no LPDCO160012211001
-		if v.(map[string]interface{})["loanProductNo"].(string) == "LPDCO160012210001" {
+		if v.(map[string]interface{})["loanProductNo"].(string) == "LPDCO160012211001" {
 			bunga = v.(map[string]interface{})["interestPercentage"].(float64)
 		}
 	}
@@ -780,12 +811,8 @@ func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistratio
 }
 
 func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error) {
-	log.Println("IDMember : ", IDMember)
-	log.Println("token : ", token)
-	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
-	// keyword := "1793AEF9-ABD4-4333-9CDC-02EDB8C68359"
-	// token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbURhdGUiOiIyMDIyLTExLTA3VDIwOjQzOjExLjcwOCswNzowMCIsImV4cCI6MTY5OTM2NDU5MSwiaWQiOiJNVGM1TTBGRlJqa3RRVUpFTkMwME16TXpMVGxEUkVNdE1ESkZSRUk0UXpZNE16VTUiLCJpc0FkbWluIjpmYWxzZSwiaXNzIjoiQ2FyZGxlekFQSSIsInVzZXJFbWFpbCI6InRlbnN1MTA0Y3JlYXRvcnM5OEBnbWFpbC5jb20iLCJ1c2VySUQiOiIxNzkzQUVGOS1BQkQ0LTQzMzMtOUNEQy0wMkVEQjhDNjgzNTkifQ.KzMA9OyEun46m7mObFhjv5aK9T9Z_z0DQxVV1UK4AJY"
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
 	req := graphql.NewRequest(` 
 		query ($keyword: String!) {	
@@ -869,7 +896,6 @@ func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token str
 	ctx := context.Background()
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
-		log.Println(err)
 		return false, err
 	}
 	// log.Println("res ", respData)
@@ -931,8 +957,6 @@ func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string
 		ClosingBalance:  int(respData.(map[string]interface{})["accounts"].([]interface{})[0].(map[string]interface{})["closingBalance"].(float64)),
 		BlockingBalance: int(respData.(map[string]interface{})["accounts"].([]interface{})[0].(map[string]interface{})["blockingBalance"].(float64)),
 	}
-
-	fmt.Println("account balance = ", accountBalance)
 
 	return accountBalance, nil
 }

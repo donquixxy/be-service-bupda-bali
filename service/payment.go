@@ -74,7 +74,11 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	}
 
 	// cek tagihan
-	tagihan, _ := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	tagihan, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+	}
 
 	if tagihan == nil {
 		exceptions.PanicIfRecordNotFound(errors.New("TAGIHAN NOT FOUND"), requestId, []string{"TAGIHAN NOT FOUND"}, service.Logger)
@@ -82,7 +86,7 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 
 	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{err.Error()}, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
