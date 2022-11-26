@@ -35,6 +35,12 @@ func DesaRoute(e *echo.Echo, desaControllerInterface controller.DesaControllerIn
 	group.GET("/desa", desaControllerInterface.FindDesaByIdKelu, authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
+func ListPinjamanRoute(e *echo.Echo, jwt config.Jwt, listPinjamanControllerInterface controller.ListPinjamanControllerInterface) {
+	group := e.Group("api/v1")
+	group.GET("/paylater/list-pinjaman", listPinjamanControllerInterface.FindListPinjamanByUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/paylater/list-pinjaman-detail", listPinjamanControllerInterface.FindListPinjamanById, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
 func InfoDesaRoute(e *echo.Echo, jwt config.Jwt, infoDesaControllerInterface controller.InfoDesaControllerInterface) {
 	group := e.Group("api/v1")
 	group.GET("/infodesa", infoDesaControllerInterface.FindInfoDesaByIdDesa, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())

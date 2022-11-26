@@ -73,6 +73,7 @@ type OrderServiceImplementation struct {
 	PpobDetailRepositoryInterface     repository.PpobDetailRepositoryInterface
 	DesaRepositoryInterface           repository.DesaRepositoryInterface
 	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
+	ListPinjamanRepositoryInterface   repository.ListPinjamanRepositoryInterface
 }
 
 func NewOrderService(
@@ -92,6 +93,7 @@ func NewOrderService(
 	ppobDetailRepositoryInterface repository.PpobDetailRepositoryInterface,
 	desaRepositoryInterface repository.DesaRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
+	listPinjamanRepositoryInterface repository.ListPinjamanRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
 		DB:                                db,
@@ -110,6 +112,7 @@ func NewOrderService(
 		PpobDetailRepositoryInterface:     ppobDetailRepositoryInterface,
 		DesaRepositoryInterface:           desaRepositoryInterface,
 		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
+		ListPinjamanRepositoryInterface:   listPinjamanRepositoryInterface,
 	}
 }
 
@@ -2285,6 +2288,24 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
 				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
 			})
+		}
+
+		listPinjamanEntity := &entity.ListPinjaman{}
+		listPinjamanEntity.Id = utilities.RandomUUID()
+		listPinjamanEntity.IdUser = idUser
+		listPinjamanEntity.IdOrder = orderEntity.Id
+		listPinjamanEntity.IdDesa = desa.Id
+		listPinjamanEntity.Nik = userProfile.NoIdentitas
+		listPinjamanEntity.JmlTagihan = orderRequest.TotalBill
+		listPinjamanEntity.BiayaAdmin = orderRequest.PaymentFee
+		listPinjamanEntity.BungaPercentage = bunga
+		listPinjamanEntity.TglPeminjaman = time.Now()
+		listPinjamanEntity.TglJatuhTempo = orderEntity.PaymentDueDate
+		listPinjamanEntity.CreatedAt = time.Now()
+
+		err = service.ListPinjamanRepositoryInterface.CreateListPinjaman(tx, listPinjamanEntity)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create list pinjaman" + err.Error()}, service.Logger, tx)
 		}
 
 	case "tabungan_bima":

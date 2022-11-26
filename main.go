@@ -80,8 +80,14 @@ func main() {
 	infoDesaRepository := repository.NewInfoDesaRepository(&appConfig.Database)
 	bannerRepository := repository.NewBannerRepository(&appConfig.Database)
 	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
+	listPinjamanRepository := repository.NewListPinjamanRepository(&appConfig.Database)
 
 	// Service
+	listPinjamanService := service.NewListPinjamanService(
+		DBConn,
+		logrusLogger,
+		listPinjamanRepository,
+	)
 	paylaterService := service.NewPaylaterService(
 		DBConn,
 		validate,
@@ -210,6 +216,7 @@ func main() {
 		ppobDetailRepository,
 		desaRepository,
 		inveliAPIRepository,
+		listPinjamanRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,
@@ -242,6 +249,9 @@ func main() {
 	)
 
 	// Controller
+	listPinjamanController := controller.NewListPinjamanController(
+		listPinjamanService,
+	)
 	paylaterController := controller.NewPaylaterController(
 		logrusLogger,
 		paylaterService,
@@ -316,6 +326,7 @@ func main() {
 	)
 
 	// Route
+	routes.ListPinjamanRoute(e, appConfig.Jwt, listPinjamanController)
 	routes.PaylaterRoute(e, appConfig.Jwt, paylaterController)
 	routes.BannerRoute(e, appConfig.Jwt, bannerController)
 	routes.MerchantRoute(e, appConfig.Jwt, merchantController)
