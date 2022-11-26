@@ -170,6 +170,13 @@ func (service *UserServiceImplementation) GetTunggakanPaylater(reqeustId string,
 
 func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, idUser string) {
 	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+
+	tx := service.DB.Begin()
+
+	if user.User.StatusPaylater == 3 {
+		exceptions.PanicIfUserNotHavePassword(errors.New("user belum first login inveli"), requestId, []string{"user belum first login inveli"}, service.Logger)
+	}
+
 	if len(user.User.InveliIDMember) != 0 {
 		exceptions.PanicIfBadRequest(errors.New("user already activated"), requestId, []string{"user already activated"}, service.Logger)
 	}
@@ -182,6 +189,14 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 		MemberName: user.NamaLengkap,
 	}
 
+	userEntity := &entity.User{}
+	userEntity.StatusPaylater = 3
+
+	errr := service.UserRepositoryInterface.UpdateUser(tx, idUser, userEntity)
+	if errr != nil {
+		exceptions.PanicIfBadRequest(errr, requestId, []string{errr.Error()}, service.Logger)
+	}
+
 	// Register to inveli
 	err := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
 	if err != nil {
@@ -191,6 +206,8 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 			exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, service.DB)
 		}
 	}
+
+	tx.Commit()
 }
 
 func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse) {
@@ -348,6 +365,11 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 		exceptions.PanicIfRecordAlreadyExists(errors.New("phone already exist"), requestId, []string{"phone sudah digunakan"}, service.Logger)
 	}
 
+	// Hash password
+	password := strings.ReplaceAll(createUserRequest.Password, " ", "")
+	bcryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
+
 	// Begin Transcation
 	tx := service.DB.Begin()
 	exceptions.PanicIfError(tx.Error, requestId, service.Logger)
@@ -366,6 +388,7 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 		Id:              utilities.RandomUUID(),
 		Phone:           createUserRequest.Phone,
 		IdDesa:          createUserRequest.IdDesa,
+		Password:        string(bcryptPassword),
 		IsActive:        1,
 		IdLimitPayLater: "1006588e-da08-4e1b-8cd4-c14fff9059e1", //default limit 0
 		AccountType:     1,                                      // 1 Normal 2 Merchant
@@ -404,23 +427,23 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	err = service.PointRepositoryInterface.CreatePoint(tx, pointEntity)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create point"}, service.Logger, tx)
 
-	inveliRegistrationModel := &inveli.InveliRegistrationModel{
-		Email:      emailLowerCase,
-		Phone:      createUserRequest.Phone,
-		NIK:        createUserRequest.NoIdentitas,
-		Address:    createUserRequest.Alamat,
-		MemberName: createUserRequest.NamaLengkap,
-	}
+	// inveliRegistrationModel := &inveli.InveliRegistrationModel{
+	// 	Email:      emailLowerCase,
+	// 	Phone:      createUserRequest.Phone,
+	// 	NIK:        createUserRequest.NoIdentitas,
+	// 	Address:    createUserRequest.Alamat,
+	// 	MemberName: createUserRequest.NamaLengkap,
+	// }
 
 	// Register to inveli
-	err = service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
-	if err != nil {
-		if strings.TrimPrefix(err.Error(), "graphql: ") == "Email : "+emailLowerCase+" dan HandPhone : "+createUserRequest.Phone+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." || strings.TrimPrefix(err.Error(), "graphql: ") == "Identity Number : "+createUserRequest.NoIdentitas+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." {
-			exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-		} else {
-			exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-		}
-	}
+	// err = service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
+	// if err != nil {
+	// 	if strings.TrimPrefix(err.Error(), "graphql: ") == "Email : "+emailLowerCase+" dan HandPhone : "+createUserRequest.Phone+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." || strings.TrimPrefix(err.Error(), "graphql: ") == "Identity Number : "+createUserRequest.NoIdentitas+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." {
+	// 		exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
+	// 	} else {
+	// 		exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
+	// 	}
+	// }
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)

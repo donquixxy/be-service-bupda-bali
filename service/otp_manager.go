@@ -80,6 +80,12 @@ func (service *OtpManagerServiceImplementation) SendOtpBySms(requestId string, s
 
 	request.ValidateRequest(service.Validate, sendOtpBySmsRequest, requestId, service.Logger)
 
+	user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, sendOtpBySmsRequest.Phone)
+
+	if user.StatusPaylater == -1 {
+		exceptions.PanicIfUserNotHavePassword(errors.New("user dont have password"), requestId, []string{"User dont have password"}, service.Logger)
+	}
+
 	resultOtp, err := service.OtpManagerRepositoryInterface.FindOtpByPhone(service.DB, sendOtpBySmsRequest.Phone)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 
