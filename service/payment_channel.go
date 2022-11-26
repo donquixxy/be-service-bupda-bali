@@ -74,15 +74,26 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 	jmlOrder += requestPayChan.TotalBill
 
 	userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
-	if len(userPaylaterFlag.Id) == 0 {
-		err := service.UserRepositoryInterface.CreateUserPayLaterFlag(service.DB, &entity.UsersPaylaterFlag{
-			Id:                  utilities.RandomUUID(),
-			IdUser:              idUser,
-			TanggungRentengFlag: 1,
-			PaylaterDate:        time.Now(),
-			CreatedAt:           time.Now(),
-		})
+	log.Println("userPaylaterFlag", userPaylaterFlag)
 
+	if len(userPaylaterFlag.Id) == 0 {
+
+		userPaylaterFlag := &entity.UsersPaylaterFlag{}
+		userPaylaterFlag.Id = utilities.RandomUUID()
+		userPaylaterFlag.IdUser = idUser
+		userPaylaterFlag.TanggungRentengFlag = 1
+
+		// cek bulan berjalan
+
+		now := time.Now()
+		day := now.Day()
+		if day < 25 {
+			userPaylaterFlag.PaylaterDate = time.Now()
+		} else if day >= 25 {
+			userPaylaterFlag.PaylaterDate = time.Now().AddDate(0, 1, 0)
+		}
+		userPaylaterFlag.CreatedAt = time.Now()
+		err := service.UserRepositoryInterface.CreateUserPayLaterFlag(service.DB, userPaylaterFlag)
 		if err != nil {
 			log.Println(err.Error())
 		}

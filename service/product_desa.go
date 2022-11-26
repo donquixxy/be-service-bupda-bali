@@ -10,6 +10,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"gorm.io/gorm"
 )
 
@@ -122,6 +123,7 @@ func (service *ProductDesaServiceImplementation) UpdateProductStock(requestId st
 		exceptions.PanicIfErrorWithRollback(errFindProduct, requestId, []string{"product not found"}, service.Logger, db)
 
 		productDesaEntityStockHistory := &entity.ProductDesaStockHistory{}
+		productDesaEntityStockHistory.Id = utilities.RandomUUID()
 		productDesaEntityStockHistory.IdProductDesa = orderItem.IdProductDesa
 		productDesaEntityStockHistory.TransDate = time.Now()
 		productDesaEntityStockHistory.MinStockQty = orderItem.Qty

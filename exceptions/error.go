@@ -116,3 +116,12 @@ func PanicPPOBHandler(err error, requestId string, message string, errorString [
 		panic(string(out))
 	}
 }
+
+func PanicIfUserNotHavePassword(err error, requestId string, errorString []string, logger *logrus.Logger) {
+	if err != nil || err == gorm.ErrRecordNotFound {
+		out, errr := json.Marshal(ErrorStruct{Code: 801, Mssg: "user belum first login inveli", Error: errorString})
+		PanicIfError(errr, requestId, logger)
+		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
+		panic(string(out))
+	}
+}

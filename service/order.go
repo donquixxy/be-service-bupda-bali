@@ -434,6 +434,8 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
+		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
@@ -801,6 +803,8 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
+		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
@@ -1164,6 +1168,8 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
+
+		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
 
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
@@ -1542,6 +1548,8 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
+		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
@@ -1908,6 +1916,8 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
 
+		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
+
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
@@ -2249,6 +2259,8 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		if len(tunggakanPaylater) != 0 {
 			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
 		}
+
+		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
 
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
