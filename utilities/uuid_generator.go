@@ -25,3 +25,10 @@ func GenerateEmail() (email string) {
 	email = "test" + fmt.Sprint(generateCode) + "@gmail.com"
 	return email
 }
+
+func GenerateNoTagihan() (refId string) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	generateCode := 100000 + rand.Intn(999999-100000)
+	refId = "TAGIHAN/" + fmt.Sprint(generateCode)
+	return refId
+}

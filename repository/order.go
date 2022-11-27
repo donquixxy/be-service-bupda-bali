@@ -23,6 +23,7 @@ type OrderRepositoryInterface interface {
 	FindOrderPaylaterUnpaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
 	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, error, string, string)
+	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, error, string, string)
 }
 
 type OrderRepositoryImplementation struct {
@@ -35,6 +36,48 @@ func NewOrderRepository(
 	return &OrderRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, error, string, string) {
+	orders := []entity.Order{}
+
+	var startDate string
+	var endDate string
+	var year int
+
+	year = time.Now().Year()
+
+	if month == 1 {
+		startDate = fmt.Sprint(year-1) + "-" + fmt.Sprint(12) + "-26 " + "00:00:00"
+		endDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month) + "-25 " + "23:59:59"
+	} else {
+		if month >= 10 {
+			if (month - 1) == 9 {
+				startDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month-1) + "-26 " + "00:00:00"
+				endDate = fmt.Sprint(year) + "-" + fmt.Sprint(month) + "-25 " + "23:59:59"
+			} else {
+				startDate = fmt.Sprint(year) + "-" + fmt.Sprint(month-1) + "-26 " + "00:00:00"
+				endDate = fmt.Sprint(year) + "-" + fmt.Sprint(month) + "-25 " + "23:59:59"
+			}
+		} else {
+			startDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month-1) + "-26 " + "00:00:00"
+			endDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month) + "-25 " + "23:59:59"
+		}
+	}
+
+	log.Println("start_date = ", startDate)
+	log.Println("end_date = ", endDate)
+
+	result := db.
+		Where("id_user = ?", idOrder).
+		Where("payment_method = ?", "paylater").
+		Where("order_date >= ?", startDate).
+		Where("order_date <= ?", endDate).
+		Where("paylater_paid_status ?", 1).
+		Order("created_at desc").
+		Find(&orders)
+
+	return orders, result.Error, startDate, endDate
 }
 
 func (repository *OrderRepositoryImplementation) GetOrderPaylaterPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, error, string, string) {

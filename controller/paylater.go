@@ -20,6 +20,7 @@ type PaylaterControllerInterface interface {
 	GetTagihanPaylater(c echo.Context) error
 	GetRiwayatPaylaterPerBulan(c echo.Context) error
 	GetOrderPaylaterByMonth(c echo.Context) error
+	GetPembayaranTransaksiByIdUser(c echo.Context) error
 }
 
 type PaylaterControllerImplementation struct {
@@ -38,6 +39,15 @@ func NewPaylaterController(
 		PaylaterServiceInterface: paylaterServiceInterface,
 		PaymentServiceInterface:  paymentServiceInterface,
 	}
+}
+
+func (controller *PaylaterControllerImplementation) GetPembayaranTransaksiByIdUser(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	IdUser := middleware.TokenClaimsIdUser(c)
+	indexDate := c.QueryParam("index_date")
+	riwayatResponse := controller.PaylaterServiceInterface.GetPembayaranTransaksiByIdUser(requestId, IdUser, indexDate)
+	responses := response.Response{Code: 200, Mssg: "success", Data: riwayatResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
 }
 
 func (controller *PaylaterControllerImplementation) GetOrderPaylaterByMonth(c echo.Context) error {

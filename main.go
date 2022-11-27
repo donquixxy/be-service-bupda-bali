@@ -81,6 +81,7 @@ func main() {
 	bannerRepository := repository.NewBannerRepository(&appConfig.Database)
 	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
 	listPinjamanRepository := repository.NewListPinjamanRepository(&appConfig.Database)
+	paymentHistoryRepository := repository.NewPaymentHistoryRepository(&appConfig.Database)
 
 	// Service
 	listPinjamanService := service.NewListPinjamanService(
@@ -95,6 +96,7 @@ func main() {
 		userRepository,
 		inveliAPIRepository,
 		orderRepository,
+		paymentHistoryRepository,
 	)
 	bannerService := service.NewBannerService(
 		DBConn,
@@ -198,6 +200,7 @@ func main() {
 		userRepository,
 		inveliAPIRepository,
 		orderRepository,
+		paymentHistoryRepository,
 	)
 	orderService := service.NewOrderService(
 		DBConn,

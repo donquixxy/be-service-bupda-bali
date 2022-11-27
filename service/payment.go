@@ -15,15 +15,17 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/payment"
-	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
+	"gopkg.in/guregu/null.v4"
 	"gorm.io/gorm"
 )
 
@@ -32,15 +34,15 @@ type PaymentServiceInterface interface {
 	CreditCardPay(requestId string, paymentRequest *payment.IpaymuCreditCardRequest) *payment.IpaymuCreditCardResponse
 	CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus
 	PayPaylater(requestId, idUser string) error
-	GetRiwayatPaylaterPerBulan(requestId, idUser string) (response []response.GetRiwayatPaylaterPerbulanResponse)
 }
 
 type PaymentServiceImplementation struct {
-	DB                           *gorm.DB
-	Logger                       *logrus.Logger
-	UserRepositoryInterface      repository.UserRepositoryInterface
-	InveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface
-	OrderRepositoryInterface     repository.OrderRepositoryInterface
+	DB                                *gorm.DB
+	Logger                            *logrus.Logger
+	UserRepositoryInterface           repository.UserRepositoryInterface
+	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
+	OrderRepositoryInterface          repository.OrderRepositoryInterface
+	PaymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface
 }
 
 func NewPaymentService(
@@ -49,23 +51,22 @@ func NewPaymentService(
 	userRepository repository.UserRepositoryInterface,
 	inveliAPIRepository invelirepository.InveliAPIRepositoryInterface,
 	orderRepository repository.OrderRepositoryInterface,
+	paymentHistoryRepository repository.PaymentHistoryRepositoryInterface,
 ) PaymentServiceInterface {
 	return &PaymentServiceImplementation{
-		DB:                           db,
-		Logger:                       logger,
-		UserRepositoryInterface:      userRepository,
-		InveliAPIRepositoryInterface: inveliAPIRepository,
-		OrderRepositoryInterface:     orderRepository,
+		DB:                                db,
+		Logger:                            logger,
+		UserRepositoryInterface:           userRepository,
+		InveliAPIRepositoryInterface:      inveliAPIRepository,
+		OrderRepositoryInterface:          orderRepository,
+		PaymentHistoryRepositoryInterface: paymentHistoryRepository,
 	}
-}
-
-func (service *PaymentServiceImplementation) GetRiwayatPaylaterPerBulan(requestId string, idUser string) (response []response.GetRiwayatPaylaterPerbulanResponse) {
-
-	return nil
 }
 
 func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser string) error {
 	var err error
+
+	tx := service.DB.Begin()
 
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 
@@ -84,14 +85,48 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 		exceptions.PanicIfRecordNotFound(errors.New("TAGIHAN NOT FOUND"), requestId, []string{"TAGIHAN NOT FOUND"}, service.Logger)
 	}
 
+	// get order
+	var totalTagihan float64
+	var adminFee float64
+	var total float64
+	order, err := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
+	for _, v := range order {
+		totalTagihan += v.SubTotal
+		adminFee += v.PaymentFee
+	}
+	total = totalTagihan + adminFee
+
+	paymentHistoryEntity := &entity.PaymentHistory{}
+	paymentHistoryEntity.Id = utilities.RandomUUID()
+	paymentHistoryEntity.IdUser = idUser
+	paymentHistoryEntity.NoTransaksi = utilities.GenerateNoTagihan()
+	paymentHistoryEntity.Total = total
+	paymentHistoryEntity.JmlTagihan = totalTagihan
+	paymentHistoryEntity.BiayaAdmin = adminFee
+	paymentHistoryEntity.TglPembayaran = null.NewTime(time.Now(), true)
+	paymentHistoryEntity.IdDesa = user.User.IdDesa
+	paymentHistoryEntity.CreatedAt = time.Now()
+	paymentHistoryEntity.IndexDate = time.Now().Format("2006-01")
+
+	err = service.PaymentHistoryRepositoryInterface.CreatePaymentHistory(tx, paymentHistoryEntity)
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error insert payment history " + err.Error()}, service.Logger, tx)
+	}
+
+	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
+		PaylaterPaidStatus: 1,
+	})
+
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
+	}
+
 	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
-	service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
-		PaylaterPaidStatus: 1,
-	})
+	tx.Commit()
 
 	return nil
 }

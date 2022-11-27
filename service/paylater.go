@@ -19,15 +19,17 @@ type PaylaterServiceInterface interface {
 	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater)
 	GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse)
 	GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse)
+	GetPembayaranTransaksiByIdUser(requestId, idUser, indexDate string) (response response.FindDetailPyamentPaylater)
 }
 
 type PaylaterServiceImplementation struct {
-	DB                           *gorm.DB
-	Validate                     *validator.Validate
-	Logger                       *logrus.Logger
-	UserRepositoryInterface      repository.UserRepositoryInterface
-	InveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface
-	OrderRepositoryInterface     repository.OrderRepositoryInterface
+	DB                                *gorm.DB
+	Validate                          *validator.Validate
+	Logger                            *logrus.Logger
+	UserRepositoryInterface           repository.UserRepositoryInterface
+	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
+	OrderRepositoryInterface          repository.OrderRepositoryInterface
+	PaymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface
 }
 
 func NewPaylaterService(
@@ -37,15 +39,32 @@ func NewPaylaterService(
 	userRepositoryInterface repository.UserRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	orderRepositoryInterface repository.OrderRepositoryInterface,
+	paymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface,
 ) PaylaterServiceInterface {
 	return &PaylaterServiceImplementation{
-		DB:                           db,
-		Validate:                     validate,
-		Logger:                       logger,
-		UserRepositoryInterface:      userRepositoryInterface,
-		InveliAPIRepositoryInterface: inveliAPIRepositoryInterface,
-		OrderRepositoryInterface:     orderRepositoryInterface,
+		DB:                                db,
+		Validate:                          validate,
+		Logger:                            logger,
+		UserRepositoryInterface:           userRepositoryInterface,
+		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
+		OrderRepositoryInterface:          orderRepositoryInterface,
+		PaymentHistoryRepositoryInterface: paymentHistoryRepositoryInterface,
 	}
+}
+
+func (service *PaylaterServiceImplementation) GetPembayaranTransaksiByIdUser(requestId, idUser, indexDate string) (response response.FindDetailPyamentPaylater) {
+	paymentHistory, err := service.PaymentHistoryRepositoryInterface.FindPaymentHistoryById(service.DB, idUser, indexDate)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"payment history not found"}, service.Logger)
+	}
+
+	response.Date = paymentHistory.TglPembayaran.Time
+	response.NoTransaksi = paymentHistory.NoTransaksi
+	response.Tagihan = paymentHistory.JmlTagihan
+	response.BiayaAdmin = paymentHistory.BiayaAdmin
+	response.Bunga = paymentHistory.BungaPinjaman
+	response.Total = paymentHistory.Total
+	return response
 }
 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse) {
