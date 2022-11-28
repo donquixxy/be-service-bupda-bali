@@ -175,19 +175,25 @@ func (repository *OrderRepositoryImplementation) FindOrderById(db *gorm.DB, idUs
 func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error) {
 	log.Println("masuk")
 	orders := []entity.Order{}
-	var month time.Month
+	// var month time.Month
 	now := time.Now()
 	day := now.Day()
+	var date1 time.Time
+	var date2 time.Time
 	if day < 25 {
-		month = now.Month()
+		date1 = time.Date(now.Year(), now.Month()-1, 25, 23, 59, 59, 0, time.UTC)
+		date2 = time.Date(now.Year(), now.Month(), 26, 0, 0, 0, 0, time.UTC)
 	} else if day >= 25 {
-		month = now.AddDate(0, 1, 0).Month()
+		date1 = time.Date(now.Year(), now.Month(), 25, 23, 59, 59, 0, time.UTC)
+		date2 = time.Date(now.Year(), now.Month()+1, 26, 0, 0, 0, 0, time.UTC)
 	}
 
+	log.Println("date1 = ", date1)
+	log.Println("date2 = ", date2)
 	result := db.
 		Where("id_user = ?", idUser).
 		Where("payment_method = ?", "paylater").
-		Where("month(order_date) = ?", int(month)).
+		Where("order_date BETWEEN  ? AND ?", date1, date2).
 		Order("created_at desc").
 		Find(&orders)
 

@@ -16,8 +16,6 @@ type PaymentHistory struct {
 	BungaPinjaman    float64   `gorm:"column:bunga_pinjaman;"`
 	BiayaAdmin       float64   `gorm:"column:biaya_admin;"`
 	Total            float64   `gorm:"column:total;"`
-	TglPeminjaman    time.Time `gorm:"column:tgl_peminjaman;"`
-	TglJatuhTempo    null.Time `gorm:"column:tgl_jatuh_tempo;"`
 	TglPembayaran    null.Time `gorm:"column:tgl_pembayaran;"`
 	StatusPembayaran int       `gorm:"column:status_pembayaran;"`
 	IndexDate        string    `gorm:"column:index_date;"`
