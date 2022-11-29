@@ -47,7 +47,7 @@ func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) []FindTagi
 		}
 		findTagihanPaylater := FindTagihanPaylater{
 			RepaymentDate:   v.RepaymentDate,
-			RepaymentAmount: v.RepaymentAmount,
+			RepaymentAmount: v.RepaymentPrincipal,
 			DateInsert:      v.DateInsert,
 		}
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)

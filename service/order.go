@@ -54,6 +54,7 @@ type OrderServiceInterface interface {
 	OrderInquiryPrepaidPln(requestId string, customerId string) (inquiryPrepaidPlnResponse response.InquiryPrepaidPlnResponse)
 	CallbackPpobTransaction(requestId string, ppobCallbackRequest *request.PpobCallbackRequest)
 	FindOrderPayLaterByIdUser(requestId, idUser string) (orderResponse []response.FindOrderByUserResponse)
+	FindOrderPaymentById(requestId, idOrder string) (orderResponse response.OrderPayment)
 }
 
 type OrderServiceImplementation struct {
@@ -74,6 +75,7 @@ type OrderServiceImplementation struct {
 	DesaRepositoryInterface           repository.DesaRepositoryInterface
 	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 	ListPinjamanRepositoryInterface   repository.ListPinjamanRepositoryInterface
+	TelegramRepositoryInterface       repository.TelegramRepositoryInterface
 }
 
 func NewOrderService(
@@ -94,6 +96,7 @@ func NewOrderService(
 	desaRepositoryInterface repository.DesaRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	listPinjamanRepositoryInterface repository.ListPinjamanRepositoryInterface,
+	telegramRepositoryInterface repository.TelegramRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
 		DB:                                db,
@@ -113,6 +116,7 @@ func NewOrderService(
 		DesaRepositoryInterface:           desaRepositoryInterface,
 		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
 		ListPinjamanRepositoryInterface:   listPinjamanRepositoryInterface,
+		TelegramRepositoryInterface:       telegramRepositoryInterface,
 	}
 }
 
@@ -2220,12 +2224,15 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 		// Validasi Saldo Bupda
 		saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(userProfile.User.InveliAccessToken, desa.GroupIdBupda)
+
+		log.Println("saldoBupda = ", saldoBupda)
+
 		if err != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error saldo bupda "+err.Error()), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
 		}
 
 		if saldoBupda <= 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"saldo bupda kurang"}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
 		}
 
 		// Get Bunga
@@ -2264,7 +2271,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID)
 		if err != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
+			exceptions.PanicIfErrorWithRollback(errors.New("error care pinjaman "+err.Error()), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
 		}
 
 		if time.Now().Local().Day() < 25 {
@@ -2302,24 +2309,6 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			})
 		}
 
-		// listPinjamanEntity := &entity.ListPinjaman{}
-		// listPinjamanEntity.Id = utilities.RandomUUID()
-		// listPinjamanEntity.IdUser = idUser
-		// listPinjamanEntity.IdOrder = orderEntity.Id
-		// listPinjamanEntity.IdDesa = desa.Id
-		// listPinjamanEntity.Nik = userProfile.NoIdentitas
-		// listPinjamanEntity.JmlTagihan = orderRequest.TotalBill
-		// listPinjamanEntity.BiayaAdmin = orderRequest.PaymentFee
-		// listPinjamanEntity.BungaPercentage = bunga
-		// listPinjamanEntity.TglPeminjaman = time.Now()
-		// listPinjamanEntity.TglJatuhTempo = orderEntity.PaymentDueDate
-		// listPinjamanEntity.CreatedAt = time.Now()
-
-		// err = service.ListPinjamanRepositoryInterface.CreateListPinjaman(tx, listPinjamanEntity)
-		// if err != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create list pinjaman" + err.Error()}, service.Logger, tx)
-		// }
-
 	case "tabungan_bima":
 
 		accountUser, _ := service.UserRepositoryInterface.GetUserAccountBimaByID(tx, userProfile.User.Id)
@@ -2343,6 +2332,14 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
 		}
 	}
+
+	// // Get Desa
+	// desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+	// if len(desa.Id) == 0 {
+	// 	exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+	// }
+	// runtime.GOMAXPROCS(1)
+	// go service.TelegramRepositoryInterface.SendMessageToTelegram("Order Baru Dari "+userProfile.NamaLengkap+" ID Order "+orderEntity.NumberOrder+" VIA "+orderRequest.PaymentChannel, desa.ChatIdTelegram, desa.TokenBot)
 
 	// Create Order
 	err = service.OrderRepositoryInterface.CreateOrder(tx, orderEntity)
@@ -2403,6 +2400,27 @@ func (service *OrderServiceImplementation) FindOrderSembakoById(requestId, idOrd
 	}
 
 	orderResponse = response.ToFindOrderSembakoByIdResponse(order, orderItems, payment)
+	return orderResponse
+}
+
+func (service *OrderServiceImplementation) FindOrderPaymentById(requestId, idOrder string) (orderResponse response.OrderPayment) {
+	var err error
+
+	// Get order by id order
+	order, err := service.OrderRepositoryInterface.FindOrderById(service.DB, idOrder)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(order.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
+	}
+
+	// Payment
+	payment, err := service.PaymentChannelRepositoryInterface.FindPaymentChannelByCode(service.DB, order.PaymentChannel)
+	exceptions.PanicIfError(err, requestId, service.Logger)
+	if len(payment.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("payment not found"), requestId, []string{"order item not found"}, service.Logger)
+	}
+
+	orderResponse = response.ToFindOrderPaymentyIdResponse(order, payment)
 	return orderResponse
 }
 

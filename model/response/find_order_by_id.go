@@ -408,3 +408,28 @@ func ToFindOrderPostpaidPdamByIdResponse(order *entity.Order, orderItemPpob *ent
 
 	return orderResponse
 }
+
+type OrderPayment struct {
+	OrderedDate   time.Time `json:"date"`
+	OrderNumber   string    `json:"no_transaksi"`
+	JmlTagihan    float64   `json:"tagihan"`
+	BiayaAdmin    float64   `json:"biaya_admin"`
+	BungaPinjaman float64   `json:"bunga_pinjaman"`
+	Total         float64   `json:"total"`
+	PaymentName   string    `json:"payment_name"`
+	BankName      string    `json:"bank_name"`
+	BankLogo      string    `json:"bank_logo"`
+}
+
+func ToFindOrderPaymentyIdResponse(order *entity.Order, payment *entity.PaymentChannel) (orderResponse OrderPayment) {
+	orderResponse.OrderedDate = order.OrderedDate
+	orderResponse.OrderNumber = order.NumberOrder
+	orderResponse.JmlTagihan = order.TotalBill
+	orderResponse.BiayaAdmin = order.PaymentFee
+	orderResponse.BungaPinjaman = 0
+	orderResponse.Total = order.PaymentCash
+	orderResponse.PaymentName = payment.Name
+	orderResponse.BankName = payment.Name
+	orderResponse.BankLogo = payment.Logo
+	return orderResponse
+}

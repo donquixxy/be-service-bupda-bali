@@ -127,6 +127,10 @@ func (controller *OrderControllerImplementation) FindOrderById(c echo.Context) e
 	case "postpaid_pdam":
 		orderResponse := controller.OrderServiceInterface.FindOrderPostpaidPdamById(requestId, idOrder)
 		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+
+	case "payment":
+		orderResponse := controller.OrderServiceInterface.FindOrderPaymentById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
 	}
 
 	return c.JSON(http.StatusOK, responses)

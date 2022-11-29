@@ -55,3 +55,4 @@ func ToListPinjamanResponse(listPinjaman *entity.ListPinjaman) (listPinjamanResp
 	listPinjamanResponse.StatusPembayaran = listPinjaman.StatusPembayaran
 	return listPinjamanResponse
 }
+

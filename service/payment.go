@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -73,7 +74,6 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
-
 	// cek tagihan
 	tagihan, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 
@@ -87,30 +87,15 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 
 	// get order
 	var totalTagihan float64
+	var totalBill float64
 	var adminFee float64
-	var total float64
-	order, err := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
+	var subTotal float64
+	order, _ := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
 	for _, v := range order {
-		totalTagihan += v.SubTotal
+		totalTagihan += v.PaymentCash
 		adminFee += v.PaymentFee
-	}
-	total = totalTagihan + adminFee
-
-	paymentHistoryEntity := &entity.PaymentHistory{}
-	paymentHistoryEntity.Id = utilities.RandomUUID()
-	paymentHistoryEntity.IdUser = idUser
-	paymentHistoryEntity.NoTransaksi = utilities.GenerateNoTagihan()
-	paymentHistoryEntity.Total = total
-	paymentHistoryEntity.JmlTagihan = totalTagihan
-	paymentHistoryEntity.BiayaAdmin = adminFee
-	paymentHistoryEntity.TglPembayaran = null.NewTime(time.Now(), true)
-	paymentHistoryEntity.IdDesa = user.User.IdDesa
-	paymentHistoryEntity.CreatedAt = time.Now()
-	paymentHistoryEntity.IndexDate = time.Now().Format("2006-01")
-
-	err = service.PaymentHistoryRepositoryInterface.CreatePaymentHistory(tx, paymentHistoryEntity)
-	if err != nil {
-		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error insert payment history " + err.Error()}, service.Logger, tx)
+		totalBill += v.TotalBill
+		subTotal += v.SubTotal
 	}
 
 	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
@@ -119,6 +104,38 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 
 	if err != nil {
 		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
+	}
+
+	now := time.Now()
+	rand.Seed(time.Now().UTC().UnixNano())
+	generateCode := 100000 + rand.Intn(999999-100000)
+	numberOrder := "TAGIHAN/" + "/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
+
+	orderEntity := &entity.Order{}
+	orderEntity.Id = utilities.RandomUUID()
+	orderEntity.IdUser = idUser
+	orderEntity.NumberOrder = numberOrder
+	orderEntity.ProductType = "payment"
+	orderEntity.OrderType = 9
+	orderEntity.NamaLengkap = user.NamaLengkap
+	orderEntity.Email = user.Email
+	orderEntity.Phone = user.User.Phone
+	orderEntity.ShippingCost = 0
+	orderEntity.PaymentCash = totalTagihan
+	orderEntity.PaymentFee = adminFee
+	orderEntity.SubTotal = subTotal
+	orderEntity.TotalBill = totalBill
+	orderEntity.PaymentMethod = "tabungan_bima"
+	orderEntity.PaymentChannel = "tabungan_bima"
+	orderEntity.PaymentName = "Tabungan Bima"
+	orderEntity.OrderStatus = 5
+	orderEntity.PaymentStatus = 1
+	orderEntity.OrderedDate = time.Now()
+	orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+
+	err = service.OrderRepositoryInterface.CreateOrder(tx, orderEntity)
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error insert payment history " + err.Error()}, service.Logger, tx)
 	}
 
 	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
