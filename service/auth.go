@@ -71,7 +71,7 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 	// jika username tidak ditemukan
 	user, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, loginRequest.Phone)
-	if user.Id == "" {
+	if len(user.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"not found"}, service.Logger)
 	}
 

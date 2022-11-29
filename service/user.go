@@ -427,24 +427,6 @@ func (service *UserServiceImplementation) CreateUserSuveyed(requestId string, cr
 	err = service.PointRepositoryInterface.CreatePoint(tx, pointEntity)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create point"}, service.Logger, tx)
 
-	// inveliRegistrationModel := &inveli.InveliRegistrationModel{
-	// 	Email:      emailLowerCase,
-	// 	Phone:      createUserRequest.Phone,
-	// 	NIK:        createUserRequest.NoIdentitas,
-	// 	Address:    createUserRequest.Alamat,
-	// 	MemberName: createUserRequest.NamaLengkap,
-	// }
-
-	// Register to inveli
-	// err = service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
-	// if err != nil {
-	// 	if strings.TrimPrefix(err.Error(), "graphql: ") == "Email : "+emailLowerCase+" dan HandPhone : "+createUserRequest.Phone+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." || strings.TrimPrefix(err.Error(), "graphql: ") == "Identity Number : "+createUserRequest.NoIdentitas+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." {
-	// 		exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-	// 	} else {
-	// 		exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-	// 	}
-	// }
-
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 }
@@ -555,16 +537,19 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user tidak ditemukan"}, service.Logger)
 	}
 
-	statusAktifUser, err := service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
-	if err != nil {
-		log.Println("error get status account inveli = ", err.Error())
-	}
+	var statusAktifUser bool
+	if user.User.StatusPaylater != 2 {
+		statusAktifUser, err = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
+		if err != nil {
+			log.Println("error get status account inveli = ", err.Error())
+		}
 
-	if statusAktifUser {
-		accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
+		if statusAktifUser {
+			accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
 
-		if len(accountInfo.Id) == 0 {
-			service.AuthServiceInterface.GetUserAccountInveli(user.User.InveliIDMember, user.User.InveliAccessToken, idUser)
+			if len(accountInfo.Id) == 0 {
+				service.AuthServiceInterface.GetUserAccountInveli(user.User.InveliIDMember, user.User.InveliAccessToken, idUser)
+			}
 		}
 	}
 
