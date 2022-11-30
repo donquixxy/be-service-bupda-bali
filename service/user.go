@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -255,7 +255,7 @@ func (service *UserServiceImplementation) FindUserFromBigis(requestId string, re
 		"nik": requestUser.Nik,
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := "http://117.53.44.216:9070/api/v1/response"
 	// URL
@@ -280,7 +280,7 @@ func (service *UserServiceImplementation) FindUserFromBigis(requestId string, re
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()

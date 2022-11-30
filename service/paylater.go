@@ -68,7 +68,7 @@ func (service *PaylaterServiceImplementation) GetPembayaranTransaksiByIdUser(req
 }
 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse) {
-	order, err, _, _ := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, month)
+	order, _, _, err := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, month)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
 	}
@@ -80,7 +80,7 @@ func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse) {
 	for i := 1; i <= 12; i++ {
 
-		orderPaylaterPerBulan, _, start, end := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, i)
+		orderPaylaterPerBulan, start, end, _ := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, i)
 		fmt.Println("data", orderPaylaterPerBulan)
 		if len(orderPaylaterPerBulan) == 0 {
 			continue

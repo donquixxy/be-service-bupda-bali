@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"log"
 	"math"
 	"math/rand"
@@ -196,7 +197,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 	// fmt.Println("url = ", urlString)
@@ -224,7 +225,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -567,7 +568,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 	// fmt.Println("url = ", urlString)
@@ -595,7 +596,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -936,7 +937,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 	// fmt.Println("url = ", urlString)
@@ -964,7 +965,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -1308,7 +1309,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	var typePpob string
 	if productType == "prepaid_pulsa" {
@@ -1342,7 +1343,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -1681,7 +1682,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	typePpob := "pln"
 	urlString := config.GetConfig().Ppob.PrepaidHost + "/pricelist/" + typePpob + "/" + typePpob
@@ -1709,7 +1710,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -2755,7 +2756,7 @@ func (service *OrderServiceImplementation) PrepaidPulsaTopup(requestId string, c
 		"sign":         hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PrepaidHost + "/top-up"
 
@@ -2783,7 +2784,7 @@ func (service *OrderServiceImplementation) PrepaidPulsaTopup(requestId string, c
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	topupPrepaidPulsaResponse := &ppob.TopupPrepaidPulsaResponse{}
@@ -2798,7 +2799,7 @@ func (service *OrderServiceImplementation) PrepaidPulsaTopup(requestId string, c
 func (service *OrderServiceImplementation) PostpaidTopupPln(requestId string, customerId string, TrxId int, productCode string) *ppob.TopupPostaidPlnDataResponse {
 	var err error
 
-	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(TrxId)))
+	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(rune(TrxId))))
 	body, _ := json.Marshal(map[string]interface{}{
 		"commands": "pay-pasca",
 		"username": config.GetConfig().Ppob.Username,
@@ -2806,7 +2807,7 @@ func (service *OrderServiceImplementation) PostpaidTopupPln(requestId string, cu
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 
@@ -2834,7 +2835,7 @@ func (service *OrderServiceImplementation) PostpaidTopupPln(requestId string, cu
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	topupPostpaidPlnResonse := &ppob.TopupPostaidPlnResponse{}
@@ -2849,7 +2850,7 @@ func (service *OrderServiceImplementation) PostpaidTopupPln(requestId string, cu
 func (service *OrderServiceImplementation) PostpaidTopupPdam(requestId string, customerId string, TrxId int, productCode string) *ppob.TopupPostaidPdamDataResponse {
 	var err error
 
-	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(TrxId)))
+	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(rune(TrxId))))
 	body, _ := json.Marshal(map[string]interface{}{
 		"commands": "pay-pasca",
 		"username": config.GetConfig().Ppob.Username,
@@ -2857,7 +2858,7 @@ func (service *OrderServiceImplementation) PostpaidTopupPdam(requestId string, c
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 
@@ -2885,7 +2886,7 @@ func (service *OrderServiceImplementation) PostpaidTopupPdam(requestId string, c
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	topupPostpaidPdamResonse := &ppob.TopupPostaidPdamResponse{}
@@ -2908,7 +2909,7 @@ func (service *OrderServiceImplementation) OrderInquiryPrepaidPln(requestId stri
 		"sign":        hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PrepaidHost + "/inquiry-pln"
 
@@ -2936,7 +2937,7 @@ func (service *OrderServiceImplementation) OrderInquiryPrepaidPln(requestId stri
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPrepaidPln := &ppob.InquiryPrepaidPln{}

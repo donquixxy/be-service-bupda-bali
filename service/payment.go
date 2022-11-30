@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -183,7 +182,7 @@ func (service *PaymentServiceImplementation) CheckPaymentStatus(requestId string
 
 	defer resp.Body.Close()
 
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	dataResponseIpaymu := &payment.PaymentStatusResponse{}
@@ -204,7 +203,7 @@ func BodyHash(postBody []byte, ipaymuKey string, ipaymuVa string) (signature str
 	h.Write([]byte(stringToSign))
 	signature = hex.EncodeToString(h.Sum(nil))
 
-	reqBody = ioutil.NopCloser(strings.NewReader(string(postBody)))
+	reqBody = io.NopCloser(strings.NewReader(string(postBody)))
 
 	return signature, reqBody
 }

@@ -22,8 +22,8 @@ type OrderRepositoryInterface interface {
 	FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	FindOrderPaylaterUnpaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
-	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, error, string, string)
-	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, error, string, string)
+	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
+	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 }
 
 type OrderRepositoryImplementation struct {
@@ -38,14 +38,13 @@ func NewOrderRepository(
 	}
 }
 
-func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, error, string, string) {
+func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, string, string, error) {
 	orders := []entity.Order{}
 
 	var startDate string
 	var endDate string
-	var year int
 
-	year = time.Now().Year()
+	year := time.Now().Year()
 
 	if month == 1 {
 		startDate = fmt.Sprint(year-1) + "-" + fmt.Sprint(12) + "-26 " + "00:00:00"
@@ -64,9 +63,6 @@ func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db
 			endDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month) + "-25 " + "23:59:59"
 		}
 	}
-
-	log.Println("start_date = ", startDate)
-	log.Println("end_date = ", endDate)
 
 	result := db.
 		Where("id_user = ?", idOrder).
@@ -77,17 +73,16 @@ func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db
 		Order("created_at desc").
 		Find(&orders)
 
-	return orders, result.Error, startDate, endDate
+	return orders, startDate, endDate, result.Error
 }
 
-func (repository *OrderRepositoryImplementation) GetOrderPaylaterPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, error, string, string) {
+func (repository *OrderRepositoryImplementation) GetOrderPaylaterPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, string, string, error) {
 	orders := []entity.Order{}
 
 	var startDate string
 	var endDate string
-	var year int
 
-	year = time.Now().Year()
+	year := time.Now().Year()
 
 	if month == 1 {
 		startDate = fmt.Sprint(year-1) + "-" + fmt.Sprint(12) + "-26 " + "00:00:00"
@@ -107,9 +102,6 @@ func (repository *OrderRepositoryImplementation) GetOrderPaylaterPerBulan(db *go
 		}
 	}
 
-	log.Println("start_date = ", startDate)
-	log.Println("end_date = ", endDate)
-
 	result := db.
 		Where("id_user = ?", idOrder).
 		Where("payment_method = ?", "paylater").
@@ -118,7 +110,7 @@ func (repository *OrderRepositoryImplementation) GetOrderPaylaterPerBulan(db *go
 		Order("created_at desc").
 		Find(&orders)
 
-	return orders, result.Error, startDate, endDate
+	return orders, startDate, endDate, result.Error
 }
 
 func (repository *OrderRepositoryImplementation) UpdateOrderPaylaterPaidStatus(db *gorm.DB, idUser string, orderUpdate *entity.Order) error {
@@ -188,8 +180,6 @@ func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.
 		date2 = time.Date(now.Year(), now.Month()+1, 26, 0, 0, 0, 0, time.UTC)
 	}
 
-	log.Println("date1 = ", date1)
-	log.Println("date2 = ", date2)
 	result := db.
 		Where("id_user = ?", idUser).
 		Where("payment_method = ?", "paylater").

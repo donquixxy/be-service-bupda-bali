@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -112,7 +112,7 @@ func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, 
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PrepaidHost + "/pricelist" + "/" + tipe + "/" + operator
 	// URL
@@ -137,7 +137,7 @@ func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, 
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
@@ -150,7 +150,7 @@ func (service *PpobServiceImplementation) GetPrepaidPriceList(requestId string, 
 	}
 
 	if prepaidPriceList.Data.Rc != "00" {
-		fmt.Printf("body: %s\n", prepaidPriceList.Data)
+		// fmt.Printf("body: %s\n", prepaidPriceList.Data)
 		exceptions.PanicIfError(errors.New("error from IAK"), requestId, service.Logger)
 	}
 
@@ -170,7 +170,7 @@ func (service *PpobServiceImplementation) InquiryPrepaidPln(requestId string, in
 		"sign":        hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PrepaidHost + "/inquiry-pln"
 
@@ -198,7 +198,7 @@ func (service *PpobServiceImplementation) InquiryPrepaidPln(requestId string, in
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPrepaidPln := &ppob.InquiryPrepaidPln{}
@@ -246,7 +246,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPln(requestId string, i
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 
@@ -274,7 +274,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPln(requestId string, i
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPostpaidPln := &ppob.InquiryPostpaidPln{}
@@ -311,7 +311,7 @@ func (service *PpobServiceImplementation) GetPostpaidPdamProduct(requestId strin
 		"province": "bali",
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl + "/pdam"
 
@@ -339,7 +339,7 @@ func (service *PpobServiceImplementation) GetPostpaidPdamProduct(requestId strin
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	postpaidPriceList := &ppob.PostpaidPriceListResponse{}
@@ -364,7 +364,7 @@ func (service *PpobServiceImplementation) GetPostpaidTelcoProduct(requestId stri
 		"status":   "all",
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl + "/hp"
 
@@ -392,7 +392,7 @@ func (service *PpobServiceImplementation) GetPostpaidTelcoProduct(requestId stri
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	postpaidTelcoPriceList := &ppob.InquiryProductPostpaidPPOB{}
@@ -424,7 +424,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 
@@ -452,7 +452,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidPdam(requestId string, 
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPostpaidPdam := &ppob.InquiryPostpaidPdam{}
@@ -494,7 +494,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidTelco(requestId string,
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PostpaidUrl
 
@@ -522,7 +522,7 @@ func (service *PpobServiceImplementation) InquiryPostpaidTelco(requestId string,
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	inquiryPostpaidTelco := &ppob.InquiryPostpaidTelco{}
@@ -556,7 +556,7 @@ func (service *PpobServiceImplementation) PrepaidCheckStatusTransaction(requestI
 		"sign":     hex.EncodeToString(sign[:]),
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Ppob.PrepaidHost + "/check-status"
 
@@ -584,6 +584,6 @@ func (service *PpobServiceImplementation) PrepaidCheckStatusTransaction(requestI
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 }

@@ -30,7 +30,7 @@ func (repository *TelegramRepositoryImplementation) SendMessageToTelegram(messag
 	resp, err := http.DefaultClient.Do(req)
 
 	if err != nil {
-		log.Println("an error occured %v", err)
+		log.Printf("an error occured %v", err)
 	}
 	defer resp.Body.Close()
 }
