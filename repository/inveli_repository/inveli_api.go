@@ -330,7 +330,7 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 		riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
 	}
 
-	fmt.Println("riwayat pinjaman ", riwayatPinjamans)
+	// fmt.Println("riwayat pinjaman ", riwayatPinjamans)
 	return riwayatPinjamans, nil
 }
 
@@ -551,7 +551,7 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
-	log.Println("loan id di inveli", loanProductId)
+	// log.Println("loan id di inveli", loanProductId)
 
 	req := graphql.NewRequest(`
 		mutation ($loanInputParam: LoanInput!) {
@@ -584,7 +584,7 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 		return err
 	}
 
-	fmt.Println("response create pinjaman : ", respData)
+	// fmt.Println("response create pinjaman : ", respData)
 
 	return nil
 }
