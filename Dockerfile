@@ -11,9 +11,9 @@ RUN apk update && apk add ca-certificates && apk add tzdata && apk add git
 COPY --from=builder /build .
 ENV TZ="Asia/Makassar"
 # Dev
-EXPOSE 9090 
+# EXPOSE 9090 
 
 # Prod
-# EXPOSE 9080
+EXPOSE 9080
 
 CMD ./be-service-bupda-bali

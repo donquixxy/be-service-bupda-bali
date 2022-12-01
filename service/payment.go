@@ -108,7 +108,7 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	now := time.Now()
 	rand.Seed(time.Now().UTC().UnixNano())
 	generateCode := 100000 + rand.Intn(999999-100000)
-	numberOrder := "TAGIHAN/" + "/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
+	numberOrder := "TAGIHAN" + "/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
 
 	orderEntity := &entity.Order{}
 	orderEntity.Id = utilities.RandomUUID()
