@@ -36,7 +36,6 @@ type InveliAPIRepositoryInterface interface {
 	GetLoanProduct(token string) (float64, error)
 	GetLoanProductId(token string) (string, error)
 	GetSaldoBupda(token, groupID string) (float64, error)
-	// CreatePaylaterNew(token, memberID, accountID, loanProductID, creditAccount string, loanAmount, totalAmount, bunga float64) error
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -962,42 +961,3 @@ func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string
 
 	return accountBalance, nil
 }
-
-// func (r *InveliAPIRepositoryImplementation) CreatePaylaterNew(token, memberID, accountID, loanProductID, creditAccount string, loanAmount, totalAmount, bunga float64) error {
-
-// 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
-
-// 	req := graphql.NewRequest(`
-// 	mutation ($loanInputParam: LoanInput!) {
-//     createLoan(loanInputParam: $loanInputParam)
-// 	}
-// `)
-
-// 	req.Header.Set("Authorization", "Bearer "+token)
-// 	req.Var("loanInputParam", map[string]interface{}{
-// 		"accountID":             AccountID,
-// 		"memberID":              IDMember,
-// 		"loanProductID":         loanProductId,
-// 		"tenor":                 1,
-// 		"loanAmount":            Amount,
-// 		"interestPercent":       bunga,
-// 		"isAutoApprove":         true,
-// 		"paymentInterest":       isMerchant,
-// 		"totalAmount":           totalAmount,
-// 		"memberLoanAttachments": []string{},
-// 	})
-
-// 	fmt.Println("request create pinjaman : ", req)
-
-// 	ctx := context.Background()
-
-// 	var respData interface{}
-// 	if err := client.Run(ctx, req, &respData); err != nil {
-// 		log.Println("error create pinjaman : ", err)
-// 		return err
-// 	}
-
-// 	fmt.Println("response create pinjaman : ", respData)
-
-// 	return nil
-// }
