@@ -201,9 +201,9 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 	err := service.InveliRepositoryInterface.InveliResgisration(inveliRegistrationModel)
 	if err != nil {
 		if strings.TrimPrefix(err.Error(), "graphql: ") == "Email : "+user.Email+" dan HandPhone : "+user.User.Phone+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." || strings.TrimPrefix(err.Error(), "graphql: ") == "Identity Number : "+user.NoIdentitas+" sudah terdaftar sebelumnya. Mohon untuk diperbaiki." {
-			exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, service.DB)
+			exceptions.PanicIfErrorWithRollbackRegister(errors.New("error register to inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
 		} else {
-			exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, service.DB)
+			exceptions.PanicIfErrorWithRollback(errors.New("error register to inveli"+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
 		}
 	}
 
@@ -499,7 +499,7 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 
 	// Save user to database
 	err = service.UserRepositoryInterface.CreateUser(tx, userEntity)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create user"}, service.Logger, service.DB)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create user"}, service.Logger, tx)
 
 	userProfileEntity := &entity.UserProfile{
 		Id:          utilities.RandomUUID(),
@@ -512,7 +512,7 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 
 	// Save user profile to database
 	err = service.UserProfileRepositoryInterface.CreateUserProfile(tx, userProfileEntity)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create user profile"}, service.Logger, service.DB)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create user profile"}, service.Logger, tx)
 
 	pointEntity := &entity.Point{
 		Id:          utilities.RandomUUID(),
@@ -524,7 +524,7 @@ func (service *UserServiceImplementation) CreateUserNonSuveyed(requestId string,
 
 	// Save point to database
 	err = service.PointRepositoryInterface.CreatePoint(tx, pointEntity)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create point"}, service.Logger, service.DB)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create point"}, service.Logger, tx)
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
@@ -554,31 +554,25 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 	}
 
 	if user.User.IsPaylater == 0 {
-		go func() {
-			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
+		userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
 
-			if len(userPaylaterList.Id) != 0 {
-				userEntity := &entity.User{
-					IsPaylater: 1,
-				}
-
-				service.UserRepositoryInterface.UpdateUser(service.DB, user.User.Id, userEntity)
+		if len(userPaylaterList.Id) != 0 {
+			userEntity := &entity.User{
+				IsPaylater: 1,
 			}
 
-		}()
+			service.UserRepositoryInterface.UpdateUser(service.DB, user.User.Id, userEntity)
+		}
 	} else if user.User.IsPaylater == 1 {
-		go func() {
-			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
+		userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, user.NoIdentitas)
 
-			if len(userPaylaterList.Id) == 0 {
-				userEntity := &entity.User{
-					IsPaylater: 0,
-				}
-
-				service.UserRepositoryInterface.UpdateUserForIsPaylater(service.DB, user.User.Id, userEntity)
+		if len(userPaylaterList.Id) == 0 {
+			userEntity := &entity.User{
+				IsPaylater: 0,
 			}
-		}()
 
+			service.UserRepositoryInterface.UpdateUserForIsPaylater(service.DB, user.User.Id, userEntity)
+		}
 	}
 
 	userResponse = response.ToFindUserIdResponse(user, statusAktifUser)
@@ -613,9 +607,10 @@ func (service *UserServiceImplementation) UpdateUserPassword(requestId string, i
 
 	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.User.InveliIDMember, updateUserPasswordRequest.PasswordBaru, user.User.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, service.DB)
+		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
 	}
-	tx.Commit()
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 }
 
 func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId string, updateUserForgotPasswordRequest *request.UpdateUserForgotPasswordRequest) {
@@ -649,7 +644,7 @@ func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId str
 
 	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.InveliIDMember, password, user.InveliAccessToken)
 	if err != nil {
-		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, service.DB)
+		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
 	}
 
 	tx.Commit()

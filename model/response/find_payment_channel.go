@@ -26,7 +26,7 @@ func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statu
 			continue
 		}
 
-		if paymentChannel.Code == "tabungan_bima" && statusUser == 0 {
+		if paymentChannel.Code == "tabungan_bima" && statusUser != 2 {
 			continue
 		}
 
