@@ -161,7 +161,6 @@ func PpobRoute(e *echo.Echo, jwt config.Jwt, ppob controller.PpobControllerInter
 
 func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface controller.PaylaterControllerInterface) {
 	group := e.Group("api/v1")
-	group.POST("/paylater/create", paylaterControllerInterface.CreatePaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.POST("/paylater/pay", paylaterControllerInterface.PayPaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/paylater/get-tagihan", paylaterControllerInterface.GetTagihanPaylater, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/order/paylater-monthly", paylaterControllerInterface.GetRiwayatPaylaterPerBulan, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())

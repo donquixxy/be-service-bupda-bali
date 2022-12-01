@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 
 	"log"
 	"math"
@@ -76,7 +77,6 @@ type OrderServiceImplementation struct {
 	DesaRepositoryInterface           repository.DesaRepositoryInterface
 	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 	ListPinjamanRepositoryInterface   repository.ListPinjamanRepositoryInterface
-	TelegramRepositoryInterface       repository.TelegramRepositoryInterface
 }
 
 func NewOrderService(
@@ -97,7 +97,6 @@ func NewOrderService(
 	desaRepositoryInterface repository.DesaRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	listPinjamanRepositoryInterface repository.ListPinjamanRepositoryInterface,
-	telegramRepositoryInterface repository.TelegramRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
 		DB:                                db,
@@ -117,7 +116,6 @@ func NewOrderService(
 		DesaRepositoryInterface:           desaRepositoryInterface,
 		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
 		ListPinjamanRepositoryInterface:   listPinjamanRepositoryInterface,
-		TelegramRepositoryInterface:       telegramRepositoryInterface,
 	}
 }
 
@@ -2115,6 +2113,12 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		exceptions.PanicIfRecordNotFoundWithRollback(err, requestId, []string{"payment not found"}, service.Logger, tx)
 	}
 
+	// Get Desa
+	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
+	if len(desa.Id) == 0 {
+		exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+	}
+
 	switch orderRequest.PaymentMethod {
 	case "cod":
 		orderEntity.OrderStatus = 1
@@ -2214,19 +2218,11 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		var isMerchant float64
 		var totalAmount float64
 
-		// Get Desa
-		desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
-		if len(desa.Id) == 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
-		}
-
 		// Set Is Merchant 0
 		isMerchant = 0
 
 		// Validasi Saldo Bupda
 		saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(userProfile.User.InveliAccessToken, desa.GroupIdBupda)
-
-		log.Println("saldoBupda = ", saldoBupda)
 
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(errors.New("error saldo bupda "+err.Error()), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
@@ -2335,12 +2331,9 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	}
 
 	// // Get Desa
-	// desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, userProfile.User.IdDesa)
-	// if len(desa.Id) == 0 {
-	// 	exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
-	// }
-	// runtime.GOMAXPROCS(1)
-	// go service.TelegramRepositoryInterface.SendMessageToTelegram("Order Baru Dari "+userProfile.NamaLengkap+" ID Order "+orderEntity.NumberOrder+" VIA "+orderRequest.PaymentChannel, desa.ChatIdTelegram, desa.TokenBot)
+	runtime.GOMAXPROCS(1)
+	mssg := "Order Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
+	go service.SendMessageToTelegram(mssg, orderEntity.NumberOrder, desa.ChatIdTelegram, desa.TokenBot)
 
 	// Create Order
 	err = service.OrderRepositoryInterface.CreateOrder(tx, orderEntity)
@@ -2364,6 +2357,25 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 	createOrderResponse = response.ToCreateOrderResponse(orderEntity, paymentChannel)
 	return createOrderResponse
+}
+
+func (service *OrderServiceImplementation) SendMessageToTelegram(message, numberOrder, chatId, token string) {
+	url, _ := url.Parse("https://api.telegram.org/bot" + token + "/sendMessage?chat_id=" + chatId + "&text=" + message + " " + numberOrder + "")
+
+	req := &http.Request{
+		Method: "POST",
+		URL:    url,
+		Header: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		log.Printf("an error occured %v", err)
+	}
+	defer resp.Body.Close()
 }
 
 func (service *OrderServiceImplementation) FindOrderByUser(requestId, idUser string, orderStatus int) (orderResponses []response.FindOrderByUserResponse) {

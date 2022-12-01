@@ -82,7 +82,6 @@ func main() {
 	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
 	listPinjamanRepository := repository.NewListPinjamanRepository(&appConfig.Database)
 	paymentHistoryRepository := repository.NewPaymentHistoryRepository(&appConfig.Database)
-	telegramRepository := repository.NewTelegramRepository()
 
 	// Service
 	listPinjamanService := service.NewListPinjamanService(
@@ -221,7 +220,6 @@ func main() {
 		desaRepository,
 		inveliAPIRepository,
 		listPinjamanRepository,
-		telegramRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,
