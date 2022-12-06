@@ -60,23 +60,24 @@ type OrderServiceInterface interface {
 }
 
 type OrderServiceImplementation struct {
-	DB                                *gorm.DB
-	Validate                          *validator.Validate
-	Logger                            *logrus.Logger
-	OrderRepositoryInterface          repository.OrderRepositoryInterface
-	UserRepositoryInterface           repository.UserRepositoryInterface
-	PaymentServiceInterface           PaymentServiceInterface
-	CartRepositoryInterface           repository.CartRepositoryInterface
-	OrderItemRepositoryInterface      repository.OrderItemRepositoryInterface
-	PaymentChannelRepositoryInterface repository.PaymentChannelRepositoryInterface
-	ProductDesaRepositoryInterface    repository.ProductDesaRepositoryInterface
-	ProductDesaServiceInterface       ProductDesaServiceInterface
-	OperatorPrefixRepositoryInterface repository.OperatorPrefixRepositoryInterface
-	OrderItemPpobRepositoryInterface  repository.OrderItemPpobRepositoryInterface
-	PpobDetailRepositoryInterface     repository.PpobDetailRepositoryInterface
-	DesaRepositoryInterface           repository.DesaRepositoryInterface
-	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
-	ListPinjamanRepositoryInterface   repository.ListPinjamanRepositoryInterface
+	DB                                     *gorm.DB
+	Validate                               *validator.Validate
+	Logger                                 *logrus.Logger
+	OrderRepositoryInterface               repository.OrderRepositoryInterface
+	UserRepositoryInterface                repository.UserRepositoryInterface
+	PaymentServiceInterface                PaymentServiceInterface
+	CartRepositoryInterface                repository.CartRepositoryInterface
+	OrderItemRepositoryInterface           repository.OrderItemRepositoryInterface
+	PaymentChannelRepositoryInterface      repository.PaymentChannelRepositoryInterface
+	ProductDesaRepositoryInterface         repository.ProductDesaRepositoryInterface
+	ProductDesaServiceInterface            ProductDesaServiceInterface
+	OperatorPrefixRepositoryInterface      repository.OperatorPrefixRepositoryInterface
+	OrderItemPpobRepositoryInterface       repository.OrderItemPpobRepositoryInterface
+	PpobDetailRepositoryInterface          repository.PpobDetailRepositoryInterface
+	DesaRepositoryInterface                repository.DesaRepositoryInterface
+	InveliAPIRepositoryInterface           invelirepository.InveliAPIRepositoryInterface
+	ListPinjamanRepositoryInterface        repository.ListPinjamanRepositoryInterface
+	UserShippingAddressRepositoryInterface repository.UserShippingAddressRepositoryInterface
 }
 
 func NewOrderService(
@@ -97,25 +98,27 @@ func NewOrderService(
 	desaRepositoryInterface repository.DesaRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	listPinjamanRepositoryInterface repository.ListPinjamanRepositoryInterface,
+	userShippingAddressRepositoryInterface repository.UserShippingAddressRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
-		DB:                                db,
-		Validate:                          validate,
-		Logger:                            logger,
-		OrderRepositoryInterface:          orderRepositoryInterface,
-		UserRepositoryInterface:           userRepositoryInterface,
-		PaymentServiceInterface:           paymentServiceInterface,
-		CartRepositoryInterface:           cartRepositoryInterface,
-		OrderItemRepositoryInterface:      orderItemRepositoryInterface,
-		PaymentChannelRepositoryInterface: paymentChannelRepositoryInterface,
-		ProductDesaRepositoryInterface:    productDesaRepositoryInterface,
-		ProductDesaServiceInterface:       productDesaServiceInterface,
-		OperatorPrefixRepositoryInterface: operatorPrefixRepositoryInterface,
-		OrderItemPpobRepositoryInterface:  orderItemPpobRepositoryInterface,
-		PpobDetailRepositoryInterface:     ppobDetailRepositoryInterface,
-		DesaRepositoryInterface:           desaRepositoryInterface,
-		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
-		ListPinjamanRepositoryInterface:   listPinjamanRepositoryInterface,
+		DB:                                     db,
+		Validate:                               validate,
+		Logger:                                 logger,
+		OrderRepositoryInterface:               orderRepositoryInterface,
+		UserRepositoryInterface:                userRepositoryInterface,
+		PaymentServiceInterface:                paymentServiceInterface,
+		CartRepositoryInterface:                cartRepositoryInterface,
+		OrderItemRepositoryInterface:           orderItemRepositoryInterface,
+		PaymentChannelRepositoryInterface:      paymentChannelRepositoryInterface,
+		ProductDesaRepositoryInterface:         productDesaRepositoryInterface,
+		ProductDesaServiceInterface:            productDesaServiceInterface,
+		OperatorPrefixRepositoryInterface:      operatorPrefixRepositoryInterface,
+		OrderItemPpobRepositoryInterface:       orderItemPpobRepositoryInterface,
+		PpobDetailRepositoryInterface:          ppobDetailRepositoryInterface,
+		DesaRepositoryInterface:                desaRepositoryInterface,
+		InveliAPIRepositoryInterface:           inveliAPIRepositoryInterface,
+		ListPinjamanRepositoryInterface:        listPinjamanRepositoryInterface,
+		UserShippingAddressRepositoryInterface: userShippingAddressRepositoryInterface,
 	}
 }
 
@@ -2020,6 +2023,9 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user not found"}, service.Logger)
 	}
 
+	// Get data user shipping status
+	userShippingAddress, _ := service.UserShippingAddressRepositoryInterface.FindUserShippingAddressByAddress(service.DB, orderRequest.AlamatPengiriman)
+
 	// Get data user cart
 	userCartItems, err := service.CartRepositoryInterface.FindCartByUser(service.DB, userProfile.User.Id)
 	exceptions.PanicIfError(err, requestId, service.Logger)
@@ -2050,6 +2056,8 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity.PaymentChannel = orderRequest.PaymentChannel
 	orderEntity.TotalBill = orderRequest.TotalBill + orderRequest.PaymentFee
 	orderEntity.PaymentFee = orderRequest.PaymentFee
+	orderEntity.Longitude = userShippingAddress.Longitude
+	orderEntity.Latitude = userShippingAddress.Latitude
 
 	orderEntity.OrderType = 1
 
