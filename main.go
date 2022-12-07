@@ -220,6 +220,7 @@ func main() {
 		desaRepository,
 		inveliAPIRepository,
 		listPinjamanRepository,
+		userShippingAddressRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,

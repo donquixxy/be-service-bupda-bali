@@ -61,23 +61,24 @@ type OrderServiceInterface interface {
 }
 
 type OrderServiceImplementation struct {
-	DB                                *gorm.DB
-	Validate                          *validator.Validate
-	Logger                            *logrus.Logger
-	OrderRepositoryInterface          repository.OrderRepositoryInterface
-	UserRepositoryInterface           repository.UserRepositoryInterface
-	PaymentServiceInterface           PaymentServiceInterface
-	CartRepositoryInterface           repository.CartRepositoryInterface
-	OrderItemRepositoryInterface      repository.OrderItemRepositoryInterface
-	PaymentChannelRepositoryInterface repository.PaymentChannelRepositoryInterface
-	ProductDesaRepositoryInterface    repository.ProductDesaRepositoryInterface
-	ProductDesaServiceInterface       ProductDesaServiceInterface
-	OperatorPrefixRepositoryInterface repository.OperatorPrefixRepositoryInterface
-	OrderItemPpobRepositoryInterface  repository.OrderItemPpobRepositoryInterface
-	PpobDetailRepositoryInterface     repository.PpobDetailRepositoryInterface
-	DesaRepositoryInterface           repository.DesaRepositoryInterface
-	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
-	ListPinjamanRepositoryInterface   repository.ListPinjamanRepositoryInterface
+	DB                                     *gorm.DB
+	Validate                               *validator.Validate
+	Logger                                 *logrus.Logger
+	OrderRepositoryInterface               repository.OrderRepositoryInterface
+	UserRepositoryInterface                repository.UserRepositoryInterface
+	PaymentServiceInterface                PaymentServiceInterface
+	CartRepositoryInterface                repository.CartRepositoryInterface
+	OrderItemRepositoryInterface           repository.OrderItemRepositoryInterface
+	PaymentChannelRepositoryInterface      repository.PaymentChannelRepositoryInterface
+	ProductDesaRepositoryInterface         repository.ProductDesaRepositoryInterface
+	ProductDesaServiceInterface            ProductDesaServiceInterface
+	OperatorPrefixRepositoryInterface      repository.OperatorPrefixRepositoryInterface
+	OrderItemPpobRepositoryInterface       repository.OrderItemPpobRepositoryInterface
+	PpobDetailRepositoryInterface          repository.PpobDetailRepositoryInterface
+	DesaRepositoryInterface                repository.DesaRepositoryInterface
+	InveliAPIRepositoryInterface           invelirepository.InveliAPIRepositoryInterface
+	ListPinjamanRepositoryInterface        repository.ListPinjamanRepositoryInterface
+	UserShippingAddressRepositoryInterface repository.UserShippingAddressRepositoryInterface
 }
 
 func NewOrderService(
@@ -98,25 +99,27 @@ func NewOrderService(
 	desaRepositoryInterface repository.DesaRepositoryInterface,
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	listPinjamanRepositoryInterface repository.ListPinjamanRepositoryInterface,
+	userShippingAddressRepositoryInterface repository.UserShippingAddressRepositoryInterface,
 ) OrderServiceInterface {
 	return &OrderServiceImplementation{
-		DB:                                db,
-		Validate:                          validate,
-		Logger:                            logger,
-		OrderRepositoryInterface:          orderRepositoryInterface,
-		UserRepositoryInterface:           userRepositoryInterface,
-		PaymentServiceInterface:           paymentServiceInterface,
-		CartRepositoryInterface:           cartRepositoryInterface,
-		OrderItemRepositoryInterface:      orderItemRepositoryInterface,
-		PaymentChannelRepositoryInterface: paymentChannelRepositoryInterface,
-		ProductDesaRepositoryInterface:    productDesaRepositoryInterface,
-		ProductDesaServiceInterface:       productDesaServiceInterface,
-		OperatorPrefixRepositoryInterface: operatorPrefixRepositoryInterface,
-		OrderItemPpobRepositoryInterface:  orderItemPpobRepositoryInterface,
-		PpobDetailRepositoryInterface:     ppobDetailRepositoryInterface,
-		DesaRepositoryInterface:           desaRepositoryInterface,
-		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
-		ListPinjamanRepositoryInterface:   listPinjamanRepositoryInterface,
+		DB:                                     db,
+		Validate:                               validate,
+		Logger:                                 logger,
+		OrderRepositoryInterface:               orderRepositoryInterface,
+		UserRepositoryInterface:                userRepositoryInterface,
+		PaymentServiceInterface:                paymentServiceInterface,
+		CartRepositoryInterface:                cartRepositoryInterface,
+		OrderItemRepositoryInterface:           orderItemRepositoryInterface,
+		PaymentChannelRepositoryInterface:      paymentChannelRepositoryInterface,
+		ProductDesaRepositoryInterface:         productDesaRepositoryInterface,
+		ProductDesaServiceInterface:            productDesaServiceInterface,
+		OperatorPrefixRepositoryInterface:      operatorPrefixRepositoryInterface,
+		OrderItemPpobRepositoryInterface:       orderItemPpobRepositoryInterface,
+		PpobDetailRepositoryInterface:          ppobDetailRepositoryInterface,
+		DesaRepositoryInterface:                desaRepositoryInterface,
+		InveliAPIRepositoryInterface:           inveliAPIRepositoryInterface,
+		ListPinjamanRepositoryInterface:        listPinjamanRepositoryInterface,
+		UserShippingAddressRepositoryInterface: userShippingAddressRepositoryInterface,
 	}
 }
 
@@ -1359,6 +1362,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	var product []string
 	var qty []int
 	var price []float64
+	var ppobDetailID string
 	orderItemsPpob := &entity.OrderItemPpob{}
 	ppobDetailPrepaidPulsa := &entity.PpobDetailPrepaidPulsa{}
 	for _, priceList := range priceLists.Data.Data {
@@ -1385,6 +1389,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 			ppobDetailPrepaidPulsa.ActivePeriod = priceList.ActivePeriod
 			ppobDetailPrepaidPulsa.IconUrl = priceList.IconUrl
 			ppobDetailPrepaidPulsa.StatusTopUp = -1
+			ppobDetailID = ppobDetailPrepaidPulsa.Id
 
 			if orderRequest.PaymentMethod == "cc" {
 				product = append(product, orderItemsPpob.ProductCode)
@@ -1633,6 +1638,16 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
+		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
+
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPln{
+			StatusTopUp:         response.Data.Status,
+			TopupProccesingDate: null.NewTime(time.Now(), true),
+			LastBalance:         response.Data.Balance,
+		})
+	}
+
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
@@ -1727,6 +1742,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	var product []string
 	var qty []int
 	var price []float64
+	var ppobDetailID string
 	orderItemsPpob := &entity.OrderItemPpob{}
 	ppobDetailPrepaidPln := &entity.PpobDetailPrepaidPln{}
 	for _, priceList := range priceLists.Data.Data {
@@ -1754,7 +1770,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 			ppobDetailPrepaidPln.CustomerName = inquiryPlnData.Name
 			ppobDetailPrepaidPln.SegmentPower = inquiryPlnData.SegmentPower
 			ppobDetailPrepaidPln.StatusTopUp = -1
-
+			ppobDetailID = ppobDetailPrepaidPln.Id
 			if orderRequest.PaymentMethod == "cc" {
 				product = append(product, orderItemsPpob.ProductCode)
 				qty = append(qty, 1)
@@ -1989,6 +2005,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
 		}
+
 	}
 
 	// Create Order
@@ -2001,6 +2018,17 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	// update stock jika payment methodnya point
+	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
+		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
+
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPln{
+			StatusTopUp:         response.Data.Status,
+			TopupProccesingDate: null.NewTime(time.Now(), true),
+			LastBalance:         response.Data.Balance,
+		})
+	}
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
@@ -2020,6 +2048,9 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	if len(userProfile.User.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user not found"}, service.Logger)
 	}
+
+	// Get data user shipping status
+	userShippingAddress, _ := service.UserShippingAddressRepositoryInterface.FindUserShippingAddressByAddress(service.DB, orderRequest.AlamatPengiriman)
 
 	// Get data user cart
 	userCartItems, err := service.CartRepositoryInterface.FindCartByUser(service.DB, userProfile.User.Id)
@@ -2051,6 +2082,8 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity.PaymentChannel = orderRequest.PaymentChannel
 	orderEntity.TotalBill = orderRequest.TotalBill + orderRequest.PaymentFee
 	orderEntity.PaymentFee = orderRequest.PaymentFee
+	orderEntity.Longitude = userShippingAddress.Longitude
+	orderEntity.Latitude = userShippingAddress.Latitude
 
 	orderEntity.OrderType = 1
 

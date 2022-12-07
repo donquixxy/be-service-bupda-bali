@@ -41,6 +41,8 @@ type Order struct {
 	FotoBuktiBayar      string    `gorm:"column:foto_bukti_bayar;"`
 	RefId               string    `gorm:"column:ref_id;"`
 	PaylaterPaidStatus  int       `gorm:"column:paylater_paid_status;"`
+	Longitude           float64   `gorm:"column:longitude;"`
+	Latitude            float64   `gorm:"column:latitude;"`
 }
 
 func (Order) TableName() string {

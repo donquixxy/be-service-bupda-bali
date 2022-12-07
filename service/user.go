@@ -634,10 +634,13 @@ func (service *UserServiceImplementation) UpdateUserPassword(requestId string, i
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.User.InveliIDMember, updateUserPasswordRequest.PasswordBaru, user.User.InveliAccessToken)
-	if err != nil {
-		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
+	if user.User.StatusPaylater != 0 {
+		err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.User.InveliIDMember, updateUserPasswordRequest.PasswordBaru, user.User.InveliAccessToken)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
+		}
 	}
+
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 }
@@ -670,10 +673,11 @@ func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId str
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
-
-	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.InveliIDMember, password, user.InveliAccessToken)
-	if err != nil {
-		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
+	if user.StatusPaylater != 0 {
+		err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.InveliIDMember, password, user.InveliAccessToken)
+		if err != nil {
+			exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
+		}
 	}
 
 	tx.Commit()
