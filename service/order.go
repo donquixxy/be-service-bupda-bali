@@ -1361,6 +1361,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	var product []string
 	var qty []int
 	var price []float64
+	var ppobDetailID string
 	orderItemsPpob := &entity.OrderItemPpob{}
 	ppobDetailPrepaidPulsa := &entity.PpobDetailPrepaidPulsa{}
 	for _, priceList := range priceLists.Data.Data {
@@ -1387,6 +1388,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 			ppobDetailPrepaidPulsa.ActivePeriod = priceList.ActivePeriod
 			ppobDetailPrepaidPulsa.IconUrl = priceList.IconUrl
 			ppobDetailPrepaidPulsa.StatusTopUp = -1
+			ppobDetailID = ppobDetailPrepaidPulsa.Id
 
 			if orderRequest.PaymentMethod == "cc" {
 				product = append(product, orderItemsPpob.ProductCode)
@@ -1635,6 +1637,16 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
+		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
+
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPln{
+			StatusTopUp:         response.Data.Status,
+			TopupProccesingDate: null.NewTime(time.Now(), true),
+			LastBalance:         response.Data.Balance,
+		})
+	}
+
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
@@ -1729,6 +1741,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	var product []string
 	var qty []int
 	var price []float64
+	var ppobDetailID string
 	orderItemsPpob := &entity.OrderItemPpob{}
 	ppobDetailPrepaidPln := &entity.PpobDetailPrepaidPln{}
 	for _, priceList := range priceLists.Data.Data {
@@ -1756,7 +1769,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 			ppobDetailPrepaidPln.CustomerName = inquiryPlnData.Name
 			ppobDetailPrepaidPln.SegmentPower = inquiryPlnData.SegmentPower
 			ppobDetailPrepaidPln.StatusTopUp = -1
-
+			ppobDetailID = ppobDetailPrepaidPln.Id
 			if orderRequest.PaymentMethod == "cc" {
 				product = append(product, orderItemsPpob.ProductCode)
 				qty = append(qty, 1)
@@ -1991,6 +2004,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
 		}
+
 	}
 
 	// Create Order
@@ -2003,6 +2017,17 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	// update stock jika payment methodnya point
+	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
+		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
+
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPln{
+			StatusTopUp:         response.Data.Status,
+			TopupProccesingDate: null.NewTime(time.Now(), true),
+			LastBalance:         response.Data.Balance,
+		})
+	}
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
