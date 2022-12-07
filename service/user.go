@@ -173,6 +173,12 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 
 	tx := service.DB.Begin()
 
+	// Get Desa
+	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
+	if len(desa.Id) == 0 {
+		exceptions.PanicIfErrorWithRollback(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger, tx)
+	}
+
 	if user.User.StatusPaylater == 3 {
 		exceptions.PanicIfUserNotHavePassword(errors.New("user belum first login inveli"), requestId, []string{"user belum first login inveli"}, service.Logger)
 	}
@@ -207,7 +213,30 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 		}
 	}
 
+	mssg := "Pendaftaran Akun Baru Atas Nama " + user.NamaLengkap + " Berhasil, Mohon untuk segera dilakukan aktivasi akun melalui aplikasi Inveli"
+	go SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
+
 	tx.Commit()
+
+}
+
+func SendMessageToTelegram(message, chatId, token string) {
+	url, _ := url.Parse("https://api.telegram.org/bot" + token + "/sendMessage?chat_id=" + chatId + "&text=" + message)
+
+	req := &http.Request{
+		Method: "POST",
+		URL:    url,
+		Header: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		log.Printf("an error occured %v", err)
+	}
+	defer resp.Body.Close()
 }
 
 func (service *UserServiceImplementation) GetSimpananKhususBalance(requestId string, idUser string) (accountBalanceResponse response.FindAccountBalanceResponse) {

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -42,8 +41,8 @@ func (controller *OrderControllerImplementation) FindOrderPayLater(c echo.Contex
 
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	idUser := middleware.TokenClaimsIdUser(c)
-	fmt.Println("masuk")
-	fmt.Println(idUser)
+	// fmt.Println("masuk")
+	// fmt.Println(idUser)
 	orderResponses := controller.OrderServiceInterface.FindOrderPayLaterByIdUser(requestId, idUser)
 	responses := response.Response{Code: 200, Mssg: "success", Data: orderResponses, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)

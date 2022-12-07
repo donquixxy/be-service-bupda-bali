@@ -57,6 +57,7 @@ type OrderServiceInterface interface {
 	CallbackPpobTransaction(requestId string, ppobCallbackRequest *request.PpobCallbackRequest)
 	FindOrderPayLaterByIdUser(requestId, idUser string) (orderResponse []response.FindOrderByUserResponse)
 	FindOrderPaymentById(requestId, idOrder string) (orderResponse response.OrderPayment)
+	SendMessageToTelegram(message, chatId, token string)
 }
 
 type OrderServiceImplementation struct {
@@ -2337,7 +2338,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	// // Get Desa
 	runtime.GOMAXPROCS(1)
 	mssg := "Order Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
-	go service.SendMessageToTelegram(mssg, orderEntity.NumberOrder, desa.ChatIdTelegram, desa.TokenBot)
+	go service.SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
 
 	// Create Order
 	err = service.OrderRepositoryInterface.CreateOrder(tx, orderEntity)
@@ -2363,8 +2364,8 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	return createOrderResponse
 }
 
-func (service *OrderServiceImplementation) SendMessageToTelegram(message, numberOrder, chatId, token string) {
-	url, _ := url.Parse("https://api.telegram.org/bot" + token + "/sendMessage?chat_id=" + chatId + "&text=" + message + " " + numberOrder + "")
+func (service *OrderServiceImplementation) SendMessageToTelegram(message, chatId, token string) {
+	url, _ := url.Parse("https://api.telegram.org/bot" + token + "/sendMessage?chat_id=" + chatId + "&text=" + message)
 
 	req := &http.Request{
 		Method: "POST",
