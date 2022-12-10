@@ -520,6 +520,17 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPostpaidPln(tx, ppobDetailPln)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
+
+		response := service.PostpaidTopupPln(requestId, orderRequest.CustomerId, orderItemsPpob.TrId, orderItemsPpob.ProductCode)
+
+		err = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPlnById(service.DB, ppobDetailPln.Id, &entity.PpobDetailPostpaidPln{
+			StatusTopUp:         3,
+			TopupProccesingDate: null.NewTime(time.Now(), true),
+			LastBalance:         response.Balance,
+		})
+	}
+
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
@@ -889,6 +900,16 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 	// create ppob detail pdam
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPostpaidPdam(tx, ppobDetailPdam)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
+		response := service.PostpaidTopupPdam(requestId, orderRequest.CustomerId, orderItemsPpob.TrId, orderItemsPpob.ProductCode)
+
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPdamById(service.DB, ppobDetailPdam.Id, &entity.PpobDetailPostpaidPdam{
+			StatusTopUp:         3,
+			TopupProccesingDate: null.NewTime(time.Now(), true),
+			LastBalance:         response.Balance,
+		})
+	}
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
@@ -1403,7 +1424,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	fmt.Println("Total Harga = ", totalHarga)
 	fmt.Println("Total Harga request = ", orderRequest.TotalBill)
 
-	if (totalHarga + orderRequest.PaymentFee) != (orderRequest.TotalBill + orderRequest.PaymentFee + orderEntity.PaymentPoint) {
+	if ((totalHarga + 1500) + orderRequest.PaymentFee) != (orderRequest.TotalBill + orderRequest.PaymentFee + orderEntity.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama"), requestId, []string{"harga tidak sama"}, service.Logger, tx)
 	}
 
@@ -1641,7 +1662,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
 
-		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPln{
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPulsaById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPulsa{
 			StatusTopUp:         response.Data.Status,
 			TopupProccesingDate: null.NewTime(time.Now(), true),
 			LastBalance:         response.Data.Balance,
