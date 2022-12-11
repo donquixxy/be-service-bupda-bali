@@ -1550,6 +1550,10 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
 		}
 
+		if saldoBupda <= (orderRequest.TotalBill + orderRequest.PaymentFee) {
+			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
+		}
+
 		// Get Bunga
 		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
 		if errr != nil {
@@ -2288,6 +2292,10 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		}
 
 		if saldoBupda <= 0 {
+			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
+		}
+
+		if saldoBupda <= (orderRequest.TotalBill + orderRequest.PaymentFee) {
 			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
 		}
 

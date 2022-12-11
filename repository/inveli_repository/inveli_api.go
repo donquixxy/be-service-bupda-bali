@@ -744,7 +744,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 
 	// Read response body
 	data, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Printf("body: %s\n", data)
+	fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
 
