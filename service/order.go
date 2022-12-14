@@ -1292,8 +1292,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 
 	request.ValidateRequest(service.Validate, orderRequest, requestId, service.Logger)
 
-	exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, service.DB)
-
 	// Get data user
 	userProfile, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	exceptions.PanicIfError(err, requestId, service.Logger)
@@ -1387,7 +1385,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	var product []string
 	var qty []int
 	var price []float64
-	var ppobDetailID string
 	orderItemsPpob := &entity.OrderItemPpob{}
 	ppobDetailPrepaidPulsa := &entity.PpobDetailPrepaidPulsa{}
 	for _, priceList := range priceLists.Data.Data {
@@ -1414,7 +1411,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 			ppobDetailPrepaidPulsa.ActivePeriod = priceList.ActivePeriod
 			ppobDetailPrepaidPulsa.IconUrl = priceList.IconUrl
 			ppobDetailPrepaidPulsa.StatusTopUp = -1
-			ppobDetailID = ppobDetailPrepaidPulsa.Id
 
 			if orderRequest.PaymentMethod == "cc" {
 				product = append(product, orderItemsPpob.ProductCode)
@@ -1664,18 +1660,15 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	err = service.OrderItemPpobRepositoryInterface.CreateOrderItemPpob(tx, orderItemsPpob)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
-	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
-
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
-
-		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPulsaById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPulsa{
-			StatusTopUp:         response.Data.Status,
-			TopupProccesingDate: null.NewTime(time.Now(), true),
-			LastBalance:         response.Data.Balance,
-		})
+		ppobDetailPrepaidPulsa.StatusTopUp = response.Data.Status
+		ppobDetailPrepaidPulsa.TopupProccesingDate = null.NewTime(time.Now(), true)
+		ppobDetailPrepaidPulsa.LastBalance = response.Data.Balance
 	}
+
+	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
@@ -1771,7 +1764,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	var product []string
 	var qty []int
 	var price []float64
-	var ppobDetailID string
 	orderItemsPpob := &entity.OrderItemPpob{}
 	ppobDetailPrepaidPln := &entity.PpobDetailPrepaidPln{}
 	for _, priceList := range priceLists.Data.Data {
@@ -1799,7 +1791,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 			ppobDetailPrepaidPln.CustomerName = inquiryPlnData.Name
 			ppobDetailPrepaidPln.SegmentPower = inquiryPlnData.SegmentPower
 			ppobDetailPrepaidPln.StatusTopUp = -1
-			ppobDetailID = ppobDetailPrepaidPln.Id
 			if orderRequest.PaymentMethod == "cc" {
 				product = append(product, orderItemsPpob.ProductCode)
 				qty = append(qty, 1)
@@ -2034,7 +2025,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		if err != nil {
 			exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
 		}
-
 	}
 
 	// Create Order
@@ -2045,19 +2035,15 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	err = service.OrderItemPpobRepositoryInterface.CreateOrderItemPpob(tx, orderItemsPpob)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
-	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
-
-	// update stock jika payment methodnya point
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
-
-		_ = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailID, &entity.PpobDetailPrepaidPln{
-			StatusTopUp:         response.Data.Status,
-			TopupProccesingDate: null.NewTime(time.Now(), true),
-			LastBalance:         response.Data.Balance,
-		})
+		ppobDetailPrepaidPln.StatusTopUp = response.Data.Status
+		ppobDetailPrepaidPln.TopupProccesingDate = null.NewTime(time.Now(), true)
+		ppobDetailPrepaidPln.LastBalance = response.Data.Balance
 	}
+
+	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
@@ -3063,6 +3049,8 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 	}
 
 	signCheck := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(order.RefId)))
+	log.Println("sign check = ", hex.EncodeToString(signCheck[:]))
+	log.Println("sign = ", ppobCallbackRequest.Data.Sign)
 
 	// cek sign dari iak dengan signcheck
 	if hex.EncodeToString(signCheck[:]) != ppobCallbackRequest.Data.Sign {

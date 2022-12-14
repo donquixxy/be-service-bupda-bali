@@ -83,6 +83,11 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password))
 		exceptions.PanicIfBadRequest(err, requestId, []string{"Invalid Credentials"}, service.Logger)
 
+		userEntity := &entity.User{
+			InveliPassword: loginRequest.Password,
+		}
+		service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+
 		userModelService.Id = user.Id
 		userModelService.IdDesa = user.IdDesa
 		userModelService.AccountType = user.AccountType
@@ -302,6 +307,8 @@ func (service *AuthServiceImplementation) NewToken(requestId string, refreshToke
 	if claims, ok := tokenParse.Claims.(*modelService.TokenClaims); ok && tokenParse.Valid {
 		user, err := service.UserRepositoryInterface.FindUserByIdAndRefreshToken(service.DB, claims.Id, refreshToken)
 		exceptions.PanicIfRecordNotFound(err, requestId, []string{"User tidak ada"}, service.Logger)
+
+		service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 
 		var userModelService modelService.User
 		userModelService.Id = user.Id

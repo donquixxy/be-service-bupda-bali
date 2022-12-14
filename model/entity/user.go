@@ -24,6 +24,7 @@ type User struct {
 	IsDelete          int       `gorm:"column:is_delete;"`
 	InveliAccessToken string    `gorm:"column:inveli_access_token;"`
 	InveliIDMember    string    `gorm:"column:inveli_id_member;"`
+	InveliPassword    string    `gorm:"column:inveli_password;"`
 	StatusPaylater    int       `gorm:"column:status_paylater;"`
 	IsPaylater        int       `gorm:"column:is_paylater;"`
 	IsDeleteDate      null.Time `gorm:"column:is_delete_date;"`

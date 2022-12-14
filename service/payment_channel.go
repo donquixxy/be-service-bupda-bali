@@ -17,7 +17,7 @@ import (
 )
 
 type PaymentChannelServiceInterface interface {
-	FindPaymentChannel(requestId string, idUser string, requestPayChan *request.GetPaymentChannelRequest) (paymentChannelResponses []response.FindPaymentChannelResponse)
+	FindPaymentChannel(requestId string, idUser string, requestPayChan *request.GetPaymentChannelRequest, productType int) (paymentChannelResponses []response.FindPaymentChannelResponse)
 }
 
 type PaymentChannelServiceImplementation struct {
@@ -50,7 +50,7 @@ func NewPaymentChannelService(
 	}
 }
 
-func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId string, idUser string, requestPayChan *request.GetPaymentChannelRequest) (paymentChannelResponses []response.FindPaymentChannelResponse) {
+func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId string, idUser string, requestPayChan *request.GetPaymentChannelRequest, productType int) (paymentChannelResponses []response.FindPaymentChannelResponse) {
 	var err error
 	paymentChannelResponse, _ := service.PaymentChannelRepositoryInterface.FindPaymentChannel(service.DB)
 	if paymentChannelResponse == nil {
@@ -112,6 +112,6 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 
 	}
 
-	paymentChannelResponses = response.ToFindPaymentChannelResponse(paymentChannelResponse, user.User.StatusPaylater, biayaTanggungRenteng, user.User.IsPaylater)
+	paymentChannelResponses = response.ToFindPaymentChannelResponse(paymentChannelResponse, user.User.StatusPaylater, biayaTanggungRenteng, user.User.IsPaylater, productType)
 	return paymentChannelResponses
 }

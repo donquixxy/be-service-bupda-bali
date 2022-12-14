@@ -15,7 +15,7 @@ type FindPaymentChannelResponse struct {
 	AdminFeePercentage float64 `json:"admin_fee_percentage"`
 }
 
-func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statusUser int, biayaTanggungRenteng float64, isPaylater int) (paymentChannelResponses []FindPaymentChannelResponse) {
+func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statusUser int, biayaTanggungRenteng float64, isPaylater int, productType int) (paymentChannelResponses []FindPaymentChannelResponse) {
 	for _, paymentChannel := range paymentChannels {
 		paymentChannelResponse := FindPaymentChannelResponse{}
 		if paymentChannel.Code == "paylater" && statusUser != 2 {
@@ -27,6 +27,10 @@ func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statu
 		}
 
 		if paymentChannel.Code == "tabungan_bima" && statusUser != 2 {
+			continue
+		}
+
+		if paymentChannel.Code == "trf_mandiri" || paymentChannel.Code == "trf_permata" || paymentChannel.Code == "trf_bca" || paymentChannel.Code == "trf_bri" || paymentChannel.Code == "trf_bni" && productType == 2 {
 			continue
 		}
 
