@@ -61,4 +61,5 @@ type TopupPrepaidPulsaResponseData struct {
 	Balance     float64 `json:"balance"`
 	TrId        int     `json:"tr_id"`
 	Rc          string  `json:"rc"`
+	Sn          string  `json:"sn"`
 }

@@ -393,6 +393,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		}
 
 	case "paylater":
+
 		var isMerchant float64
 		var totalAmount float64
 
@@ -524,7 +525,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 
 		response := service.PostpaidTopupPln(requestId, orderRequest.CustomerId, orderItemsPpob.TrId, orderItemsPpob.ProductCode)
 
-		err = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPlnById(service.DB, ppobDetailPln.Id, &entity.PpobDetailPostpaidPln{
+		_ = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPlnById(service.DB, ppobDetailPln.Id, &entity.PpobDetailPostpaidPln{
 			StatusTopUp:         3,
 			TopupProccesingDate: null.NewTime(time.Now(), true),
 			LastBalance:         response.Balance,
@@ -1286,9 +1287,12 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 }
 
 func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPrepaidRequest) (createOrderResponse response.CreateOrderResponse) {
+
 	var err error
 
 	request.ValidateRequest(service.Validate, orderRequest, requestId, service.Logger)
+
+	exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, service.DB)
 
 	// Get data user
 	userProfile, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
@@ -1808,7 +1812,7 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	fmt.Println("Total Harga = ", totalHarga)
 	fmt.Println("Total Harga request = ", orderRequest.TotalBill)
 
-	if (totalHarga + orderRequest.PaymentFee) != (orderRequest.TotalBill + orderRequest.PaymentFee + orderEntity.PaymentPoint) {
+	if ((totalHarga + 1500) + orderRequest.PaymentFee) != (orderRequest.TotalBill + orderRequest.PaymentFee + orderEntity.PaymentPoint) {
 		exceptions.PanicIfErrorWithRollback(errors.New("harga tidak sama"), requestId, []string{"harga tidak sama"}, service.Logger, tx)
 	}
 
@@ -2778,6 +2782,7 @@ func (service *OrderServiceImplementation) UpdatePaymentStatusOrder(requestId st
 
 				err = service.PpobDetailRepositoryInterface.UpdatePpobPrepaidPlnById(service.DB, ppobDetailPrepaidPulsa.Id, &entity.PpobDetailPrepaidPln{
 					StatusTopUp:         response.Data.Status,
+					NoToken:             response.Data.Sn,
 					TopupProccesingDate: null.NewTime(time.Now(), true),
 					LastBalance:         response.Data.Balance,
 				})

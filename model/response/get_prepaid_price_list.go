@@ -45,7 +45,7 @@ func ToGetPrepaidDataPriceListResponse(priceLists []ppob.PrepaidPriceList) (pric
 		pulsaPriceListResponse.ProductDescription = priceList.ProductDescription
 		pulsaPriceListResponse.ProductNominal = priceList.ProductNominal
 		pulsaPriceListResponse.ProductDetails = priceList.ProductDetails
-		pulsaPriceListResponse.ProductPrice = priceList.ProductPrice
+		pulsaPriceListResponse.ProductPrice = priceList.ProductPrice + 1500
 		pulsaPriceListResponse.ProductType = priceList.ProductType
 		pulsaPriceListResponse.ActivePeriod = priceList.ActivePeriod
 		pulsaPriceListResponse.Status = priceList.Status

@@ -22,6 +22,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/payment"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
@@ -34,6 +35,7 @@ type PaymentServiceInterface interface {
 	CreditCardPay(requestId string, paymentRequest *payment.IpaymuCreditCardRequest) *payment.IpaymuCreditCardResponse
 	CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus
 	PayPaylater(requestId, idUser string) error
+	GetTabunganBimaMutation(requestId, idUser, startDate, endDate string) (responseMutation []response.GetMutationResponse)
 }
 
 type PaymentServiceImplementation struct {
@@ -61,6 +63,40 @@ func NewPaymentService(
 		OrderRepositoryInterface:          orderRepository,
 		PaymentHistoryRepositoryInterface: paymentHistoryRepository,
 	}
+}
+
+func (service *PaymentServiceImplementation) GetTabunganBimaMutation(requestId, idUser, startDate, endDate string) (responseMutation []response.GetMutationResponse) {
+	var err error
+
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	if len(user.User.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user not found"}, service.Logger)
+	}
+
+	account, err := service.UserRepositoryInterface.GetUserAccountBimaByID(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	if len(account.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("account not found"), requestId, []string{"account not found"}, service.Logger)
+	}
+
+	mutation, err := service.InveliAPIRepositoryInterface.GetMutation(account.IdAccount, user.User.InveliAccessToken, startDate, endDate)
+	if err != nil {
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	if len(mutation) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("mutation not found"), requestId, []string{"mutation not found"}, service.Logger)
+	}
+
+	response := response.ToGetMutationResponse(mutation)
+	return response
 }
 
 func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser string) error {

@@ -36,6 +36,7 @@ type InveliAPIRepositoryInterface interface {
 	GetLoanProduct(token string) (float64, error)
 	GetLoanProductId(token string) (string, error)
 	GetSaldoBupda(token, groupID string) (float64, error)
+	GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error)
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -43,6 +44,54 @@ type InveliAPIRepositoryImplementation struct {
 
 func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
+}
+
+func (r *InveliAPIRepositoryImplementation) GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error) {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	req := graphql.NewRequest(`
+		query ($accountID: String!, $startDate: String!, $endDate: String!) {
+			transactions(
+				accountID: $accountID, 
+				startDate: $startDate, 
+				endDate: $endDate
+			){
+				id
+				transactionDate
+				transactionDateCurrency
+				transactionType
+				debitAmount
+				creditAmount
+				description
+			}
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("accountID", accountID)
+	req.Var("startDate", startDate)
+	req.Var("endDate", endDate)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	mutations := []inveli.Transaction{}
+	for _, mutation := range respData.(map[string]interface{})["data"].(map[string]interface{})["transactions"].([]interface{}) {
+		mutations = append(mutations, inveli.Transaction{
+			ID:                      mutation.(map[string]interface{})["id"].(string),
+			TransactionDate:         mutation.(map[string]interface{})["transactionDate"].(string),
+			TransactionDateCurrency: mutation.(map[string]interface{})["transactionDateCurrency"].(string),
+			TransactionType:         mutation.(map[string]interface{})["transactionType"].(string),
+			DebitAmount:             mutation.(map[string]interface{})["debitAmount"].(float64),
+			CreditAmount:            mutation.(map[string]interface{})["creditAmount"].(float64),
+			Description:             mutation.(map[string]interface{})["description"].(string),
+		})
+	}
+
+	return mutations, nil
 }
 
 func (r *InveliAPIRepositoryImplementation) GetSaldoBupda(token, groupID string) (float64, error) {
