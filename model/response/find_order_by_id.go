@@ -136,7 +136,7 @@ func ToFindOrderPrepaidPulsaByIdResponse(order *entity.Order, orderItemPpob *ent
 	orderResponse.PaymentMethod = order.PaymentMethod
 	orderResponse.PaymentChannel = order.PaymentChannel
 	orderResponse.PaymentDueDate = order.PaymentDueDate.Time
-	orderResponse.SubTotal = orderItemPpob.TotalTagihan
+	orderResponse.SubTotal = orderItemPpob.TotalTagihan + 1500
 	orderResponse.PaymentPoint = order.PaymentPoint
 	orderResponse.PaymentFee = order.PaymentFee
 	orderResponse.PaymentCash = order.PaymentCash
@@ -205,7 +205,7 @@ func ToFindOrderPrepaidPlnByIdResponse(order *entity.Order, orderItemPpob *entit
 	orderResponse.PaymentMethod = order.PaymentMethod
 	orderResponse.PaymentChannel = order.PaymentChannel
 	orderResponse.PaymentDueDate = order.PaymentDueDate.Time
-	orderResponse.SubTotal = orderItemPpob.TotalTagihan
+	orderResponse.SubTotal = orderItemPpob.TotalTagihan + 1500
 	orderResponse.PaymentPoint = order.PaymentPoint
 	orderResponse.PaymentFee = order.PaymentFee
 	orderResponse.PaymentCash = order.PaymentCash

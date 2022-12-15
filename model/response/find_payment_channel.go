@@ -30,7 +30,7 @@ func ToFindPaymentChannelResponse(paymentChannels []entity.PaymentChannel, statu
 			continue
 		}
 
-		if paymentChannel.Code == "trf_mandiri" || paymentChannel.Code == "trf_permata" || paymentChannel.Code == "trf_bca" || paymentChannel.Code == "trf_bri" || paymentChannel.Code == "trf_bni" {
+		if paymentChannel.Code == "trf_mandiri" || paymentChannel.Code == "trf_permata" || paymentChannel.Code == "trf_bca" || paymentChannel.Code == "trf_bri" || paymentChannel.Code == "trf_bni" || paymentChannel.Code == "cod" {
 			if productType == 2 {
 				continue
 			}
