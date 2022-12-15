@@ -8,7 +8,19 @@ type FindVersionResponse struct {
 	New     string `json:"new"`
 }
 
-func ToFindNewVersionResponse(setting []entity.Setting, os int) (settingResponse FindVersionResponse) {
+func ToFindNewVersionResponse(appVersion []entity.AppVersion, os int) (settingResponse FindVersionResponse) {
+	if os == 1 {
+		settingResponse.OSName = "Android"
+	} else {
+
+	}
+	settingResponse.OSName = appVersion[0].OS
+	settingResponse.Current = appVersion[0].Version
+	settingResponse.New = appVersion[1].Version
+	return settingResponse
+}
+
+func ToFindNewVersion2Response(setting []entity.Setting, os int) (settingResponse FindVersionResponse) {
 	if os == 1 {
 		settingResponse.OSName = "Android"
 	} else {

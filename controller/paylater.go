@@ -19,6 +19,7 @@ type PaylaterControllerInterface interface {
 	GetRiwayatPaylaterPerBulan(c echo.Context) error
 	GetOrderPaylaterByMonth(c echo.Context) error
 	GetPembayaranTransaksiByIdUser(c echo.Context) error
+	GetTabunganBimaMutation(c echo.Context) error
 }
 
 type PaylaterControllerImplementation struct {
@@ -37,6 +38,16 @@ func NewPaylaterController(
 		PaylaterServiceInterface: paylaterServiceInterface,
 		PaymentServiceInterface:  paymentServiceInterface,
 	}
+}
+
+func (controller *PaylaterControllerImplementation) GetTabunganBimaMutation(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	IdUser := middleware.TokenClaimsIdUser(c)
+	startDate := c.QueryParam("start_date")
+	endDate := c.QueryParam("end_date")
+	mutations := controller.PaymentServiceInterface.GetTabunganBimaMutation(requestId, IdUser, startDate, endDate)
+	responses := response.Response{Code: 200, Mssg: "success", Data: mutations, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
 }
 
 func (controller *PaylaterControllerImplementation) GetPembayaranTransaksiByIdUser(c echo.Context) error {

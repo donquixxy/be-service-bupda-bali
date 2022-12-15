@@ -86,7 +86,7 @@ func (service *PaymentServiceImplementation) GetTabunganBimaMutation(requestId, 
 		exceptions.PanicIfRecordNotFound(errors.New("account not found"), requestId, []string{"account not found"}, service.Logger)
 	}
 
-	mutation, err := service.InveliAPIRepositoryInterface.GetMutation(account.IdAccount, user.User.InveliAccessToken, startDate, endDate)
+	mutation, err := service.InveliAPIRepositoryInterface.GetMutation(user.User.InveliAccessToken, account.IdAccount, startDate, endDate)
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
@@ -94,6 +94,8 @@ func (service *PaymentServiceImplementation) GetTabunganBimaMutation(requestId, 
 	if len(mutation) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("mutation not found"), requestId, []string{"mutation not found"}, service.Logger)
 	}
+
+	log.Println("mutation", mutation)
 
 	response := response.ToGetMutationResponse(mutation)
 	return response

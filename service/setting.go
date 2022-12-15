@@ -15,11 +15,12 @@ type SettingServiceInterface interface {
 }
 
 type SettingServiceImplementation struct {
-	DB                         *gorm.DB
-	Validate                   *validator.Validate
-	Logger                     *logrus.Logger
-	SettingRepositoryInterface repository.SettingRepositoryInterface
-	DesaRepositoryInterface    repository.DesaRepositoryInterface
+	DB                            *gorm.DB
+	Validate                      *validator.Validate
+	Logger                        *logrus.Logger
+	SettingRepositoryInterface    repository.SettingRepositoryInterface
+	DesaRepositoryInterface       repository.DesaRepositoryInterface
+	AppVersionRepositoryInterface repository.AppVersionRepositoryInterface
 }
 
 func NewSettingService(
@@ -28,18 +29,27 @@ func NewSettingService(
 	logger *logrus.Logger,
 	settingServiceInterface repository.SettingRepositoryInterface,
 	desaRepositoryInterface repository.DesaRepositoryInterface,
+	appVersionRepositoryInterface repository.AppVersionRepositoryInterface,
 ) SettingServiceInterface {
 	return &SettingServiceImplementation{
-		DB:                         db,
-		Validate:                   validate,
-		Logger:                     logger,
-		SettingRepositoryInterface: settingServiceInterface,
-		DesaRepositoryInterface:    desaRepositoryInterface,
+		DB:                            db,
+		Validate:                      validate,
+		Logger:                        logger,
+		SettingRepositoryInterface:    settingServiceInterface,
+		DesaRepositoryInterface:       desaRepositoryInterface,
+		AppVersionRepositoryInterface: appVersionRepositoryInterface,
 	}
 }
 
 func (service *SettingServiceImplementation) FindNewVersion(requestId string, os int) (settingResponse response.FindVersionResponse) {
-	version, err := service.SettingRepositoryInterface.FindVerAppByOS(service.DB, os)
+	var osType string
+	if os == 1 {
+		osType = "android"
+	} else if os == 2 {
+		osType = "ios"
+	}
+
+	version, err := service.AppVersionRepositoryInterface.FindVersionByOS(service.DB, osType)
 	exceptions.PanicIfRecordNotFound(err, requestId, []string{"Data not found"}, service.Logger)
 	settingResponse = response.ToFindNewVersionResponse(version, os)
 	return settingResponse

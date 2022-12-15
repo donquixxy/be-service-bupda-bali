@@ -30,7 +30,7 @@ func ToFindOrderByUserResponse(orders []entity.Order) (orderResponses []FindOrde
 		orderResponse.OrderedDate = order.OrderedDate
 		orderResponse.PaymentMethod = order.PaymentMethod
 		orderResponse.PaymentChannel = order.PaymentChannel
-		orderResponse.TotalBill = order.TotalBill
+		orderResponse.TotalBill = order.PaymentCash
 		orderResponses = append(orderResponses, orderResponse)
 	}
 	return orderResponses

@@ -48,13 +48,12 @@ func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 
 func (r *InveliAPIRepositoryImplementation) GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error) {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
-
 	req := graphql.NewRequest(`
 		query ($accountID: String!, $startDate: String!, $endDate: String!) {
 			transactions(
 				accountID: $accountID, 
-				startDate: $startDate, 
-				endDate: $endDate
+				periodStart: $startDate, 
+				periodEnd: $endDate
 			){
 				id
 				transactionDate
@@ -79,7 +78,7 @@ func (r *InveliAPIRepositoryImplementation) GetMutation(token, accountID, startD
 	}
 
 	mutations := []inveli.Transaction{}
-	for _, mutation := range respData.(map[string]interface{})["data"].(map[string]interface{})["transactions"].([]interface{}) {
+	for _, mutation := range respData.(map[string]interface{})["transactions"].([]interface{}) {
 		mutations = append(mutations, inveli.Transaction{
 			ID:                      mutation.(map[string]interface{})["id"].(string),
 			TransactionDate:         mutation.(map[string]interface{})["transactionDate"].(string),

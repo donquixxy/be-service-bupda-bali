@@ -82,6 +82,7 @@ func main() {
 	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
 	listPinjamanRepository := repository.NewListPinjamanRepository(&appConfig.Database)
 	paymentHistoryRepository := repository.NewPaymentHistoryRepository(&appConfig.Database)
+	appVersionRepository := repository.NewAppVersionRepository(&appConfig.Database)
 
 	// Service
 	listPinjamanService := service.NewListPinjamanService(
@@ -237,6 +238,7 @@ func main() {
 		logrusLogger,
 		settingRepository,
 		desaRepository,
+		appVersionRepository,
 	)
 	userShippingAddressService := service.NewUserShippingAddressService(
 		DBConn,
