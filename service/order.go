@@ -1670,6 +1670,10 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	runtime.GOMAXPROCS(1)
+	mssg := "Order Preapaid Pulsa Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
+	go service.SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
+
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
@@ -2045,6 +2049,10 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	runtime.GOMAXPROCS(1)
+	mssg := "Order Preapaid PLN Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
+	go service.SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
+
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
@@ -2389,7 +2397,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 	// // Get Desa
 	runtime.GOMAXPROCS(1)
-	mssg := "Order Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
+	mssg := "Order Sembako Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
 	go service.SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
 
 	// Create Order

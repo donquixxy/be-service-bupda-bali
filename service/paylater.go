@@ -103,10 +103,13 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 	}
 
 	tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	log.Println("tagihanPaylater", tagihanPaylater)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
+
+	log.Println("masuk")
 
 	tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
 	return tagihanPaylaterResponse

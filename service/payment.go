@@ -135,7 +135,7 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 		subTotal += v.SubTotal
 	}
 
-	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
+	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(tx, idUser, &entity.Order{
 		PaylaterPaidStatus: 1,
 	})
 
