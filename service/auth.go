@@ -83,10 +83,10 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password))
 		exceptions.PanicIfBadRequest(err, requestId, []string{"Invalid Credentials"}, service.Logger)
 
-		userEntity := &entity.User{
-			InveliPassword: loginRequest.Password,
-		}
-		service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+		// userEntity := &entity.User{
+		// 	InveliPassword: loginRequest.Password,
+		// }
+		// service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
 
 		userModelService.Id = user.Id
 		userModelService.IdDesa = user.IdDesa
@@ -103,7 +103,7 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
-		service.FirstTimeLoginInveli(user.Phone, loginRequest.Password)
+		service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 
 		// Get User Paylater List
 		if user.IsPaylater == 0 {
@@ -254,7 +254,8 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	exceptions.PanicIfBadRequest(err, requestId, []string{"Error Generate Password"}, service.Logger)
 
 	userUpdateEntity := &entity.User{
-		Password: string(bcryptPassword),
+		Password:       string(bcryptPassword),
+		InveliPassword: ubahPasswordInveliRequest.NewPassword,
 	}
 
 	errr := service.UserRepositoryInterface.UpdateUser(service.DB, userResult.Id, userUpdateEntity)
