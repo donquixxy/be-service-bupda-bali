@@ -1577,13 +1577,23 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		}
 
 		// Validasi Tunggakan Paylater
-		tunggakanPaylater, err := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		// tunggakanPaylater, err := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		// if err != nil {
+		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+		// }
+
+		// if len(tunggakanPaylater) != 0 {
+		// 	exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		// }
+
+		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
 		if err != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("error get riwayat pinjaman", err.Error())
+			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
-		if len(tunggakanPaylater) != 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		if len(loanID) != 0 {
+			exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
 		}
 
 		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
@@ -1956,13 +1966,14 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		}
 
 		// Validasi Tunggakan Paylater
-		tunggakanPaylater, err := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
 		if err != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("error get riwayat pinjaman", err.Error())
+			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
-		if len(tunggakanPaylater) != 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		if len(loanID) != 0 {
+			exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
 		}
 
 		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
@@ -2320,13 +2331,14 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		}
 
 		// Validasi Tunggakan Paylater
-		tunggakanPaylater, err := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
+		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
 		if err != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
+			log.Println("error get riwayat pinjaman", err.Error())
+			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
-		if len(tunggakanPaylater) != 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
+		if len(loanID) != 0 {
+			exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
 		}
 
 		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee

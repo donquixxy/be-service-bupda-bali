@@ -37,6 +37,7 @@ type InveliAPIRepositoryInterface interface {
 	GetLoanProductId(token string) (string, error)
 	GetSaldoBupda(token, groupID string) (float64, error)
 	GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error)
+	GetRiwayatPinjaman(token, memberID string) ([]string, error)
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -44,6 +45,98 @@ type InveliAPIRepositoryImplementation struct {
 
 func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
+}
+
+func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID string) ([]string, error) {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+	req := graphql.NewRequest(`
+		query ($memberID: String!) {
+			loans(memberID: $memberID){
+				loanID
+        code
+        customerID
+        customerName
+        productDesc
+        loanProductID
+        startDate
+        endDate
+        tenorMonth
+        loanAmount
+        interestPercentage
+        repaymentMethod
+        accountID
+        userInsert
+        dateInsert
+        dateAuthor
+        userAuthor
+        recordStatus
+        isLiquidated
+        outstandingAmount
+        nominalWajib
+        filePDFName
+        loanAccountRepayments{
+          id
+          loanAccountID
+          repaymentType
+          repaymentDate
+          repaymentInterest
+          repaymentPrincipal
+          repaymentAmount
+          repaymentInterestPaid
+          repaymentPrincipalPaid
+          outStandingBakiDebet
+          tellerId
+          isPaid
+          amountPaid
+          paymentTxnID
+          recordStatus
+          userInsert
+          dateInsert
+          userUpdate
+          dateUpdate
+          loanPassdues{
+            loanPassdueID
+            loanPassdueNo
+            loanAccountRepaymentID
+            loanID
+            overduePrincipal
+            overdueInterest
+            overduePenalty
+            overdueAmount
+            isPaid
+            isWaivePenalty
+            userInsert
+            dateInsert
+            userUpdate
+            dateUpdate
+            passdueCode
+          }
+        }
+			}
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("memberID", memberID)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println("errr", err.Error())
+		return nil, err
+	}
+
+	// log.Println("resp", respData.(map[string]interface{})["loans"])
+
+	var loanID []string
+	for _, v := range respData.(map[string]interface{})["loans"].([]interface{}) {
+		// log.Println("repayment", v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"])
+		if v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"].(bool) {
+			loanID = append(loanID, v.(map[string]interface{})["loanID"].(string))
+		}
+	}
+
+	return loanID, nil
+
 }
 
 func (r *InveliAPIRepositoryImplementation) GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error) {
@@ -467,7 +560,7 @@ func (r *InveliAPIRepositoryImplementation) GetTunggakan(LoanID, token string) (
 		})
 	}
 
-	log.Println("tunggakan : ", tunggakanResp)
+	// log.Println("tunggakan : ", tunggakanResp)
 
 	return tunggakanResp, nil
 }

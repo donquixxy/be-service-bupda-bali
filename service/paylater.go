@@ -1,11 +1,13 @@
 package service
 
 import (
+	"errors"
 	"log"
 
 	"github.com/go-playground/validator"
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/inveli"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
@@ -13,7 +15,7 @@ import (
 )
 
 type PaylaterServiceInterface interface {
-	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater)
+	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse response.TotalTagihan)
 	GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse)
 	GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse)
 	GetPembayaranTransaksiByIdUser(requestId, idUser, indexDate string) (response response.FindDetailPyamentPaylater)
@@ -96,21 +98,67 @@ func (service *PaylaterServiceImplementation) GetOrderPaylaterPerBulan(requestId
 	return orderPaylaterPerBulanResponse
 }
 
-func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater) {
+func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse response.TotalTagihan) {
+	// log.Println("masuk ke tagihan paylater")
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
 	}
 
 	tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
-	log.Println("tagihanPaylater", tagihanPaylater)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	log.Println("masuk")
+	// log.Println("tagihan", tagihanPaylater)
 
-	tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
-	return tagihanPaylaterResponse
+	count := 0
+	for _, tagihan := range tagihanPaylater {
+		if tagihan.IsPaid {
+			continue
+		}
+		count++
+	}
+
+	// log.Println("count", count)
+
+	if count == 0 {
+		// log.Println("MASUK")
+		// get riwayat pinjaman
+		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
+		if err != nil {
+			log.Println("error get riwayat pinjaman", err.Error())
+			exceptions.PanicIfError(err, requestId, service.Logger)
+		}
+
+		if len(loanID) == 0 {
+			exceptions.PanicIfBadRequest(errors.New("riwayat paylater not found"), requestId, []string{"riwayat paylater not found"}, service.Logger)
+		}
+
+		// log.Println("loanID", loanID)
+
+		tunggakans := []inveli.TunggakanPaylater{}
+		for _, id := range loanID {
+			tunggakan, err := service.InveliAPIRepositoryInterface.GetTunggakan(id, user.User.InveliAccessToken)
+			if err != nil {
+				log.Println("error get tunggakan", err.Error())
+				exceptions.PanicIfError(err, requestId, service.Logger)
+			}
+
+			if len(tunggakan) == 0 {
+				exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
+			}
+
+			tunggakans = append(tunggakans, tunggakan...)
+		}
+
+		// log.Println("tunggakan", tunggakans)
+		tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakans)
+		return tagihanPaylaterResponse
+	} else {
+		tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
+		return tagihanPaylaterResponse
+	}
+
 }

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -81,7 +82,8 @@ func (controller *PaylaterControllerImplementation) GetTagihanPaylater(c echo.Co
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	IdUser := middleware.TokenClaimsIdUser(c)
 	tagihanResponse := controller.PaylaterServiceInterface.GetTagihanPaylater(requestId, IdUser)
-	if condition := len(tagihanResponse) == 0; condition {
+	log.Println("tagihanResponse", tagihanResponse)
+	if condition := len(tagihanResponse.FindTagihanPaylater) == 0; condition {
 		exceptions.PanicIfRecordNotFound(errors.New("tagihan paylater not found"), requestId, []string{"tagihan paylater not found"}, controller.logger)
 	}
 

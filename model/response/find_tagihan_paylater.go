@@ -13,6 +13,11 @@ type FindTagihanPaylater struct {
 	DateInsert      string  `json:"date_insert"`
 }
 
+type TotalTagihan struct {
+	Total               float64               `json:"total"`
+	FindTagihanPaylater []FindTagihanPaylater `json:"find_tagihan_paylater"`
+}
+
 type FindDetailPyamentPaylater struct {
 	Date        time.Time `json:"date"`
 	NoTransaksi string    `json:"no_transaksi"`
@@ -39,8 +44,9 @@ func ToFindDetailPyamentPaylater(paymentHistory *entity.PaymentHistory) (findPay
 // 	}
 // }
 
-func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) []FindTagihanPaylater {
+func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) TotalTagihan {
 	var findTagihanPaylaters []FindTagihanPaylater
+	var total float64
 	for _, v := range riwayatPinjaman {
 		if v.IsPaid {
 			continue
@@ -50,7 +56,32 @@ func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) []FindTagi
 			RepaymentAmount: v.RepaymentPrincipal,
 			DateInsert:      v.DateInsert,
 		}
+		total = total + v.RepaymentPrincipal
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
 	}
-	return findTagihanPaylaters
+
+	totalTagihan := TotalTagihan{
+		Total:               total,
+		FindTagihanPaylater: findTagihanPaylaters,
+	}
+
+	return totalTagihan
+}
+
+func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater) TotalTagihan {
+	var findTagihanPaylaters []FindTagihanPaylater
+	var total float64
+	for _, v := range tunggakan {
+		findTagihanPaylater := FindTagihanPaylater{
+			RepaymentDate:   v.DateUpdate,
+			RepaymentAmount: v.OverdueAmount,
+			DateInsert:      v.DateInsert,
+		}
+		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
+	}
+	totalTagihan := TotalTagihan{
+		Total:               total,
+		FindTagihanPaylater: findTagihanPaylaters,
+	}
+	return totalTagihan
 }
