@@ -2332,6 +2332,7 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 
 		// Validasi Tunggakan Paylater
 		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
+		log.Println("loanID", loanID)
 		if err != nil {
 			log.Println("error get riwayat pinjaman", err.Error())
 			exceptions.PanicIfError(err, requestId, service.Logger)
