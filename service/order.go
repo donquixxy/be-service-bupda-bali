@@ -2338,7 +2338,11 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
-		if len(loanID) != 0 {
+		// log.Println("loanID", loanID)
+
+		// exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
+
+		if len(loanID) > 0 {
 			exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
 		}
 

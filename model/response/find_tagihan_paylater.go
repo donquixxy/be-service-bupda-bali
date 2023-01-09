@@ -1,6 +1,7 @@
 package response
 
 import (
+	"log"
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
@@ -60,6 +61,8 @@ func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) TotalTagih
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
 	}
 
+	log.Println("total = ", total)
+
 	totalTagihan := TotalTagihan{
 		Total:               total,
 		FindTagihanPaylater: findTagihanPaylaters,
@@ -77,8 +80,10 @@ func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater) TotalTagihan 
 			RepaymentAmount: v.OverdueAmount,
 			DateInsert:      v.DateInsert,
 		}
+		total = total + v.OverdueAmount
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
 	}
+
 	totalTagihan := TotalTagihan{
 		Total:               total,
 		FindTagihanPaylater: findTagihanPaylaters,

@@ -132,6 +132,8 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
+		log.Println("loanID", loanID)
+
 		if len(loanID) == 0 {
 			exceptions.PanicIfBadRequest(errors.New("riwayat paylater not found"), requestId, []string{"riwayat paylater not found"}, service.Logger)
 		}
