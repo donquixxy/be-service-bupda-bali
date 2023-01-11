@@ -7,7 +7,6 @@ import (
 	"github.com/go-playground/validator"
 	"github.com/sirupsen/logrus"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
-	"github.com/tensuqiuwulu/be-service-bupda-bali/model/inveli"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
@@ -124,37 +123,22 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 	// log.Println("count", count)
 
 	if count == 0 {
-		// log.Println("MASUK")
+		log.Println("MASUK")
 		// get riwayat pinjaman
-		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
+		tunggakan, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
 		if err != nil {
 			log.Println("error get riwayat pinjaman", err.Error())
 			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
-		if len(loanID) == 0 {
-			exceptions.PanicIfBadRequest(errors.New("riwayat paylater not found"), requestId, []string{"riwayat paylater not found"}, service.Logger)
-		}
+		log.Println("tunggakan", tunggakan)
 
-		// log.Println("loanID", loanID)
-
-		tunggakans := []inveli.TunggakanPaylater{}
-		for _, id := range loanID {
-			tunggakan, err := service.InveliAPIRepositoryInterface.GetTunggakan(id, user.User.InveliAccessToken)
-			if err != nil {
-				log.Println("error get tunggakan", err.Error())
-				exceptions.PanicIfError(err, requestId, service.Logger)
-			}
-
-			if len(tunggakan) == 0 {
-				exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
-			}
-
-			tunggakans = append(tunggakans, tunggakan...)
+		if len(tunggakan) == 0 {
+			exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
 		}
 
 		// log.Println("tunggakan", tunggakans)
-		tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakans)
+		tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakan)
 		return tagihanPaylaterResponse
 	} else {
 		tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)

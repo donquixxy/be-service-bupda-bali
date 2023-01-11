@@ -17,3 +17,9 @@ type TunggakanPaylater struct {
 	DateUpdate             string  `json:"dateUpdate"`
 	PassdueCode            string  `json:"passdueCode"`
 }
+
+type TunggakanPaylater2 struct {
+	DateUpdate string  `json:"dateUpdate"`
+	DateInsert string  `json:"dateInsert"`
+	LoanAmount float64 `json:"loanAmount"`
+}

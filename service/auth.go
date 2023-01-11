@@ -29,6 +29,7 @@ type AuthServiceInterface interface {
 	GenerateToken(user modelService.User) (token string, err error)
 	GenerateRefreshToken(user modelService.User) (token string, err error)
 	GetUserAccountInveli(inveliIDMember string, inveliAccessToken string, userID string)
+	FirstTimeLoginInveli(phone string, passwordFromInveli string) string
 }
 
 type AuthServiceImplementation struct {

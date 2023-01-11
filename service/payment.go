@@ -106,7 +106,7 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 
 	tx := service.DB.Begin()
 
-	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	user, err := service.UserRepositoryInterface.FindUserById(tx, idUser)
 
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
@@ -127,20 +127,12 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	var totalBill float64
 	var adminFee float64
 	var subTotal float64
-	order, _ := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
+	order, _ := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(tx, idUser)
 	for _, v := range order {
 		totalTagihan += v.PaymentCash
 		adminFee += v.PaymentFee
 		totalBill += v.TotalBill
 		subTotal += v.SubTotal
-	}
-
-	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(tx, idUser, &entity.Order{
-		PaylaterPaidStatus: 1,
-	})
-
-	if err != nil {
-		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
 	}
 
 	now := time.Now()
@@ -181,6 +173,14 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	}
 
 	tx.Commit()
+
+	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
+		PaylaterPaidStatus: 1,
+	})
+
+	if err != nil {
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
+	}
 
 	return nil
 }

@@ -7,8 +7,8 @@ type FindLimitPayLaterResponse struct {
 	AvailableLimit float64 `json:"available_limit"`
 }
 
-func ToFindLimitPayLaterResponse(limitPayLater *inveli.LimitPaylater) (limitPayLaterResponse FindLimitPayLaterResponse) {
+func ToFindLimitPayLaterResponse(limitPayLater *inveli.LimitPaylater, loanAmount float64) (limitPayLaterResponse FindLimitPayLaterResponse) {
 	limitPayLaterResponse.MaxLimit = limitPayLater.MaxLimit
-	limitPayLaterResponse.AvailableLimit = limitPayLater.AvailableLimit
+	limitPayLaterResponse.AvailableLimit = limitPayLater.MaxLimit - loanAmount
 	return limitPayLaterResponse
 }
