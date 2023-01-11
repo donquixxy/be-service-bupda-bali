@@ -12,7 +12,7 @@ func ToFindNewVersionResponse(appVersion []entity.AppVersion, os int) (settingRe
 	if os == 1 {
 		settingResponse.OSName = "Android"
 	} else {
-
+		settingResponse.OSName = "iOS"
 	}
 	settingResponse.OSName = appVersion[0].OS
 	settingResponse.Current = appVersion[0].Version

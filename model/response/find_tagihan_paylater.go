@@ -37,13 +37,6 @@ func ToFindDetailPyamentPaylater(paymentHistory *entity.PaymentHistory) (findPay
 	return findPaymentHistory
 }
 
-// func ToFindDetailPyamentPaylater(orders []entity.Order) (findDetailPyamentPaylater FindDetailPyamentPaylater) {
-
-// 	for _, order := range orders {
-
-// 	}
-// }
-
 func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) TotalTagihan {
 	var findTagihanPaylaters []FindTagihanPaylater
 	var total float64
@@ -77,6 +70,7 @@ func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater) TotalTagihan 
 			RepaymentAmount: v.OverdueAmount,
 			DateInsert:      v.DateInsert,
 		}
+		total = total + v.OverdueAmount
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
 	}
 	totalTagihan := TotalTagihan{
