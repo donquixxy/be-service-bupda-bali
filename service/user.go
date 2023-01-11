@@ -128,12 +128,45 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
+	tagihanPaylater, err := service.InveliRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		log.Println("error get tagihan inveli", err.Error())
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	// log.Println("tagihan", tagihanPaylater)
+
+	count := 0
+	for _, tagihan := range tagihanPaylater {
+		if tagihan.IsPaid {
+			continue
+		}
+		count++
+	}
+
+	var loanAmount float64
+	if count == 0 {
+		tunggakan, err := service.InveliRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
+		if err != nil {
+			log.Println("error get riwayat pinjaman", err.Error())
+			exceptions.PanicIfError(err, requestId, service.Logger)
+		}
+
+		for _, v := range tunggakan {
+			loanAmount += v.LoanAmount
+		}
+	} else {
+		for _, v := range tagihanPaylater {
+			loanAmount += v.RepaymentAmount
+		}
+	}
+
 	limitPinjaman, err := service.InveliRepositoryInterface.GetLimitPayLater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
-	limitPayLaterResponse = response.ToFindLimitPayLaterResponse(limitPinjaman)
+	limitPayLaterResponse = response.ToFindLimitPayLaterResponse(limitPinjaman, loanAmount)
 
 	return limitPayLaterResponse
 }

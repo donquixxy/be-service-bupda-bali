@@ -37,7 +37,7 @@ type InveliAPIRepositoryInterface interface {
 	GetLoanProductId(token string) (string, error)
 	GetSaldoBupda(token, groupID string) (float64, error)
 	GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error)
-	GetRiwayatPinjaman(token, memberID string) ([]string, error)
+	GetRiwayatPinjaman(token, memberID string) ([]inveli.TunggakanPaylater2, error)
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -47,7 +47,7 @@ func NewInveliAPIRepository() InveliAPIRepositoryInterface {
 	return &InveliAPIRepositoryImplementation{}
 }
 
-func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID string) ([]string, error) {
+func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID string) ([]inveli.TunggakanPaylater2, error) {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 	req := graphql.NewRequest(`
 		query ($memberID: String!) {
@@ -127,15 +127,28 @@ func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID s
 
 	// log.Println("resp", respData.(map[string]interface{})["loans"])
 
-	var loanID []string
+	var tunggakan []inveli.TunggakanPaylater2
 	for _, v := range respData.(map[string]interface{})["loans"].([]interface{}) {
+		var tunggakan2 inveli.TunggakanPaylater2
 		// log.Println("repayment", v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"])
 		if v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"].(bool) {
-			loanID = append(loanID, v.(map[string]interface{})["loanID"].(string))
+
+			// log.Println("repaymentDate", v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string))
+
+			// loanID = append(loanID, v.(map[string]interface{})["loanID"].(string))
+
+			tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
+			tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
+			tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
+			tunggakan = append(tunggakan, tunggakan2)
+
+			// log.Println("repayment", v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanPassdues"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string))
 		}
 	}
 
-	return loanID, nil
+	log.Println("tunggakan", tunggakan)
+
+	return tunggakan, nil
 
 }
 

@@ -71,16 +71,16 @@ func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) TotalTagih
 	return totalTagihan
 }
 
-func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater) TotalTagihan {
+func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater2) TotalTagihan {
 	var findTagihanPaylaters []FindTagihanPaylater
 	var total float64
 	for _, v := range tunggakan {
 		findTagihanPaylater := FindTagihanPaylater{
 			RepaymentDate:   v.DateUpdate,
-			RepaymentAmount: v.OverdueAmount,
+			RepaymentAmount: v.LoanAmount,
 			DateInsert:      v.DateInsert,
 		}
-		total = total + v.OverdueAmount
+		total = total + v.LoanAmount
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
 	}
 
