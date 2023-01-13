@@ -637,9 +637,9 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 		}
 	}
 
-	if user.User.StatusPaylater == 2 {
-		service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
-	}
+	// if user.User.StatusPaylater == 2 {
+	// 	service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
+	// }
 
 	userResponse = response.ToFindUserIdResponse(user, statusAktifUser)
 	return userResponse

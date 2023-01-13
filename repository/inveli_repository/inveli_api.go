@@ -125,28 +125,18 @@ func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID s
 		return nil, err
 	}
 
-	// log.Println("resp", respData.(map[string]interface{})["loans"])
-
 	var tunggakan []inveli.TunggakanPaylater2
 	for _, v := range respData.(map[string]interface{})["loans"].([]interface{}) {
 		var tunggakan2 inveli.TunggakanPaylater2
-		// log.Println("log", v.(map[string]interface{})["recordStatus"].(float64))
+
 		if v.(map[string]interface{})["recordStatus"].(float64) != 18 {
-
-			// log.Println("repaymentDate", v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string))
-
-			// loanID = append(loanID, v.(map[string]interface{})["loanID"].(string))
 
 			tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
 			tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
 			tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
 			tunggakan = append(tunggakan, tunggakan2)
-
-			// log.Println("repayment", v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanPassdues"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string))
 		}
 	}
-
-	log.Println("tunggakan", tunggakan)
 
 	return tunggakan, nil
 
@@ -506,6 +496,7 @@ func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token str
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println(err)
+		log.Println(respData)
 		return nil, err
 	}
 
@@ -898,7 +889,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 
 	// Read response body
 	data, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("body: %s\n", data)
+	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()
 
@@ -907,6 +898,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 
 	if err = json.Unmarshal([]byte(data), &inveliLogin); err != nil {
 		log.Printf("An Error Occured %v", err)
+		log.Printf("body: %s\n", data)
 	}
 
 	return inveliLogin

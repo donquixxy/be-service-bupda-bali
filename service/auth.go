@@ -104,7 +104,7 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
-		service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
+		// service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 
 		// Get User Paylater List
 		if user.IsPaylater == 0 {
@@ -130,7 +130,6 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 }
 
 func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, passwordFromInveli string) string {
-
 	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(phone, passwordFromInveli)
 
 	if len(loginResult.AccessToken) == 0 {
@@ -310,7 +309,9 @@ func (service *AuthServiceImplementation) NewToken(requestId string, refreshToke
 		user, err := service.UserRepositoryInterface.FindUserByIdAndRefreshToken(service.DB, claims.Id, refreshToken)
 		exceptions.PanicIfRecordNotFound(err, requestId, []string{"User tidak ada"}, service.Logger)
 
-		service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
+		if user.StatusPaylater == 2 {
+			service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
+		}
 
 		var userModelService modelService.User
 		userModelService.Id = user.Id
