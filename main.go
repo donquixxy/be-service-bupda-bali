@@ -90,15 +90,6 @@ func main() {
 		logrusLogger,
 		listPinjamanRepository,
 	)
-	paylaterService := service.NewPaylaterService(
-		DBConn,
-		validate,
-		logrusLogger,
-		userRepository,
-		inveliAPIRepository,
-		orderRepository,
-		paymentHistoryRepository,
-	)
 	bannerService := service.NewBannerService(
 		DBConn,
 		validate,
@@ -127,6 +118,16 @@ func main() {
 		inveliAPIRepository,
 		userProfileRepository,
 		desaRepository,
+	)
+	paylaterService := service.NewPaylaterService(
+		DBConn,
+		validate,
+		logrusLogger,
+		userRepository,
+		inveliAPIRepository,
+		orderRepository,
+		paymentHistoryRepository,
+		authService,
 	)
 	otpManagerService := service.NewOtpManagerService(
 		DBConn,

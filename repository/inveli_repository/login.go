@@ -3,7 +3,7 @@ package invelirepository
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -29,7 +29,7 @@ func (service *LoginRepositoryImplementation) Login(username string, password st
 		"imei":     "",
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	// URL
 	url, _ := url.Parse("http://api-dev.cardlez.com:8089/login/member")
@@ -54,7 +54,7 @@ func (service *LoginRepositoryImplementation) Login(username string, password st
 	defer resp.Body.Close()
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	fmt.Printf("body: %s\n", data)
 
 	return "", nil

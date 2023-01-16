@@ -128,10 +128,18 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
+	// log.Println("GetLimitPayLater")
+
 	tagihanPaylater, err := service.InveliRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	if tagihanPaylater == nil {
+		if user.User.StatusPaylater == 2 {
+			go service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
+		}
 	}
 
 	// log.Println("tagihan", tagihanPaylater)
@@ -637,10 +645,6 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 		}
 	}
 
-	// if user.User.StatusPaylater == 2 {
-	// 	service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
-	// }
-
 	userResponse = response.ToFindUserIdResponse(user, statusAktifUser)
 	return userResponse
 }
@@ -710,12 +714,6 @@ func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId str
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
-	// if user.StatusPaylater != 0 {
-	// 	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.InveliIDMember, password, user.InveliAccessToken)
-	// 	if err != nil {
-	// 		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
-	// 	}
-	// }
 
 	tx.Commit()
 }

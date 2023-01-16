@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -125,20 +125,25 @@ func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID s
 		return nil, err
 	}
 
-	var tunggakan []inveli.TunggakanPaylater2
-	for _, v := range respData.(map[string]interface{})["loans"].([]interface{}) {
-		var tunggakan2 inveli.TunggakanPaylater2
+	if respData == nil {
+		return nil, nil
+	} else {
 
-		if v.(map[string]interface{})["recordStatus"].(float64) != 18 {
+		var tunggakan []inveli.TunggakanPaylater2
+		for _, v := range respData.(map[string]interface{})["loans"].([]interface{}) {
+			var tunggakan2 inveli.TunggakanPaylater2
 
-			tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
-			tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
-			tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
-			tunggakan = append(tunggakan, tunggakan2)
+			if v.(map[string]interface{})["recordStatus"].(float64) != 18 {
+
+				tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
+				tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
+				tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
+				tunggakan = append(tunggakan, tunggakan2)
+			}
 		}
-	}
 
-	return tunggakan, nil
+		return tunggakan, nil
+	}
 
 }
 
@@ -449,35 +454,41 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 		return nil, err
 	}
 
-	riwayatPinjamans := []inveli.RiwayatPinjaman2{}
-	// var data []interface{}
-	for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
-		riwayatPinjaman := inveli.RiwayatPinjaman2{}
-		riwayatPinjaman.ID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["id"].(string)
-		riwayatPinjaman.LoanAccountID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanAccountID"].(string)
-		riwayatPinjaman.RepaymentDate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
-		riwayatPinjaman.RepaymentInterest = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentInterest"].(float64)
-		riwayatPinjaman.RepaymentPrincipal = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentPrincipal"].(float64)
-		riwayatPinjaman.RepaymentAmount = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentAmount"].(float64)
-		riwayatPinjaman.RepaymentInterestPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentInterestPaid"].(float64)
-		riwayatPinjaman.RepaymentPrincipalPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentPrincipalPaid"].(float64)
-		riwayatPinjaman.OutStandingBakiDebet = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["outStandingBakiDebet"].(float64)
-		riwayatPinjaman.TellerID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["tellerId"].(string)
-		riwayatPinjaman.IsPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"].(bool)
-		riwayatPinjaman.AmountPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["amountPaid"].(float64)
-		riwayatPinjaman.PaymentTxnID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["paymentTxnID"].(string)
-		riwayatPinjaman.UserInsert = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userInsert"].(string)
-		riwayatPinjaman.DateInsert = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateInsert"].(string)
-		riwayatPinjaman.UserUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userUpdate"].(string)
-		riwayatPinjaman.DateUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string)
-		riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
+	if respData == nil {
+		return nil, nil
+	} else {
+		riwayatPinjamans := []inveli.RiwayatPinjaman2{}
+		// var data []interface{}
+		for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
+			riwayatPinjaman := inveli.RiwayatPinjaman2{}
+			riwayatPinjaman.ID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["id"].(string)
+			riwayatPinjaman.LoanAccountID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanAccountID"].(string)
+			riwayatPinjaman.RepaymentDate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
+			riwayatPinjaman.RepaymentInterest = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentInterest"].(float64)
+			riwayatPinjaman.RepaymentPrincipal = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentPrincipal"].(float64)
+			riwayatPinjaman.RepaymentAmount = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentAmount"].(float64)
+			riwayatPinjaman.RepaymentInterestPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentInterestPaid"].(float64)
+			riwayatPinjaman.RepaymentPrincipalPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentPrincipalPaid"].(float64)
+			riwayatPinjaman.OutStandingBakiDebet = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["outStandingBakiDebet"].(float64)
+			riwayatPinjaman.TellerID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["tellerId"].(string)
+			riwayatPinjaman.IsPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["isPaid"].(bool)
+			riwayatPinjaman.AmountPaid = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["amountPaid"].(float64)
+			riwayatPinjaman.PaymentTxnID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["paymentTxnID"].(string)
+			riwayatPinjaman.UserInsert = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userInsert"].(string)
+			riwayatPinjaman.DateInsert = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateInsert"].(string)
+			riwayatPinjaman.UserUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userUpdate"].(string)
+			riwayatPinjaman.DateUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string)
+			riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
+		}
+
+		// fmt.Println("riwayat pinjaman ", riwayatPinjamans)
+		return riwayatPinjamans, nil
 	}
 
-	// fmt.Println("riwayat pinjaman ", riwayatPinjamans)
-	return riwayatPinjamans, nil
 }
 
 func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token string) (*inveli.LimitPaylater, error) {
+
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
 	req := graphql.NewRequest(`
@@ -500,12 +511,19 @@ func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token str
 		return nil, err
 	}
 
-	limitPayLater := &inveli.LimitPaylater{}
+	log.Println(respData)
 
-	limitPayLater.MaxLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominal"].(float64)
-	limitPayLater.AvailableLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominalAvailable"].(float64)
+	if respData == nil {
+		return nil, nil
+	} else {
+		limitPayLater := &inveli.LimitPaylater{}
 
-	return limitPayLater, nil
+		limitPayLater.MaxLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominal"].(float64)
+		limitPayLater.AvailableLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominalAvailable"].(float64)
+
+		return limitPayLater, nil
+	}
+
 }
 
 func (r *InveliAPIRepositoryImplementation) GetTunggakan(LoanID, token string) ([]inveli.TunggakanPaylater, error) {
@@ -864,7 +882,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 		"imei":     "",
 	})
 
-	reqBody := ioutil.NopCloser(strings.NewReader(string(body)))
+	reqBody := io.NopCloser(strings.NewReader(string(body)))
 
 	urlString := config.GetConfig().Inveli.InveliAPI + "/login/member"
 	// URL
@@ -888,7 +906,7 @@ func (r *InveliAPIRepositoryImplementation) InveliLogin(username, password strin
 	}
 
 	// Read response body
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	// fmt.Printf("body: %s\n", data)
 
 	defer resp.Body.Close()

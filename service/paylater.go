@@ -28,6 +28,7 @@ type PaylaterServiceImplementation struct {
 	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 	OrderRepositoryInterface          repository.OrderRepositoryInterface
 	PaymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface
+	AuthServiceInterface              AuthServiceInterface
 }
 
 func NewPaylaterService(
@@ -38,6 +39,7 @@ func NewPaylaterService(
 	inveliAPIRepositoryInterface invelirepository.InveliAPIRepositoryInterface,
 	orderRepositoryInterface repository.OrderRepositoryInterface,
 	paymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface,
+	authServiceInterface AuthServiceInterface,
 ) PaylaterServiceInterface {
 	return &PaylaterServiceImplementation{
 		DB:                                db,
@@ -47,6 +49,7 @@ func NewPaylaterService(
 		InveliAPIRepositoryInterface:      inveliAPIRepositoryInterface,
 		OrderRepositoryInterface:          orderRepositoryInterface,
 		PaymentHistoryRepositoryInterface: paymentHistoryRepositoryInterface,
+		AuthServiceInterface:              authServiceInterface,
 	}
 }
 
@@ -110,7 +113,11 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	// log.Println("tagihan", tagihanPaylater)
+	if tagihanPaylater == nil {
+		if user.User.StatusPaylater == 2 {
+			go service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
+		}
+	}
 
 	count := 0
 	for _, tagihan := range tagihanPaylater {
