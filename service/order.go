@@ -1966,15 +1966,15 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		}
 
 		// Validasi Tunggakan Paylater
-		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
-		if err != nil {
-			log.Println("error get riwayat pinjaman", err.Error())
-			exceptions.PanicIfError(err, requestId, service.Logger)
-		}
+		// loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
+		// if err != nil {
+		// 	log.Println("error get riwayat pinjaman", err.Error())
+		// 	exceptions.PanicIfError(err, requestId, service.Logger)
+		// }
 
-		if len(loanID) != 0 {
-			exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
-		}
+		// if len(loanID) != 0 {
+		// 	exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
+		// }
 
 		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
 
@@ -2331,20 +2331,20 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		}
 
 		// Validasi Tunggakan Paylater
-		loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
-		log.Println("loanID", loanID)
-		if err != nil {
-			log.Println("error get riwayat pinjaman", err.Error())
-			exceptions.PanicIfError(err, requestId, service.Logger)
-		}
+		// loanID, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember)
+		// log.Println("loanID", loanID)
+		// if err != nil {
+		// 	log.Println("error get riwayat pinjaman", err.Error())
+		// 	exceptions.PanicIfError(err, requestId, service.Logger)
+		// }
 
 		// log.Println("loanID", loanID)
 
 		// exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
 
-		if len(loanID) > 0 {
-			exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
-		}
+		// if len(loanID) > 0 {
+		// 	exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan"), requestId, []string{"anda masih memiliki tunggakan"}, service.Logger)
+		// }
 
 		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
 
