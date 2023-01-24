@@ -94,7 +94,7 @@ func (controller *PaylaterControllerImplementation) GetTagihanPaylater(c echo.Co
 func (controller *PaylaterControllerImplementation) PayPaylater(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	IdUser := middleware.TokenClaimsIdUser(c)
-	controller.PaymentServiceInterface.PayPaylater(requestId, IdUser)
+	controller.PaymentServiceInterface.PayPaylaterBill(requestId, IdUser)
 	responses := response.Response{Code: 201, Mssg: "success", Data: "success pay paylater", Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

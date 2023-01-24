@@ -607,19 +607,29 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 		exceptions.PanicIfRecordNotFound(errors.New("user not found"), requestId, []string{"user tidak ditemukan"}, service.Logger)
 	}
 
-	var statusAktifUser bool
+	var statusAktifUser int
 	if user.User.StatusPaylater != 2 {
 		statusAktifUser, err = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
 		if err != nil {
 			log.Println("error get status account inveli = ", err.Error())
 		}
 
-		if statusAktifUser {
+		//  Cek apakah data account ada di tabel user account
+		if statusAktifUser == 2 {
 			accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
 
 			if len(accountInfo.Id) == 0 {
 				service.AuthServiceInterface.GetUserAccountInveli(user.User.InveliIDMember, user.User.InveliAccessToken, idUser)
 			}
+		}
+	}
+
+	//  Cek apakah data account ada di tabel user account
+	if user.User.StatusPaylater == 2 {
+		accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
+
+		if len(accountInfo.Id) == 0 {
+			service.AuthServiceInterface.GetUserAccountInveli(user.User.InveliIDMember, user.User.InveliAccessToken, idUser)
 		}
 	}
 
@@ -645,7 +655,7 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 		}
 	}
 
-	userResponse = response.ToFindUserIdResponse(user, statusAktifUser)
+	userResponse = response.ToFindUserIdResponse(user)
 	return userResponse
 }
 
@@ -674,13 +684,6 @@ func (service *UserServiceImplementation) UpdateUserPassword(requestId string, i
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
-
-	// if user.User.StatusPaylater != 0 {
-	// 	err = service.InveliRepositoryInterface.InveliUbahPasswordUserExisting(user.User.InveliIDMember, updateUserPasswordRequest.PasswordBaru, user.User.InveliAccessToken)
-	// 	if err != nil {
-	// 		exceptions.PanicIfErrorWithRollback(errors.New("error ubah password inveli "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "grapql: Internal Core Error : ")}, service.Logger, tx)
-	// 	}
-	// }
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)

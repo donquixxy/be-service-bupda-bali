@@ -24,7 +24,7 @@ type InveliAPIRepositoryInterface interface {
 	InveliUpdateMember(user *entity.User, userProfile *entity.UserProfile, accessToken string, groupIdBupda string) error
 	GetAccountInfo(IDMember, token string) ([]inveli.InveliAcountInfo, error)
 	InveliCreatePaylater(token string, IDMember string, AccountID string, Amount float64, totalAmount float64, isMerchant float64, bunga float64, loanProductId string, creditAccount string) error
-	GetStatusAccount(IDMember, token string) (bool, error)
+	GetStatusAccount(IDMember, token string) (int, error)
 	GetBalanceAccount(Code, token string) (*inveli.InveliAcountInfo, error)
 	GetKodeBIN(token string) (string, error)
 	InquiryVaNasabah(phone, token string) (*inveli.InquiryVaNasabah, error)
@@ -217,6 +217,11 @@ func (r *InveliAPIRepositoryImplementation) GetSaldoBupda(token, groupID string)
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println(err)
 		return 0, err
+	}
+
+	if respData == nil {
+		log.Println("error get bupda saldo ", respData)
+		return 0, nil
 	}
 
 	bupdaSaldo := respData.(map[string]interface{})["accountByGroupID"].(map[string]interface{})["balance"].(float64)
@@ -515,15 +520,14 @@ func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token str
 
 	if respData == nil {
 		return nil, nil
-	} else {
-		limitPayLater := &inveli.LimitPaylater{}
-
-		limitPayLater.MaxLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominal"].(float64)
-		limitPayLater.AvailableLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominalAvailable"].(float64)
-
-		return limitPayLater, nil
 	}
 
+	limitPayLater := &inveli.LimitPaylater{}
+
+	limitPayLater.MaxLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominal"].(float64)
+	limitPayLater.AvailableLimit = respData.(map[string]interface{})["limitByCustomerID"].(map[string]interface{})["nominalAvailable"].(float64)
+
+	return limitPayLater, nil
 }
 
 func (r *InveliAPIRepositoryImplementation) GetTunggakan(LoanID, token string) ([]inveli.TunggakanPaylater, error) {
@@ -1045,7 +1049,7 @@ func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token strin
 	return userInfos, nil
 }
 
-func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token string) (bool, error) {
+func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token string) (int, error) {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
 	req := graphql.NewRequest(` 
@@ -1061,16 +1065,14 @@ func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token str
 	ctx := context.Background()
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
-		return false, err
+		return 1, err
 	}
-	// log.Println("res ", respData)
 
-	resStatus := respData.(map[string]interface{})["member"].(map[string]interface{})["recordStatus"].(float64)
-	if resStatus == 2 {
-		return true, nil
-	} else {
-		return false, nil
+	if respData == nil {
+		return 3, nil
 	}
+	resStatus := respData.(map[string]interface{})["member"].(map[string]interface{})["recordStatus"].(float64)
+	return int(resStatus), nil
 }
 
 func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string) (*inveli.InveliAcountInfo, error) {

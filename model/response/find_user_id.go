@@ -20,7 +20,7 @@ type FindUserIdResponse struct {
 	StatusPaylater    int    `json:"status_paylater"`
 }
 
-func ToFindUserIdResponse(userProfile *entity.UserProfile, statusAktifUser bool) (userResponse FindUserIdResponse) {
+func ToFindUserIdResponse(userProfile *entity.UserProfile) (userResponse FindUserIdResponse) {
 	// log.Println("status aktif user", userProfile.User.StatusPaylater)
 	userResponse.Id = userProfile.User.Id
 	userResponse.NoIdentitas = userProfile.NoIdentitas

@@ -34,8 +34,9 @@ type PaymentServiceInterface interface {
 	VaQrisPay(requestId string, paymentRequest *payment.IpaymuQrisVaRequest) *payment.IpaymuQrisVaResponse
 	CreditCardPay(requestId string, paymentRequest *payment.IpaymuCreditCardRequest) *payment.IpaymuCreditCardResponse
 	CheckPaymentStatus(requestId string, trxId int) *payment.PaymentStatus
-	PayPaylater(requestId, idUser string) error
+	PayPaylaterBill(requestId, idUser string) error
 	GetTabunganBimaMutation(requestId, idUser, startDate, endDate string) (responseMutation []response.GetMutationResponse)
+	PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaNoRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order
 }
 
 type PaymentServiceImplementation struct {
@@ -63,6 +64,91 @@ func NewPaymentService(
 		OrderRepositoryInterface:          orderRepository,
 		PaymentHistoryRepositoryInterface: paymentHistoryRepository,
 	}
+}
+
+func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order {
+	var isMerchant float64
+	var totalAmount float64
+
+	// Set Is Merchant 0
+	isMerchant = 0
+
+	totalAmount = orderRequestTotalBill + orderRequestPaymentFee
+
+	// Validasi Saldo Bupda
+	saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(inveliAccessToken, desaGroupIdBupda)
+
+	if err != nil {
+		exceptions.PanicIfBadRequest(errors.New("error saldo bupda "+err.Error()), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+	}
+
+	if saldoBupda <= 0 {
+		exceptions.PanicIfBadRequest(errors.New("saldo bupda kurang"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+	}
+
+	if saldoBupda <= totalAmount {
+		exceptions.PanicIfBadRequest(errors.New("saldo bupda kurang dari"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+	}
+
+	// Get Bunga
+	bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(inveliAccessToken)
+	if errr != nil {
+		exceptions.PanicIfBadRequest(errors.New("error get loan product "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+	}
+
+	// Get Loan Product
+	loandProductID, err := service.InveliAPIRepositoryInterface.GetLoanProductId(inveliAccessToken)
+	if errr != nil {
+		exceptions.PanicIfBadRequest(errors.New("error get loan product id "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+	}
+
+	if len(loandProductID) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("loan product id not found"), "", []string{"loan product id not found"}, service.Logger)
+	}
+
+	// Get Account User
+	accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
+	if len(accountUser.Id) == 0 {
+		exceptions.PanicIfRecordNotFound(errors.New("user account paylater not found"), "", []string{"user account paylater not found"}, service.Logger)
+	}
+
+	// Validasi Tunggakan Paylater
+	// logic untuk validasi tunggakan
+
+	err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(inveliAccessToken, inveliIdMember, accountUser.IdAccount, orderRequestTotalBill, totalAmount, isMerchant, bunga, loandProductID, desaRekening)
+	if err != nil {
+		exceptions.PanicIfBadRequest(errors.New("error care pinjaman "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+	}
+
+	orderEntity := entity.Order{}
+
+	orderEntity.PaymentDueDate = null.NewTime(time.Now().AddDate(0, 0, 30), true)
+
+	orderEntity.OrderStatus = 1
+	orderEntity.PaymentStatus = 1
+	orderEntity.PaymentName = "Paylater"
+	orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
+	orderEntity.PaymentCash = totalAmount
+
+	var jmlOrder float64
+	jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	jmlOrder = 0
+	for _, v := range jmlOrderPayLate {
+		jmlOrder = jmlOrder + v.TotalBill
+	}
+
+	userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+	if (int(jmlOrder) + int(orderRequestTotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+		service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
+			TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
+		})
+	}
+
+	return orderEntity
 }
 
 func (service *PaymentServiceImplementation) GetTabunganBimaMutation(requestId, idUser, startDate, endDate string) (responseMutation []response.GetMutationResponse) {
@@ -101,12 +187,10 @@ func (service *PaymentServiceImplementation) GetTabunganBimaMutation(requestId, 
 	return response
 }
 
-func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser string) error {
+func (service *PaymentServiceImplementation) PayPaylaterBill(requestId, idUser string) error {
 	var err error
 
-	tx := service.DB.Begin()
-
-	user, err := service.UserRepositoryInterface.FindUserById(tx, idUser)
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 
 	if err != nil {
 		exceptions.PanicIfError(err, requestId, service.Logger)
@@ -127,7 +211,7 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	var totalBill float64
 	var adminFee float64
 	var subTotal float64
-	order, _ := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(tx, idUser)
+	order, _ := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
 	for _, v := range order {
 		totalTagihan += v.PaymentCash
 		adminFee += v.PaymentFee
@@ -162,6 +246,8 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 	orderEntity.OrderedDate = time.Now()
 	orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 
+	tx := service.DB.Begin()
+
 	err = service.OrderRepositoryInterface.CreateOrder(tx, orderEntity)
 	if err != nil {
 		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error insert payment history " + err.Error()}, service.Logger, tx)
@@ -172,7 +258,8 @@ func (service *PaymentServiceImplementation) PayPaylater(requestId, idUser strin
 		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
-	tx.Commit()
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
 	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
 		PaylaterPaidStatus: 1,

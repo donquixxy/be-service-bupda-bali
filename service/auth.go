@@ -84,11 +84,6 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password))
 		exceptions.PanicIfBadRequest(err, requestId, []string{"Invalid Credentials"}, service.Logger)
 
-		// userEntity := &entity.User{
-		// 	InveliPassword: loginRequest.Password,
-		// }
-		// service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
-
 		userModelService.Id = user.Id
 		userModelService.IdDesa = user.IdDesa
 		userModelService.AccountType = user.AccountType
@@ -104,6 +99,9 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
+		if user.StatusPaylater == 2 {
+			go service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
+		}
 		// service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 
 		// Get User Paylater List
@@ -236,10 +234,7 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 		exceptions.PanicIfBadRequest(errors.New("user not found"), requestId, []string{"User Not Found"}, service.Logger)
 	}
 
-	// fmt.Println("userResult : ", userResult)
-
 	resp, err := service.InveliAPIRespositoryInterface.InveliUbahPassword(userResult.InveliIDMember, ubahPasswordInveliRequest.NewPassword, accessToken)
-
 	if err != nil {
 		exceptions.PanicIfBadRequest(errors.New("error inveli ubah password"), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
