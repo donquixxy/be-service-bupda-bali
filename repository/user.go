@@ -73,8 +73,6 @@ func (repository *UserRepositoryImplementation) GetUserPayLaterFlagThisMonth(db 
 		month = now.AddDate(0, 1, 0).Month()
 	}
 
-	log.Println("month", int(month))
-
 	result := db.
 		Where("id_user = ?", idUser).
 		Where("MONTH(paylater_date) = ?", int(month)).

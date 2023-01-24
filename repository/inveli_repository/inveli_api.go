@@ -864,7 +864,7 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"fileVideo64":               "",
 	})
 
-	// fmt.Println("req : ", req)
+	fmt.Println("req : ", req)
 
 	ctx := context.Background()
 	var respData interface{}
@@ -1017,6 +1017,12 @@ func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token strin
 		log.Println(err)
 		return nil, err
 	}
+
+	if respData == nil {
+		log.Println("Account Info is null")
+		return nil, nil
+	}
+
 	// log.Println("req ", respData)
 
 	userInfos := []inveli.InveliAcountInfo{}
@@ -1112,7 +1118,11 @@ func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string
 		log.Println(err)
 		return nil, err
 	}
-	log.Println("req ", respData)
+
+	if respData == nil {
+		log.Println("Get Balance Account Inveli is nil")
+		return nil, nil
+	}
 
 	accountBalance := &inveli.InveliAcountInfo{
 		ID:              respData.(map[string]interface{})["accounts"].([]interface{})[0].(map[string]interface{})["id"].(string),

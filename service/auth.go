@@ -269,6 +269,8 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 
 	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
 
+	log.Println("desa : ", desa.GroupIdBupda)
+
 	if len(desa.GroupIdBupda) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("groupd id not found"), requestId, []string{"groupd id not found"}, service.Logger)
 	}
