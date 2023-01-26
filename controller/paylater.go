@@ -83,7 +83,7 @@ func (controller *PaylaterControllerImplementation) GetTagihanPaylater(c echo.Co
 	IdUser := middleware.TokenClaimsIdUser(c)
 	tagihanResponse := controller.PaylaterServiceInterface.GetTagihanPaylater(requestId, IdUser)
 	log.Println("tagihanResponse", tagihanResponse)
-	if condition := len(tagihanResponse.FindTagihanPaylater) == 0; condition {
+	if condition := len(tagihanResponse) == 0; condition {
 		exceptions.PanicIfRecordNotFound(errors.New("tagihan paylater not found"), requestId, []string{"tagihan paylater not found"}, controller.logger)
 	}
 

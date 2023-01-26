@@ -165,9 +165,11 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		}
 	} else {
 		for _, v := range tagihanPaylater {
-			loanAmount += v.RepaymentAmount
+			loanAmount += v.RepaymentPrincipal
 		}
 	}
+
+	log.Println("loanAmount = ", loanAmount)
 
 	limitPinjaman, err := service.InveliRepositoryInterface.GetLimitPayLater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
@@ -718,7 +720,8 @@ func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId str
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	tx.Commit()
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 }
 
 func (service *UserServiceImplementation) UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest) {

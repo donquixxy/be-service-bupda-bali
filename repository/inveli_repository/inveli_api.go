@@ -619,11 +619,6 @@ func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccou
 		}
 	`)
 
-	log.Println("creditAccount : ", creditAccount)
-	log.Println("debitAccount : ", debitAccount)
-	log.Println("amount : ", amount)
-	log.Println("isMerchant : ", isMerchant)
-
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Var("payment", map[string]interface{}{
 		"creditAccount":       creditAccount,
@@ -799,8 +794,8 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 	  }
 	`)
 
-	log.Println("groupId :", user.Phone)
-	log.Println("groupId : ", groupIdBupda)
+	// log.Println("groupId :", user.Phone)
+	// log.Println("groupId : ", groupIdBupda)
 
 	// set any variables
 	req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -864,7 +859,7 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"fileVideo64":               "",
 	})
 
-	fmt.Println("req : ", req)
+	log.Println("req update member : ", req)
 
 	ctx := context.Background()
 	var respData interface{}
@@ -967,6 +962,8 @@ func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistratio
 		"goldStatus":         0,
 		"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
 	})
+
+	log.Println("req registrasi member : ", req)
 
 	// run it and capture the response
 	ctx := context.Background()

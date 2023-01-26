@@ -14,7 +14,7 @@ import (
 )
 
 type PaylaterServiceInterface interface {
-	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse response.TotalTagihan)
+	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater)
 	GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse)
 	GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse)
 	GetPembayaranTransaksiByIdUser(requestId, idUser, indexDate string) (response response.FindDetailPyamentPaylater)
@@ -100,8 +100,7 @@ func (service *PaylaterServiceImplementation) GetOrderPaylaterPerBulan(requestId
 	return orderPaylaterPerBulanResponse
 }
 
-func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse response.TotalTagihan) {
-	// log.Println("masuk ke tagihan paylater")
+func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater) {
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
@@ -119,6 +118,8 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 		}
 	}
 
+	log.Println("tagihan paylater", tagihanPaylater)
+
 	count := 0
 	for _, tagihan := range tagihanPaylater {
 		if tagihan.IsPaid {
@@ -127,10 +128,7 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 		count++
 	}
 
-	// log.Println("count", count)
-
 	if count == 0 {
-		log.Println("MASUK")
 		// get riwayat pinjaman
 		tunggakan, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
 		if err != nil {
@@ -138,13 +136,10 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 			exceptions.PanicIfError(err, requestId, service.Logger)
 		}
 
-		log.Println("tunggakan", tunggakan)
-
 		if len(tunggakan) == 0 {
 			exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
 		}
 
-		// log.Println("tunggakan", tunggakans)
 		tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakan)
 		return tagihanPaylaterResponse
 	} else {

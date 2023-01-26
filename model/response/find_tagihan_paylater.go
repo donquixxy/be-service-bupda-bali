@@ -1,7 +1,6 @@
 package response
 
 import (
-	"log"
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
@@ -14,10 +13,10 @@ type FindTagihanPaylater struct {
 	DateInsert      string  `json:"date_insert"`
 }
 
-type TotalTagihan struct {
-	Total               float64               `json:"total"`
-	FindTagihanPaylater []FindTagihanPaylater `json:"find_tagihan_paylater"`
-}
+// type TotalTagihan struct {
+// 	Total               float64               `json:"total"`
+// 	FindTagihanPaylater []FindTagihanPaylater `json:"find_tagihan_paylater"`
+// }
 
 type FindDetailPyamentPaylater struct {
 	Date        time.Time `json:"date"`
@@ -38,50 +37,35 @@ func ToFindDetailPyamentPaylater(paymentHistory *entity.PaymentHistory) (findPay
 	return findPaymentHistory
 }
 
-func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) TotalTagihan {
+func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) []FindTagihanPaylater {
 	var findTagihanPaylaters []FindTagihanPaylater
-	var total float64
 	for _, v := range riwayatPinjaman {
+		var findTagihanPaylater FindTagihanPaylater
 		if v.IsPaid {
 			continue
 		}
-		findTagihanPaylater := FindTagihanPaylater{
-			RepaymentDate:   v.RepaymentDate,
-			RepaymentAmount: v.RepaymentPrincipal,
-			DateInsert:      v.DateInsert,
-		}
-		total = total + v.RepaymentPrincipal
+
+		findTagihanPaylater.RepaymentDate = v.RepaymentDate
+		findTagihanPaylater.RepaymentAmount = v.RepaymentPrincipal
+		findTagihanPaylater.DateInsert = v.DateInsert
+
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
+
 	}
 
-	log.Println("total = ", total)
-
-	totalTagihan := TotalTagihan{
-		Total:               total,
-		FindTagihanPaylater: findTagihanPaylaters,
-	}
-
-	return totalTagihan
+	return findTagihanPaylaters
 }
 
-func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater2) TotalTagihan {
+func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater2) []FindTagihanPaylater {
 	var findTagihanPaylaters []FindTagihanPaylater
-	var total float64
 	for _, v := range tunggakan {
-		findTagihanPaylater := FindTagihanPaylater{
-			RepaymentDate:   v.DateUpdate,
-			RepaymentAmount: v.LoanAmount,
-			DateInsert:      v.DateInsert,
-		}
-
-		total = total + v.LoanAmount
+		var findTagihanPaylater FindTagihanPaylater
+		findTagihanPaylater.RepaymentDate = v.DateUpdate
+		findTagihanPaylater.RepaymentAmount = v.LoanAmount
+		findTagihanPaylater.DateInsert = v.DateInsert
 
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
 	}
 
-	totalTagihan := TotalTagihan{
-		Total:               total,
-		FindTagihanPaylater: findTagihanPaylaters,
-	}
-	return totalTagihan
+	return findTagihanPaylaters
 }
