@@ -136,6 +136,8 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 		// exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
 
+	log.Println("login result inveli : ", loginResult.AccessToken)
+
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
 	if userResult.StatusPaylater == 2 {
 		user := &entity.User{

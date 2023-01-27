@@ -79,27 +79,27 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(inveliAccessToken, desaGroupIdBupda)
 
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("error saldo bupda "+err.Error()), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error saldo bupda "+err.Error()), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 	}
 
 	if saldoBupda <= 0 {
-		exceptions.PanicIfBadRequest(errors.New("saldo bupda kurang"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("saldo bupda kurang"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 	}
 
 	if saldoBupda <= totalAmount {
-		exceptions.PanicIfBadRequest(errors.New("saldo bupda kurang dari"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("saldo bupda kurang dari"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 	}
 
 	// Get Bunga
 	bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(inveliAccessToken)
 	if errr != nil {
-		exceptions.PanicIfBadRequest(errors.New("error get loan product "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error get loan product "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	// Get Loan Product
 	loandProductID, err := service.InveliAPIRepositoryInterface.GetLoanProductId(inveliAccessToken)
 	if errr != nil {
-		exceptions.PanicIfBadRequest(errors.New("error get loan product id "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error get loan product id "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	if len(loandProductID) == 0 {
@@ -117,7 +117,7 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 
 	err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(inveliAccessToken, inveliIdMember, accountUser.IdAccount, orderRequestTotalBill, totalAmount, isMerchant, bunga, loandProductID, desaRekening)
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("error care pinjaman "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error care pinjaman "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	orderEntity := entity.Order{}

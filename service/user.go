@@ -128,8 +128,6 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	// log.Println("GetLimitPayLater")
-
 	tagihanPaylater, err := service.InveliRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
@@ -142,8 +140,6 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		}
 	}
 
-	// log.Println("tagihan", tagihanPaylater)
-
 	count := 0
 	for _, tagihan := range tagihanPaylater {
 		if tagihan.IsPaid {
@@ -154,7 +150,9 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 
 	var loanAmount float64
 	if count == 0 {
+		log.Println("count == 0")
 		tunggakan, err := service.InveliRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
+		log.Println("tunggakan", tunggakan)
 		if err != nil {
 			log.Println("error get riwayat pinjaman", err.Error())
 			exceptions.PanicIfError(err, requestId, service.Logger)
@@ -169,7 +167,7 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		}
 	}
 
-	log.Println("loanAmount = ", loanAmount)
+	// log.Println("loanAmount = ", loanAmount)
 
 	limitPinjaman, err := service.InveliRepositoryInterface.GetLimitPayLater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {

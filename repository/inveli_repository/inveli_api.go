@@ -135,10 +135,13 @@ func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID s
 
 			if v.(map[string]interface{})["recordStatus"].(float64) != 18 {
 
-				tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
-				tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
-				tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
-				tunggakan = append(tunggakan, tunggakan2)
+				if len(v.(map[string]interface{})["loanAccountRepayments"].([]interface{})) != 0 {
+					tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
+					tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
+					tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
+
+					tunggakan = append(tunggakan, tunggakan2)
+				}
 			}
 		}
 
@@ -459,6 +462,8 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 		return nil, err
 	}
 
+	// log.Println("respData tagihan", respData)
+
 	if respData == nil {
 		return nil, nil
 	} else {
@@ -466,6 +471,14 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 		// var data []interface{}
 		for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
 			riwayatPinjaman := inveli.RiwayatPinjaman2{}
+
+			log.Println("loan", len(loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})))
+
+			if len(loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})) == 0 {
+				continue
+			}
+
+			log.Println("masuk")
 			riwayatPinjaman.ID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["id"].(string)
 			riwayatPinjaman.LoanAccountID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanAccountID"].(string)
 			riwayatPinjaman.RepaymentDate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
@@ -484,9 +497,11 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 			riwayatPinjaman.UserUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userUpdate"].(string)
 			riwayatPinjaman.DateUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string)
 			riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
+
+			// log.Println("riwayatPinjaman", riwayatPinjaman)
 		}
 
-		// fmt.Println("riwayat pinjaman ", riwayatPinjamans)
+		// log.Println("riwayatPinjamans", riwayatPinjamans)
 		return riwayatPinjamans, nil
 	}
 
@@ -516,7 +531,7 @@ func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token str
 		return nil, err
 	}
 
-	log.Println(respData)
+	log.Println("limit = ", respData)
 
 	if respData == nil {
 		return nil, nil

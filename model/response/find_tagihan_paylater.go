@@ -41,9 +41,9 @@ func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) []FindTagi
 	var findTagihanPaylaters []FindTagihanPaylater
 	for _, v := range riwayatPinjaman {
 		var findTagihanPaylater FindTagihanPaylater
-		if v.IsPaid {
-			continue
-		}
+		// if v.IsPaid {
+		// 	continue
+		// }
 
 		findTagihanPaylater.RepaymentDate = v.RepaymentDate
 		findTagihanPaylater.RepaymentAmount = v.RepaymentPrincipal

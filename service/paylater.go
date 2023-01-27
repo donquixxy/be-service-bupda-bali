@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"log"
 
 	"github.com/go-playground/validator"
@@ -120,31 +119,33 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 
 	log.Println("tagihan paylater", tagihanPaylater)
 
-	count := 0
-	for _, tagihan := range tagihanPaylater {
-		if tagihan.IsPaid {
-			continue
-		}
-		count++
-	}
+	tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
+	return tagihanPaylaterResponse
 
-	if count == 0 {
-		// get riwayat pinjaman
-		tunggakan, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
-		if err != nil {
-			log.Println("error get riwayat pinjaman", err.Error())
-			exceptions.PanicIfError(err, requestId, service.Logger)
-		}
+	// count := 0
+	// for _, tagihan := range tagihanPaylater {
+	// 	if tagihan.IsPaid {
+	// 		continue
+	// 	}
+	// 	count++
+	// }
 
-		if len(tunggakan) == 0 {
-			exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
-		}
+	// if count == 0 {
+	// 	// get riwayat pinjaman
+	// 	tunggakan, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
+	// 	if err != nil {
+	// 		log.Println("error get riwayat pinjaman", err.Error())
+	// 		exceptions.PanicIfError(err, requestId, service.Logger)
+	// 	}
 
-		tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakan)
-		return tagihanPaylaterResponse
-	} else {
-		tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
-		return tagihanPaylaterResponse
-	}
+	// 	if len(tunggakan) == 0 {
+	// 		exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
+	// 	}
+
+	// 	tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakan)
+	// 	return tagihanPaylaterResponse
+	// } else {
+
+	// }
 
 }
