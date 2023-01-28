@@ -146,11 +146,12 @@ func (service *OrderServiceImplementation) GenerateNumberOrder(idDesa string) (n
 
 func (service *OrderServiceImplementation) FindOrderPayLaterByIdUser(requestId, idUser string) (orderResponse []response.FindOrderByUserResponse) {
 	orders, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
-	fmt.Println("masuk service")
 	exceptions.PanicIfError(err, requestId, service.Logger)
+
 	if len(orders) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("order not found"), requestId, []string{"order not found"}, service.Logger)
 	}
+
 	orderResponse = response.ToFindOrderByUserResponse(orders)
 	return orderResponse
 }
