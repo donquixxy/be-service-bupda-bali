@@ -24,6 +24,7 @@ type OrderRepositoryInterface interface {
 	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
 	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
+	FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error)
 }
 
 type OrderRepositoryImplementation struct {
@@ -36,6 +37,19 @@ func NewOrderRepository(
 	return &OrderRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *OrderRepositoryImplementation) FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error) {
+	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("order_type < ?", 9).
+		Where("paylater_paid_status = ?", 0).
+		Order("order_date ASC").
+		Find(&orders)
+
+	return orders, result.Error
 }
 
 func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, string, string, error) {

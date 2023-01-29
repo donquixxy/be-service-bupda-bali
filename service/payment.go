@@ -69,6 +69,22 @@ func NewPaymentService(
 func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order {
 	var isMerchant float64
 	var totalAmount float64
+	var err error
+
+	log.Println("masuk pay with paylater")
+	// cek tunggakan 2 bulan terakhir
+	unPaidPaylater, err := service.OrderRepositoryInterface.FindUnPaidPaylater(service.DB, idUser)
+	// log.Println("unpaid = ", unPaidPaylater)
+	if err != nil {
+		exceptions.PanicIfError(err, "", service.Logger)
+	}
+
+	log.Println("unpaid ordered date = ", unPaidPaylater[0].OrderedDate)
+	log.Println("unpaid ordered date 2 = ", time.Now().AddDate(0, 2, 0))
+
+	if len(unPaidPaylater) > 0 && unPaidPaylater[0].OrderedDate.Before(time.Now().AddDate(0, -2, 0)) {
+		exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan 2 bulan terakhir"), "", []string{"Masih ada tunggakan selama 2 bulan yang belum dibayar"}, service.Logger)
+	}
 
 	// Set Is Merchant 0
 	isMerchant = 0
@@ -266,7 +282,7 @@ func (service *PaymentServiceImplementation) PayPaylaterBill(requestId, idUser s
 	})
 
 	if err != nil {
-		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
+		exceptions.PanicIfRecordNotFound(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger)
 	}
 
 	return nil
