@@ -74,13 +74,13 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	log.Println("masuk pay with paylater")
 	// cek tunggakan 2 bulan terakhir
 	unPaidPaylater, err := service.OrderRepositoryInterface.FindUnPaidPaylater(service.DB, idUser)
-	// log.Println("unpaid = ", unPaidPaylater)
+	log.Println("unpaid = ", unPaidPaylater)
 	if err != nil {
 		exceptions.PanicIfError(err, "", service.Logger)
 	}
 
-	log.Println("unpaid ordered date = ", unPaidPaylater[0].OrderedDate)
-	log.Println("unpaid ordered date 2 = ", time.Now().AddDate(0, 2, 0))
+	// log.Println("unpaid ordered date = ", unPaidPaylater[0].OrderedDate)
+	// log.Println("unpaid ordered date 2 = ", time.Now().AddDate(0, 2, 0))
 
 	if len(unPaidPaylater) > 0 && unPaidPaylater[0].OrderedDate.Before(time.Now().AddDate(0, -2, 0)) {
 		exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan 2 bulan terakhir"), "", []string{"Masih ada tunggakan selama 2 bulan yang belum dibayar"}, service.Logger)
@@ -93,6 +93,8 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 
 	// Validasi Saldo Bupda
 	saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(inveliAccessToken, desaGroupIdBupda)
+
+	log.Println("saldo bupda = ", saldoBupda)
 
 	if err != nil {
 		exceptions.PanicIfRecordNotFound(errors.New("error saldo bupda "+err.Error()), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
