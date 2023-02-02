@@ -175,7 +175,6 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 
 		return loginResult.AccessToken
 	}
-
 }
 
 func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken, IdUser string) {
@@ -284,7 +283,6 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	}
 
 	return nil
-
 }
 
 func (service *AuthServiceImplementation) NewToken(requestId string, refreshToken string) (token string) {

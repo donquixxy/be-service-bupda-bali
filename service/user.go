@@ -258,7 +258,6 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 	go SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
 
 	tx.Commit()
-
 }
 
 func SendMessageToTelegram(message, chatId, token string) {

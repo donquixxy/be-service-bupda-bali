@@ -21,6 +21,7 @@ type OrderRepositoryInterface interface {
 	FindOrderPrepaidPlnById(db *gorm.DB, idUser string) (*entity.Order, error)
 	FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	FindOrderPaylaterUnpaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
+	FindOrderPaylaterAllPaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
 	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
@@ -144,6 +145,17 @@ func (repository *OrderRepositoryImplementation) FindOrderPaylaterUnpaidById(db 
 		Where("id_user = ?", idUser).
 		Where("payment_method = ?", "paylater").
 		Where("paylater_paid_status = ?", 0).
+		Find(&orders)
+
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOrderPaylaterAllPaidById(db *gorm.DB, idUser string) ([]entity.Order, error) {
+	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("payment_method = ?", "paylater").
 		Find(&orders)
 
 	return orders, result.Error
