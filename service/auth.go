@@ -106,18 +106,17 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		// Get User Paylater List
 		if user.IsPaylater == 0 {
-			go func() {
-				userResult, _ := service.UserRepositoryInterface.FindUserById(service.DB, user.Id)
 
-				userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, userResult.NoIdentitas)
+			userResult, _ := service.UserRepositoryInterface.FindUserById(service.DB, user.Id)
 
-				if len(userPaylaterList.Id) != 0 {
-					userEntity := &entity.User{
-						IsPaylater: 1,
-					}
-					service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, userResult.NoIdentitas)
+
+			if len(userPaylaterList.Id) != 0 {
+				userEntity := &entity.User{
+					IsPaylater: 1,
 				}
-			}()
+				service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+			}
 		}
 
 		return loginResponse
@@ -220,7 +219,6 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 				log.Println("error save user account : ", err.Error())
 			}
 		}()
-
 	}
 }
 
@@ -269,8 +267,6 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	user, _ := service.UserRepositoryInterface.FindUserById(service.DB, userResult.Id)
 
 	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
-
-	log.Println("desa : ", desa.GroupIdBupda)
 
 	if len(desa.GroupIdBupda) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("groupd id not found"), requestId, []string{"groupd id not found"}, service.Logger)
