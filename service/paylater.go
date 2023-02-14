@@ -2,6 +2,7 @@ package service
 
 import (
 	"log"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/sirupsen/logrus"
@@ -68,6 +69,7 @@ func (service *PaylaterServiceImplementation) GetPembayaranTransaksiByIdUser(req
 }
 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse) {
+
 	order, _, _, err := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, month)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
@@ -79,17 +81,33 @@ func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId 
 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse) {
 
-	orderPaylaterPerBulan, _ := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
+	yearNow := time.Now().Year()
+	monthNow := time.Now().Month()
 
-	var responseData = response.GetRiwayatPaylaterPerbulanResponse{}
-	for _, order := range orderPaylaterPerBulan {
-		responseData.StartDate = order.OrderedDate.Format("2006-01-02 15:04:05")
-		responseData.EndDate = order.PaymentDueDate.Time.Format("2006-01-02 15:04:05")
-		responseData.Month = 1
-		responseData.TotalBayar = responseData.TotalBayar + order.TotalBill
+	for i := 12; i > 0; i-- {
+		var responseData = response.GetRiwayatPaylaterPerbulanResponse{}
+		orderPaylaterPerBulan, _ := service.OrderRepositoryInterface.FindOrderTotalPaylaterByMonth(service.DB, idUser, int(monthNow))
+		responseData.StartDate = time.Date(yearNow, monthNow, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02 15:04:05")
+		responseData.EndDate = time.Date(yearNow, monthNow+1, 0, 0, 0, 0, 0, time.UTC).Format("2006-01-02 15:04:05")
+		responseData.Month = int(monthNow)
+
+		for _, order := range orderPaylaterPerBulan {
+			responseData.TotalBayar = responseData.TotalBayar + order.TotalBill
+		}
+
+		orderPaylaterPerBulanResponse = append(orderPaylaterPerBulanResponse, responseData)
+
+		monthNow = monthNow - 1
+		if monthNow == 0 {
+			monthNow = 12
+			yearNow = yearNow - 1
+		}
+
+		if responseData.TotalBayar == 0 {
+			orderPaylaterPerBulanResponse = orderPaylaterPerBulanResponse[:len(orderPaylaterPerBulanResponse)-1]
+		}
+
 	}
-
-	orderPaylaterPerBulanResponse = append(orderPaylaterPerBulanResponse, responseData)
 
 	return orderPaylaterPerBulanResponse
 }
@@ -112,7 +130,7 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 	// 	}
 	// }
 
-	tagihanPaylater, err := service.OrderRepositoryInterface.FindOrderPaylaterAllPaidById(service.DB, idUser)
+	tagihanPaylater, err := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)

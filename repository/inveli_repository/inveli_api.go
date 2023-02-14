@@ -3,6 +3,7 @@ package invelirepository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -277,6 +278,13 @@ func (r *InveliAPIRepositoryImplementation) PayPaylater(IDMember, token string) 
 		log.Println(err)
 		return err
 	}
+
+	log.Println("response pay pay later : ", respData)
+
+	if respData == nil {
+		return errors.New("error pay pay later payment")
+	}
+
 	return nil
 }
 
@@ -471,7 +479,7 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 			if len(loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})) == 0 {
 				continue
 			}
-			
+
 			if loan.(map[string]interface{})["recordStatus"].(float64) == 18 {
 				continue
 			}
@@ -641,11 +649,14 @@ func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccou
 	fmt.Println("request api payment : ", req)
 
 	ctx := context.Background()
-
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println("error api payment : ", err)
 		return err
+	}
+
+	if respData == nil {
+		return errors.New("error api payment")
 	}
 
 	fmt.Println("response api payment : ", respData)
@@ -751,6 +762,10 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println("error create pinjaman : ", err)
 		return err
+	}
+
+	if respData == nil {
+		return errors.New("error create pinjaman")
 	}
 
 	// fmt.Println("response create pinjaman : ", respData)
@@ -1083,7 +1098,9 @@ func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token str
 		return 3, nil
 	}
 	resStatus := respData.(map[string]interface{})["member"].(map[string]interface{})["recordStatus"].(float64)
+
 	return int(resStatus), nil
+
 }
 
 func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string) (*inveli.InveliAcountInfo, error) {

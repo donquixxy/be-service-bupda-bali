@@ -608,9 +608,10 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 
 	var statusAktifUser int
 	if user.User.StatusPaylater != 2 {
-		statusAktifUser, err = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
-		if err != nil {
-			log.Println("error get status account inveli = ", err.Error())
+		statusAktifUser, _ = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
+
+		if statusAktifUser == 3 {
+
 		}
 
 		//  Cek apakah data account ada di tabel user account

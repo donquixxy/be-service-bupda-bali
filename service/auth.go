@@ -130,12 +130,10 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(phone, passwordFromInveli)
 
 	if len(loginResult.AccessToken) == 0 {
-		log.Println("login inveli gagal")
+		// log.Println("login inveli gagal")
 		return ""
 		// exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
-
-	log.Println("login result inveli : ", loginResult.AccessToken)
 
 	userResult, _ := service.UserRepositoryInterface.FindUserByPhone(service.DB, phone)
 	if userResult.StatusPaylater == 2 {
@@ -178,9 +176,8 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 
 func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken, IdUser string) {
 	accountInfo, _ := service.InveliAPIRespositoryInterface.GetAccountInfo(IDMember, AccessToken)
-	// fmt.Println("accountInfo : ", accountInfo)
 	if accountInfo == nil {
-		log.Println("akun belum aktif")
+		log.Println("Error Get Account Info")
 	} else {
 		go func() {
 			codeBIN, err := service.InveliAPIRespositoryInterface.GetKodeBIN(AccessToken)

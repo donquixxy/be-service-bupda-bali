@@ -7,9 +7,9 @@ import (
 )
 
 type FindTagihanPaylater struct {
-	RepaymentDate   time.Time  `json:"repayment_date"`
-	RepaymentAmount float64	 `json:"repayment_amount"`
-	DateInsert      time.Time  `json:"date_insert"`
+	RepaymentDate   time.Time `json:"repayment_date"`
+	RepaymentAmount float64   `json:"repayment_amount"`
+	DateInsert      time.Time `json:"date_insert"`
 }
 
 // type TotalTagihan struct {
