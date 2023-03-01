@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"math"
 
 	"github.com/go-playground/validator"
 	"github.com/sirupsen/logrus"
@@ -58,6 +59,17 @@ func (service *UserShippingAddressServiceImplementation) DeleteUserShippingAddre
 
 func (service *UserShippingAddressServiceImplementation) CreateUserShippingAddress(requestId string, idUser string, createUserShippingAddressRequest *request.CreateUserShippingAddressRequest) {
 	// validate request
+	var radius float64
+
+	if createUserShippingAddressRequest.Radius == 0 {
+		radius = 1.01
+	}
+
+	_, frac := math.Modf(createUserShippingAddressRequest.Radius)
+	if frac == 0 {
+		radius = createUserShippingAddressRequest.Radius + 0.01
+	}
+
 	request.ValidateRequest(service.Validate, createUserShippingAddressRequest, requestId, service.Logger)
 
 	userShippingAddressEntity := &entity.UserShippingAddress{}
@@ -66,7 +78,7 @@ func (service *UserShippingAddressServiceImplementation) CreateUserShippingAddre
 	userShippingAddressEntity.AlamatPengiriman = createUserShippingAddressRequest.AlamatPengiriman
 	userShippingAddressEntity.Latitude = createUserShippingAddressRequest.Latitude
 	userShippingAddressEntity.Longitude = createUserShippingAddressRequest.Longitude
-	userShippingAddressEntity.Radius = createUserShippingAddressRequest.Radius
+	userShippingAddressEntity.Radius = radius
 	userShippingAddressEntity.StatusPrimary = createUserShippingAddressRequest.StatusPrimary
 	userShippingAddressEntity.Catatan = createUserShippingAddressRequest.Catatan
 	_, err := service.UserShippingAddressRepositoryInterface.CreateUserShippingAddress(service.DB, userShippingAddressEntity)
