@@ -528,11 +528,9 @@ func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token str
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println(err)
-		log.Println(respData)
+		log.Println("limit =", respData)
 		return nil, err
 	}
-
-	log.Println("limit = ", respData)
 
 	if respData == nil {
 		return nil, nil
@@ -609,8 +607,6 @@ func (r *InveliAPIRepositoryImplementation) GetTunggakan(LoanID, token string) (
 
 func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccount, token string, amount float64, isMerchant float64) error {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
-
-	log.Println("credit account api payment: ", creditAccount)
 
 	req := graphql.NewRequest(`
 		mutation ($payment: MemberPaymentInput!) {
@@ -1038,6 +1034,8 @@ func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token strin
 		return nil, err
 	}
 
+	log.Println("req ", respData)
+
 	if respData == nil {
 		log.Println("Account Info is null")
 		return nil, nil
@@ -1093,6 +1091,8 @@ func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token str
 	if err := client.Run(ctx, req, &respData); err != nil {
 		return 1, err
 	}
+
+	log.Println("respData : ", respData)
 
 	if respData == nil {
 		return 3, nil

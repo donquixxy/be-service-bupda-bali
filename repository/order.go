@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
@@ -47,6 +46,7 @@ func (repository *OrderRepositoryImplementation) FindUnPaidPaylater(db *gorm.DB,
 	result := db.
 		Where("id_user = ?", idUser).
 		Where("order_type < ?", 9).
+		Where("payment_method = ?", "paylater").
 		Where("paylater_paid_status = ?", 0).
 		Order("order_date ASC").
 		Find(&orders)
@@ -188,7 +188,6 @@ func (repository *OrderRepositoryImplementation) FindOrderById(db *gorm.DB, idUs
 }
 
 func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error) {
-	log.Println("masuk")
 	orders := []entity.Order{}
 	// var month time.Month
 	now := time.Now()

@@ -1,7 +1,6 @@
 package response
 
 import (
-	"log"
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
@@ -22,7 +21,6 @@ type ListPinjamanResponse struct {
 }
 
 func ToListPinjamanResponses(listPinjamans []entity.ListPinjaman) (listPinjamanResponses []ListPinjamanResponse) {
-	log.Println("list pinjaman response", listPinjamans)
 	for _, listPinjaman := range listPinjamans {
 		listPinjamanResponse := &ListPinjamanResponse{}
 		listPinjamanResponse.Id = listPinjaman.Id
@@ -55,4 +53,3 @@ func ToListPinjamanResponse(listPinjaman *entity.ListPinjaman) (listPinjamanResp
 	listPinjamanResponse.StatusPembayaran = listPinjaman.StatusPembayaran
 	return listPinjamanResponse
 }
-

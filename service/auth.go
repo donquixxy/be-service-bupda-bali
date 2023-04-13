@@ -19,6 +19,7 @@ import (
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/guregu/null.v4"
 	"gorm.io/gorm"
 )
 
@@ -99,7 +100,7 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
-		if user.StatusPaylater == 2 {
+		if user.StatusPaylater == 1 || user.StatusPaylater == 2 {
 			go service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 		}
 		// service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
@@ -198,7 +199,8 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 			}
 
 			user := &entity.User{
-				StatusPaylater: 2,
+				StatusPaylater:       2,
+				PaylaterApprovalDate: null.NewTime(time.Now(), true),
 			}
 
 			service.UserRepositoryInterface.SaveUserInveliToken(service.DB, IdUser, user)

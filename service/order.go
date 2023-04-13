@@ -159,7 +159,7 @@ func (service *OrderServiceImplementation) FindOrderPayLaterByIdUser(requestId, 
 func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse) {
 	var err error
 
-	exceptions.PanicIfRecordNotFound(errors.New("error request postpaid pln"), requestId, []string{"mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+	// exceptions.PanicIfRecordNotFound(errors.New("error request postpaid pln"), requestId, []string{"mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 
 	request.ValidateRequest(service.Validate, orderRequest, requestId, service.Logger)
 
@@ -251,6 +251,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 	orderItemsPpob.Id = utilities.RandomUUID()
 	orderItemsPpob.IdOrder = orderEntity.Id
 	orderItemsPpob.RefId = orderRequest.RefId
+	orderItemsPpob.TrId = trxData.Data.TrxId
 	orderItemsPpob.IdUser = userProfile.IdUser
 	orderItemsPpob.ProductCode = trxData.Data.Code
 	orderItemsPpob.ProductType = productType
@@ -464,7 +465,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, idUser, idDesa, productType string, orderRequest *request.CreateOrderPostpaidRequest) (createOrderResponse response.CreateOrderResponse) {
 	var err error
 
-	exceptions.PanicIfRecordNotFound(errors.New("error request postpaid pdam"), requestId, []string{"mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+	// exceptions.PanicIfRecordNotFound(errors.New("error request postpaid pdam"), requestId, []string{"mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 
 	request.ValidateRequest(service.Validate, orderRequest, requestId, service.Logger)
 
@@ -699,96 +700,14 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		}
 
 	case "paylater":
-		var isMerchant float64
-		var totalAmount float64
+		orderPaylater := service.PaymentServiceInterface.PayWithPaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, desa.GroupIdBupda, desa.NoRekening, userProfile.User.Id, orderRequest.TotalBill, orderRequest.PaymentFee)
 
-		// Set Is Merchant 0
-		isMerchant = 0
-
-		// Validasi Saldo Bupda
-		saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(userProfile.User.InveliAccessToken, desa.GroupIdBupda)
-
-		if err != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("error saldo bupda "+err.Error()), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
-		}
-
-		if saldoBupda <= 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("saldo bupda kurang"), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
-		}
-
-		// Get Bunga
-		bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(userProfile.User.InveliAccessToken)
-		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-		}
-
-		// Get Loan Product
-		loandProductID, errr := service.InveliAPIRepositoryInterface.GetLoanProductId(userProfile.User.InveliAccessToken)
-		if errr != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("error get loan product id "+err.Error()), requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-		}
-
-		if len(loandProductID) == 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("loan product id not found"), requestId, []string{"loan product id not found"}, service.Logger, tx)
-		}
-
-		// Get Account User
-		accountUser, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(tx, userProfile.User.Id)
-		if len(accountUser.Id) == 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("user account paylater not found"), requestId, []string{"user account paylater not found"}, service.Logger, tx)
-		}
-
-		// Validasi Tunggakan Paylater
-		tunggakanPaylater, err := service.InveliAPIRepositoryInterface.GetTunggakan(accountUser.IdAccount, userProfile.User.InveliAccessToken)
-		if err != nil {
-			exceptions.PanicIfErrorWithRollback(err, requestId, []string{err.Error()}, service.Logger, tx)
-		}
-
-		if len(tunggakanPaylater) != 0 {
-			exceptions.PanicIfErrorWithRollback(errors.New("masih ada tunggakan"), requestId, []string{"masih ada tunggakan yang belum di bayar"}, service.Logger, tx)
-		}
-
-		totalAmount = orderRequest.TotalBill + orderRequest.PaymentFee
-
-		err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(userProfile.User.InveliAccessToken, userProfile.User.InveliIDMember, accountUser.IdAccount, orderRequest.TotalBill, totalAmount, isMerchant, bunga, loandProductID, desa.NoRekening)
-		if err != nil {
-			exceptions.PanicIfErrorWithRollback(errors.New("error care pinjaman "+err.Error()), requestId, []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger, tx)
-		}
-
-		if time.Now().Local().Day() < 25 {
-			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month(), 25, 0, 0, 0, 0, time.Local), true)
-		} else if time.Now().Local().Day() >= 25 {
-			orderEntity.PaymentDueDate = null.NewTime(time.Date(time.Now().Year(), time.Now().Month()+1, 25, 0, 0, 0, 0, time.Local), true)
-		}
-
-		orderEntity.OrderStatus = 1
-		orderEntity.PaymentStatus = 1
-		orderEntity.PaymentName = "Paylater"
-		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
-		orderEntity.PaymentCash = orderRequest.TotalBill + orderRequest.PaymentFee
-
-		// err = service.InveliAPIRepositoryInterface.ApiPayment(desa.NoRekening, accountUser.Code, userProfile.User.InveliAccessToken, orderRequest.TotalBill, isMerchant)
-		// if err != nil {
-		// 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger, tx)
-		// }
-
-		var jmlOrder float64
-		jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
-		if err != nil {
-			log.Println(err.Error())
-		}
-		jmlOrder = 0
-		for _, v := range jmlOrderPayLate {
-			jmlOrder = jmlOrder + v.TotalBill
-		}
-
-		userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
-
-		if (int(jmlOrder) + int(orderRequest.TotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
-			service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
-				TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
-			})
-		}
+		orderEntity.PaymentDueDate = orderPaylater.PaymentDueDate
+		orderEntity.OrderStatus = orderPaylater.OrderStatus
+		orderEntity.PaymentStatus = orderPaylater.PaymentStatus
+		orderEntity.PaymentName = orderPaylater.PaymentName
+		orderEntity.PaymentSuccessDate = orderPaylater.PaymentSuccessDate
+		orderEntity.PaymentCash = orderPaylater.PaymentCash
 
 	case "tabungan_bima":
 
@@ -827,7 +746,7 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
-		response := service.PostpaidTopupPdam(requestId, orderRequest.CustomerId, orderItemsPpob.TrId, orderItemsPpob.ProductCode)
+		response := service.PostpaidTopupPdam(requestId, orderRequest.CustomerId, ppobDetailPdam.TrId, orderItemsPpob.ProductCode)
 
 		_ = service.PpobDetailRepositoryInterface.UpdatePpobPostpaidPdamById(service.DB, ppobDetailPdam.Id, &entity.PpobDetailPostpaidPdam{
 			StatusTopUp:         3,
@@ -2276,6 +2195,7 @@ func (service *OrderServiceImplementation) FindOrderPostpaidPlnById(requestId, i
 
 	// Get detail prepaid pulsa
 	ppobDetailPostpaidPln, err := service.PpobDetailRepositoryInterface.FindPpobDetailPostpaidPlnById(service.DB, orderItemsPpob.Id)
+	log.Println("ppobDetailPostpaidPln", ppobDetailPostpaidPln.JsonDetailTagihan)
 	exceptions.PanicIfError(err, requestId, service.Logger)
 	if len(orderItemsPpob.Id) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("order item ppb not found"), requestId, []string{"order item ppob not found"}, service.Logger)
@@ -2562,7 +2482,12 @@ func (service *OrderServiceImplementation) PrepaidPulsaTopup(requestId string, c
 func (service *OrderServiceImplementation) PostpaidTopupPln(requestId string, customerId string, TrxId int, productCode string) *ppob.TopupPostaidPlnDataResponse {
 	var err error
 
-	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(rune(TrxId))))
+	trxIdBytes := []byte(strconv.Itoa(TrxId))
+	concatString := config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(trxIdBytes)
+	concatBytes := []byte(concatString)
+	hash := md5.Sum(concatBytes)
+	sign := hash[:]
+
 	body, _ := json.Marshal(map[string]interface{}{
 		"commands": "pay-pasca",
 		"username": config.GetConfig().Ppob.Username,
@@ -2613,7 +2538,12 @@ func (service *OrderServiceImplementation) PostpaidTopupPln(requestId string, cu
 func (service *OrderServiceImplementation) PostpaidTopupPdam(requestId string, customerId string, TrxId int, productCode string) *ppob.TopupPostaidPdamDataResponse {
 	var err error
 
-	sign := md5.Sum([]byte(config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(rune(TrxId))))
+	trxIdBytes := []byte(strconv.Itoa(TrxId))
+	concatString := config.GetConfig().Ppob.Username + config.GetConfig().Ppob.PpobKey + string(trxIdBytes)
+	concatBytes := []byte(concatString)
+	hash := md5.Sum(concatBytes)
+	sign := hash[:]
+
 	body, _ := json.Marshal(map[string]interface{}{
 		"commands": "pay-pasca",
 		"username": config.GetConfig().Ppob.Username,

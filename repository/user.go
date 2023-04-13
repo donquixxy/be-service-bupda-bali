@@ -134,7 +134,6 @@ func (repository *UserRepositoryImplementation) SaveUserAccount(db *gorm.DB, use
 
 func (repository *UserRepositoryImplementation) UpdateUser(db *gorm.DB, idUser string, userUpdate *entity.User) error {
 	user := &entity.User{}
-	log.Println("userUpdate", userUpdate)
 	result := db.
 		Model(user).
 		Where("id = ?", idUser).

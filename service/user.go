@@ -150,9 +150,7 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 
 	var loanAmount float64
 	if count == 0 {
-		log.Println("count == 0")
 		tunggakan, err := service.InveliRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
-		log.Println("tunggakan", tunggakan)
 		if err != nil {
 			log.Println("error get riwayat pinjaman", err.Error())
 			exceptions.PanicIfError(err, requestId, service.Logger)
@@ -610,10 +608,6 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 	if user.User.StatusPaylater != 2 {
 		statusAktifUser, _ = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
 
-		if statusAktifUser == 3 {
-
-		}
-
 		//  Cek apakah data account ada di tabel user account
 		if statusAktifUser == 2 {
 			accountInfo, _ := service.UserRepositoryInterface.GetUserAccountPaylaterByID(service.DB, idUser)
@@ -638,7 +632,8 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 
 		if len(userPaylaterList.Id) != 0 {
 			userEntity := &entity.User{
-				IsPaylater: 1,
+				IsPaylater:     1,
+				ActivationDate: null.NewTime(time.Now(), true),
 			}
 
 			service.UserRepositoryInterface.UpdateUser(service.DB, user.User.Id, userEntity)

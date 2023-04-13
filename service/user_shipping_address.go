@@ -61,13 +61,15 @@ func (service *UserShippingAddressServiceImplementation) CreateUserShippingAddre
 	// validate request
 	var radius float64
 
-	if createUserShippingAddressRequest.Radius == 0 {
-		radius = 1.01
+	radius = createUserShippingAddressRequest.Radius
+
+	if radius == 0 {
+		radius = radius + 0.01
 	}
 
 	_, frac := math.Modf(createUserShippingAddressRequest.Radius)
 	if frac == 0 {
-		radius = createUserShippingAddressRequest.Radius + 0.01
+		radius = radius + 0.01
 	}
 
 	request.ValidateRequest(service.Validate, createUserShippingAddressRequest, requestId, service.Logger)
