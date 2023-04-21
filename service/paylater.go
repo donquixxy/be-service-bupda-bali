@@ -118,11 +118,13 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 	// 	exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
 	// }
 
-	// tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	// _, err = service.InveliAPIRepositoryInterface.GetLastLoanIdPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	// if err != nil {
 	// 	log.Println("error get tagihan inveli", err.Error())
 	// 	exceptions.PanicIfError(err, requestId, service.Logger)
 	// }
+
+	// log.Println("tagihanPaylater = ", tagihanPaylater[0].LoanAccountID)
 
 	// if tagihanPaylater == nil {
 	// 	if user.User.StatusPaylater == 2 {

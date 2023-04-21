@@ -21,10 +21,12 @@ type OrderRepositoryInterface interface {
 	FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	FindOrderPaylaterUnpaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	FindOrderPaylaterAllPaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
-	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
+	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idUser string, orderUpdate *entity.Order) error
+	UpdateOrderPaylaterPaidStatusByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
 	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error)
+	FindOldestUnPaidPaylater(db *gorm.DB, idUser string) (entity.Order, error)
 	FindOrderTotalPaylaterByMonth(db *gorm.DB, idUser string, month int) ([]entity.Order, error)
 }
 
@@ -42,6 +44,20 @@ func NewOrderRepository(
 
 func (repository *OrderRepositoryImplementation) FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error) {
 	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("order_type < ?", 9).
+		Where("payment_method = ?", "paylater").
+		Where("paylater_paid_status = ?", 0).
+		Order("order_date ASC").
+		Find(&orders)
+
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOldestUnPaidPaylater(db *gorm.DB, idUser string) (entity.Order, error) {
+	orders := entity.Order{}
 
 	result := db.
 		Where("id_user = ?", idUser).
@@ -119,6 +135,16 @@ func (repository *OrderRepositoryImplementation) UpdateOrderPaylaterPaidStatus(d
 	result := db.
 		Model(order).
 		Where("id_user = ?", idUser).
+		Where("paylater_paid_status = ?", 0).
+		Updates(orderUpdate)
+	return result.Error
+}
+
+func (repository *OrderRepositoryImplementation) UpdateOrderPaylaterPaidStatusByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error {
+	order := &entity.Order{}
+	result := db.
+		Model(order).
+		Where("id = ?", idOrder).
 		Where("paylater_paid_status = ?", 0).
 		Updates(orderUpdate)
 	return result.Error

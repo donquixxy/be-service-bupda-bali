@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/controller"
@@ -167,4 +169,13 @@ func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface con
 	group.GET("/order/paylater-month", paylaterControllerInterface.GetOrderPaylaterByMonth, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/paylater/paid-transaction", paylaterControllerInterface.GetPembayaranTransaksiByIdUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/bima/mutation", paylaterControllerInterface.GetTabunganBimaMutation, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/paylater/tagihan-pelunasan", paylaterControllerInterface.GetTagihanPelunasan, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/paylater/debet-per-transaksi", paylaterControllerInterface.DebetPerTransaksi, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
+// Main Route
+func MainRoute(e *echo.Echo) {
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Welcome")
+	})
 }

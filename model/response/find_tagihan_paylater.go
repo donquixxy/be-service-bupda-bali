@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/inveli"
 )
 
 type FindTagihanPaylater struct {
@@ -12,10 +13,12 @@ type FindTagihanPaylater struct {
 	DateInsert      time.Time `json:"date_insert"`
 }
 
-// type TotalTagihan struct {
-// 	Total               float64               `json:"total"`
-// 	FindTagihanPaylater []FindTagihanPaylater `json:"find_tagihan_paylater"`
-// }
+type FindTagihanPelunasan struct {
+	LoanId          string  `json:"loan_id"`
+	RepaymentDate   string  `json:"repayment_date"`
+	RepaymentAmount float64 `json:"repayment_amount"`
+	DateInsert      string  `json:"date_insert"`
+}
 
 type FindDetailPyamentPaylater struct {
 	Date        time.Time `json:"date"`
@@ -36,25 +39,6 @@ func ToFindDetailPyamentPaylater(paymentHistory *entity.PaymentHistory) (findPay
 	return findPaymentHistory
 }
 
-// func ToFindTagihanPaylater(riwayatPinjaman []inveli.RiwayatPinjaman2) []FindTagihanPaylater {
-// 	var findTagihanPaylaters []FindTagihanPaylater
-// 	for _, v := range riwayatPinjaman {
-// 		var findTagihanPaylater FindTagihanPaylater
-// 		// if v.IsPaid {
-// 		// 	continue
-// 		// }
-
-// 		findTagihanPaylater.RepaymentDate = v.RepaymentDate
-// 		findTagihanPaylater.RepaymentAmount = v.RepaymentPrincipal
-// 		findTagihanPaylater.DateInsert = v.DateInsert
-
-// 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
-
-// 	}
-
-// 	return findTagihanPaylaters
-// }
-
 func ToFindTagihanPaylater(order []entity.Order) []FindTagihanPaylater {
 	var findTagihanPaylaters []FindTagihanPaylater
 	for _, v := range order {
@@ -74,16 +58,19 @@ func ToFindTagihanPaylater(order []entity.Order) []FindTagihanPaylater {
 	return findTagihanPaylaters
 }
 
-// func ToFindTunggakanPaylater(tunggakan []inveli.TunggakanPaylater2) []FindTagihanPaylater {
-// 	var findTagihanPaylaters []FindTagihanPaylater
-// 	for _, v := range tunggakan {
-// 		var findTagihanPaylater FindTagihanPaylater
-// 		findTagihanPaylater.RepaymentDate = v.DateUpdate
-// 		findTagihanPaylater.RepaymentAmount = v.LoanAmount
-// 		findTagihanPaylater.DateInsert = v.DateInsert
+func ToFindTagihanPelunasan(tagihan []inveli.TagihanPaylater) []FindTagihanPelunasan {
+	var findTagihanPaylaters []FindTagihanPelunasan
+	for _, v := range tagihan {
+		var findTagihanPaylater FindTagihanPelunasan
 
-// 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
-// 	}
+		findTagihanPaylater.LoanId = v.LoanId
+		findTagihanPaylater.RepaymentDate = v.EndDate
+		findTagihanPaylater.RepaymentAmount = v.LoanAmount
+		findTagihanPaylater.DateInsert = v.StartDate
 
-// 	return findTagihanPaylaters
-// }
+		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)
+
+	}
+
+	return findTagihanPaylaters
+}

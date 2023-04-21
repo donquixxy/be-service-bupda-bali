@@ -131,7 +131,6 @@ func (service *OrderServiceImplementation) GenerateNumberOrder(idDesa string) (n
 		exceptions.PanicIfRecordNotFound(errors.New("desa not found"), "", []string{"desa not found"}, service.Logger)
 	}
 	for {
-		rand.Seed(time.Now().UTC().UnixNano())
 		generateCode := 100000 + rand.Intn(999999-100000)
 		numberOrder = "ORDER/" + desa.KodeTrx + "/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
 
@@ -311,8 +310,6 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 		orderEntity.PaymentName = "Point"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	case "trf":
-		// buat nomor acak
-		rand.Seed(time.Now().UnixNano())
 		min := 111
 		max := 299
 		rand3Number := rand.Intn(max-min+1) + min
@@ -444,6 +441,9 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPostpaidPln(tx, ppobDetailPln)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 
 		response := service.PostpaidTopupPln(requestId, orderRequest.CustomerId, orderItemsPpob.TrId, orderItemsPpob.ProductCode)
@@ -454,9 +454,6 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPln(requestId, idU
 			LastBalance:         response.Balance,
 		})
 	}
-
-	commit := tx.Commit()
-	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
 	createOrderResponse = response.ToCreateOrderResponse(orderEntity, paymentChannel)
 	return createOrderResponse
@@ -615,8 +612,6 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 		orderEntity.PaymentName = "Point"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	case "trf":
-		// buat nomor acak
-		rand.Seed(time.Now().UnixNano())
 		min := 111
 		max := 299
 		rand3Number := rand.Intn(max-min+1) + min
@@ -745,6 +740,9 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPostpaidPdam(tx, ppobDetailPdam)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 		response := service.PostpaidTopupPdam(requestId, orderRequest.CustomerId, ppobDetailPdam.TrId, orderItemsPpob.ProductCode)
 
@@ -754,9 +752,6 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidPdam(requestId, id
 			LastBalance:         response.Balance,
 		})
 	}
-
-	commit := tx.Commit()
-	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
 	createOrderResponse = response.ToCreateOrderResponse(orderEntity, paymentChannel)
 	return createOrderResponse
@@ -912,8 +907,6 @@ func (service *OrderServiceImplementation) CreateOrderPostpaidTelco(requestId, i
 		orderEntity.PaymentName = "Point"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	case "trf":
-		// buat nomor acak
-		rand.Seed(time.Now().UnixNano())
 		min := 111
 		max := 299
 		rand3Number := rand.Intn(max-min+1) + min
@@ -1295,8 +1288,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		orderEntity.PaymentName = "Point"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	case "trf":
-		// buat nomor acak
-		rand.Seed(time.Now().UnixNano())
 		min := 111
 		max := 299
 		rand3Number := rand.Intn(max-min+1) + min
@@ -1423,6 +1414,12 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 	err = service.OrderItemPpobRepositoryInterface.CreateOrderItemPpob(tx, orderItemsPpob)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
 		ppobDetailPrepaidPulsa.StatusTopUp = response.Data.Status
@@ -1430,15 +1427,9 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPulsa(requestId, id
 		ppobDetailPrepaidPulsa.LastBalance = response.Data.Balance
 	}
 
-	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPulsa(tx, ppobDetailPrepaidPulsa)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
-
 	runtime.GOMAXPROCS(1)
 	mssg := "Order Preapaid Pulsa Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
 	go service.SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
-
-	commit := tx.Commit()
-	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
 	createOrderResponse = response.ToCreateOrderResponse(orderEntity, paymentChannel)
 	return createOrderResponse
@@ -1597,8 +1588,6 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		orderEntity.PaymentName = "Point"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	case "trf":
-		// buat nomor acak
-		rand.Seed(time.Now().UnixNano())
 		min := 111
 		max := 299
 		rand3Number := rand.Intn(max-min+1) + min
@@ -1726,6 +1715,12 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 	err = service.OrderItemPpobRepositoryInterface.CreateOrderItemPpob(tx, orderItemsPpob)
 	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
 
+	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
+	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
+
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+
 	if orderRequest.PaymentMethod == "tabungan_bima" || orderRequest.PaymentMethod == "paylater" {
 		response := service.PrepaidPulsaTopup(requestId, orderRequest.CustomerId, orderEntity.RefId, orderItemsPpob.ProductCode)
 		ppobDetailPrepaidPln.StatusTopUp = response.Data.Status
@@ -1733,15 +1728,9 @@ func (service *OrderServiceImplementation) CreateOrderPrepaidPln(requestId, idUs
 		ppobDetailPrepaidPln.LastBalance = response.Data.Balance
 	}
 
-	err = service.PpobDetailRepositoryInterface.CreateOrderPpobDetailPrepaidPln(tx, ppobDetailPrepaidPln)
-	exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error create order items"}, service.Logger, tx)
-
 	runtime.GOMAXPROCS(1)
 	mssg := "Order Preapaid PLN Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias
 	go service.SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
-
-	commit := tx.Commit()
-	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 
 	createOrderResponse = response.ToCreateOrderResponse(orderEntity, paymentChannel)
 	return createOrderResponse
@@ -1880,8 +1869,6 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		orderEntity.PaymentName = "Point"
 		orderEntity.PaymentSuccessDate = null.NewTime(time.Now(), true)
 	case "trf":
-		// buat nomor acak
-		rand.Seed(time.Now().UnixNano())
 		min := 111
 		max := 299
 		rand3Number := rand.Intn(max-min+1) + min
@@ -2858,5 +2845,27 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 		} else {
 			exceptions.PanicIfBadRequest(errors.New("status not found"), requestId, []string{"error string"}, service.Logger)
 		}
+	}
+}
+
+func (service *OrderServiceImplementation) UpdateLoanIdToOrder(idOrder string, idUser string) {
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
+	}
+
+	lastLoanId, err := service.InveliAPIRepositoryInterface.GetLastLoanIdPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		log.Println("error get tagihan inveli", err.Error())
+		exceptions.PanicIfError(err, "", service.Logger)
+	}
+
+	err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, idOrder, &entity.Order{
+		LoanId: lastLoanId,
+	})
+
+	if err != nil {
+		log.Println("error update loan id to order", err.Error())
+		exceptions.PanicIfError(err, "", service.Logger)
 	}
 }

@@ -43,6 +43,7 @@ type Order struct {
 	PaylaterPaidStatus  int       `gorm:"column:paylater_paid_status;"`
 	Longitude           float64   `gorm:"column:longitude;"`
 	Latitude            float64   `gorm:"column:latitude;"`
+	LoanId              string    `gorm:"column:loan_id;"`
 }
 
 func (Order) TableName() string {
