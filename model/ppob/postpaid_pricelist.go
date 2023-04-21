@@ -59,7 +59,7 @@ type InquiryPostpaidPlnDetail struct {
 	Total       float64 `json:"total"`
 }
 
-//  Inquiry Postpaid PDAM
+// Inquiry Postpaid PDAM
 type InquiryPostpaidPdam struct {
 	Data InquiryPostpaidPdamData `json:"data"`
 }
@@ -150,6 +150,51 @@ type PostpaidCheckTransactionPlnData struct {
 	Desc         InquiryPostpaidPlnDesc `json:"desc"`
 }
 
+type PostpaidCheckTransactionTelco struct {
+	Data PostpaidCheckTransactionTelcoData `json:"data"`
+	Meta []interface{}                     `json:"meta"`
+}
+
+type PostpaidCheckTransactionTelcoData struct {
+	TrxId        int                      `json:"tr_id"`
+	Code         string                   `json:"code"`
+	Datetime     string                   `json:"datetime"`
+	Hp           string                   `json:"hp"`
+	TrName       string                   `json:"tr_name"`
+	Period       string                   `json:"period"`
+	Nominal      float64                  `json:"nominal"`
+	Admin        float64                  `json:"admin"`
+	Status       int                      `json:"status"`
+	ResponseCode string                   `json:"response_code"`
+	Message      string                   `json:"message"`
+	Price        float64                  `json:"price"`
+	SellingPrice float64                  `json:"selling_price"`
+	Desc         InquiryPostpaidTelcoDesc `json:"desc"`
+}
+
+type TopupPostaidTelcoResponse struct {
+	Data TopupPostaidTelcoDataResponse `json:"data"`
+}
+
+type TopupPostaidTelcoDataResponse struct {
+	TrxId        int                      `json:"tr_id"`
+	Code         string                   `json:"code"`
+	Datetime     string                   `json:"datetime"`
+	Hp           string                   `json:"hp"` //Customer Number
+	TrxName      string                   `json:"tr_name"`
+	Period       string                   `json:"period"`
+	Nominal      float64                  `json:"nominal"`
+	Admin        float64                  `json:"admin"`
+	RefId        string                   `json:"ref_id"`
+	ResponseCode string                   `json:"response_code"`
+	Message      string                   `json:"message"`
+	Price        float64                  `json:"price"`
+	SellingPrice float64                  `json:"selling_price"`
+	Balance      float64                  `json:"balance"`
+	NoRef        string                   `json:"noref"`
+	Desc         InquiryPostpaidTelcoDesc `json:"desc"`
+}
+
 type TopupPostaidPdamResponse struct {
 	Data TopupPostaidPdamDataResponse `json:"data"`
 }
@@ -194,4 +239,68 @@ type TopupPostaidPlnDataResponse struct {
 	Balance      float64                `json:"balance"`
 	NoRef        string                 `json:"noref"`
 	Desc         InquiryPostpaidPlnDesc `json:"desc"`
+}
+
+type PostpaidErrorResponse struct {
+	Data PostpaidErrorDataResponse `json:"data"`
+	Meta []string                  `json:"meta"`
+}
+
+type PostpaidErrorDataResponse struct {
+	ResponseCode string `json:"response_code"`
+	Message      string `json:"message"`
+}
+
+// Telco
+type InquiryPostpaidTelco struct {
+	Data InquiryPostpaidTelcoData `json:"data"`
+}
+
+type InquiryPostpaidTelcoData struct {
+	TrxId        int                      `json:"tr_id"`
+	Code         string                   `json:"code"`
+	Hp           string                   `json:"hp"`
+	TrxName      string                   `json:"tr_name"`
+	Period       string                   `json:"period"`
+	Nominal      float64                  `json:"nominal"`
+	Admin        float64                  `json:"admin"`
+	RefId        string                   `json:"ref_id"`
+	ResponseCode string                   `json:"response_code"`
+	Message      string                   `json:"message"`
+	Price        float64                  `json:"price"`
+	SellingPrice float64                  `json:"selling_price"`
+	Desc         InquiryPostpaidTelcoDesc `json:"desc"`
+}
+
+type InquiryPostpaidTelcoDesc struct {
+	KodeArea      string                      `json:"kode_area"`
+	Divre         string                      `json:"divre"`
+	Datel         string                      `json:"datel"`
+	JumlahTagihan int                         `json:"jumlah_tagihan"`
+	Tagihan       InquiryPostpaidTelcoTagihan `json:"tagihan"`
+}
+
+type InquiryPostpaidTelcoTagihan struct {
+	Tagihan []InquiryPostpaidTelcoTagihanData `json:"detail"`
+}
+
+type InquiryPostpaidTelcoTagihanData struct {
+	Periode      string `json:"periode"`
+	NilaiTagihan string `json:"nilai_tagihan"`
+	Admin        string `json:"admin"`
+	Total        string `json:"total"`
+}
+
+type InquiryProductPostpaidPPOB struct {
+	Data struct {
+		Pasca []struct {
+			Code   string  `json:"code"`
+			Name   string  `json:"name"`
+			Status int     `json:"status"`
+			Fee    float64 `json:"fee"`
+			Komisi float64 `json:"komisi"`
+			Type   string  `json:"type"`
+		} `json:"pasca"`
+	} `json:"data"`
+	Meta []interface{} `json:"meta"`
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -35,7 +36,7 @@ func NewDatabaseConnection(DB *config.Database) *gorm.DB {
 		panic("Cannot ping the database: " + err.Error())
 	}
 
-	fmt.Println("Success connect to database")
+	log.Println("Success connect to database")
 
 	sqlDB.SetMaxIdleConns(int(DB.MaxIdle))
 	sqlDB.SetMaxOpenConns(int(DB.MaxOpen))
@@ -55,5 +56,5 @@ func Close(DB *gorm.DB) {
 		panic(err)
 	}
 
-	fmt.Println("database disconected")
+	log.Println("database disconected")
 }

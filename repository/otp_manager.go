@@ -33,6 +33,7 @@ func (repository *OtpManagerRepositoryImplementation) UpdateOtp(db *gorm.DB, idO
 	updateOtp := make(map[string]interface{})
 	updateOtp["otp_code"] = otpManager.OtpCode
 	updateOtp["otp_experied_at"] = otpManager.OtpExperiedAt
+	updateOtp["freeze_due_date"] = otpManager.FreezeDueDate
 	updateOtp["phone_limit"] = otpManager.PhoneLimit
 	result := db.
 		Model(entity.OtpManager{}).

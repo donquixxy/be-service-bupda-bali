@@ -8,6 +8,7 @@ import (
 
 type PpobDetailRepositoryInterface interface {
 	CreateOrderPpobDetailPostpaidPdam(db *gorm.DB, ppobDetailPostpaidPdam *entity.PpobDetailPostpaidPdam) error
+	CreateOrderPpobDetailPostpaidTelco(db *gorm.DB, ppobDetailPostpaidTelco *entity.PpobDetailPostpaidTelco) error
 	CreateOrderPpobDetailPostpaidPln(db *gorm.DB, ppobDetailPostpaidPln *entity.PpobDetailPostpaidPln) error
 	CreateOrderPpobDetailPrepaidPulsa(db *gorm.DB, ppobDetailPrepaidPulsa *entity.PpobDetailPrepaidPulsa) error
 	CreateOrderPpobDetailPrepaidPln(db *gorm.DB, ppobDetailPrepaidPln *entity.PpobDetailPrepaidPln) error
@@ -35,6 +36,11 @@ func NewPpobDetailRepository(
 
 func (repository *PpobDetailRepositoryImplementation) CreateOrderPpobDetailPostpaidPdam(db *gorm.DB, ppobDetailPostpaidPdam *entity.PpobDetailPostpaidPdam) error {
 	result := db.Create(&ppobDetailPostpaidPdam)
+	return result.Error
+}
+
+func (repository *PpobDetailRepositoryImplementation) CreateOrderPpobDetailPostpaidTelco(db *gorm.DB, ppobDetailPostpaidTelco *entity.PpobDetailPostpaidTelco) error {
+	result := db.Create(&ppobDetailPostpaidTelco)
 	return result.Error
 }
 

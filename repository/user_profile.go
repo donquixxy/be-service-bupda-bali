@@ -11,6 +11,7 @@ type UserProfileRepositoryInterface interface {
 	FindUserByEmail(db *gorm.DB, email string) (*entity.UserProfile, error)
 	FindUserByNoIdentitas(db *gorm.DB, NoIdentitas string) (*entity.UserProfile, error)
 	UpdateUserProfile(db *gorm.DB, idUser string, userProfileUpdate *entity.UserProfile) error
+	FindUserProfileByIdUser(db *gorm.DB, idUser string) (*entity.UserProfile, error)
 }
 
 type UserProfileRepositoryImplementation struct {
@@ -23,6 +24,12 @@ func NewUserProfileRepository(
 	return &UserProfileRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *UserProfileRepositoryImplementation) FindUserProfileByIdUser(db *gorm.DB, idUser string) (*entity.UserProfile, error) {
+	userProfile := &entity.UserProfile{}
+	result := db.Where("id_user = ?", idUser).Find(userProfile)
+	return userProfile, result.Error
 }
 
 func (repository *UserProfileRepositoryImplementation) UpdateUserProfile(db *gorm.DB, idUser string, userProfileUpdate *entity.UserProfile) error {

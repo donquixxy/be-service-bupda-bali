@@ -32,3 +32,16 @@ func ReadFromUpdateUserForgotPasswordRequestBody(c echo.Context, requestId strin
 	}
 	return updateUserForgotPasswordRequest
 }
+
+type UpdateUserPasswordInveliRequest struct {
+	Phone       string `json:"phone" form:"phone" validate:"required"`
+	NewPassword string `json:"new_password" form:"new_password" validate:"required"`
+}
+
+func ReadFromUpdateUserPasswordInveliRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *UpdateUserPasswordInveliRequest {
+	updateUserPasswordInveliRequest := &UpdateUserPasswordInveliRequest{}
+	if err := c.Bind(updateUserPasswordInveliRequest); err != nil {
+		exceptions.PanicIfError(err, requestId, logger)
+	}
+	return updateUserPasswordInveliRequest
+}

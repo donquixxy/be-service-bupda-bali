@@ -28,7 +28,19 @@ func PanicIfErrorWithRollback(err error, requestId string, errorString []string,
 		}
 		out, errr := json.Marshal(ErrorStruct{Code: 404, Error: errorString})
 		PanicIfError(errr, requestId, logger)
+		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
+		panic(string(out))
+	}
+}
 
+func PanicIfErrorWithRollbackRegister(err error, requestId string, errorString []string, logger *logrus.Logger, DB *gorm.DB) {
+	if err != nil && err != gorm.ErrRecordNotFound {
+		rollback := DB.Rollback()
+		if rollback.Error != nil {
+			PanicIfError(rollback.Error, requestId, logger)
+		}
+		out, errr := json.Marshal(ErrorStruct{Code: 408, Error: errorString})
+		PanicIfError(errr, requestId, logger)
 		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
 		panic(string(out))
 	}
@@ -90,6 +102,24 @@ func PanicIfRecordAlreadyExistsWIthRollback(err error, requestId string, errorSt
 			PanicIfError(rollback.Error, requestId, logger)
 		}
 		out, errr := json.Marshal(ErrorStruct{Code: 409, Error: errorString})
+		PanicIfError(errr, requestId, logger)
+		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
+		panic(string(out))
+	}
+}
+
+func PanicPPOBHandler(err error, requestId string, message string, errorString []string, logger *logrus.Logger) {
+	if err != nil {
+		out, errr := json.Marshal(ErrorStruct{Code: 409, Mssg: message, Error: errorString})
+		PanicIfError(errr, requestId, logger)
+		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
+		panic(string(out))
+	}
+}
+
+func PanicIfUserNotHavePassword(err error, requestId string, errorString []string, logger *logrus.Logger) {
+	if err != nil || err == gorm.ErrRecordNotFound {
+		out, errr := json.Marshal(ErrorStruct{Code: 801, Mssg: "user belum first login inveli", Error: errorString})
 		PanicIfError(errr, requestId, logger)
 		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
 		panic(string(out))

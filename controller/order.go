@@ -20,6 +20,7 @@ type OrderControllerInterface interface {
 	CompleteOrderById(c echo.Context) error
 	UpdateOrderPaymentStatus(c echo.Context) error
 	CallbackPpobTransaction(c echo.Context) error
+	FindOrderPayLater(c echo.Context) error
 }
 
 type OrderControllerImplementation struct {
@@ -34,6 +35,17 @@ func NewOrderController(
 	return &OrderControllerImplementation{
 		OrderServiceInterface: orderServiceInterface,
 	}
+}
+
+func (controller *OrderControllerImplementation) FindOrderPayLater(c echo.Context) error {
+
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	idUser := middleware.TokenClaimsIdUser(c)
+	// fmt.Println("masuk")
+	// fmt.Println(idUser)
+	orderResponses := controller.OrderServiceInterface.FindOrderPayLaterByIdUser(requestId, idUser)
+	responses := response.Response{Code: 200, Mssg: "success", Data: orderResponses, Error: []string{}}
+	return c.JSON(http.StatusOK, responses)
 }
 
 func (controller *OrderControllerImplementation) CreateOrder(c echo.Context) error {
@@ -59,6 +71,9 @@ func (controller *OrderControllerImplementation) CreateOrder(c echo.Context) err
 		case "postpaid_pdam":
 			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
 			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPdam(requestId, idUser, idDesa, productType, request)
+		case "postpaid_telco":
+			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
+			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidTelco(requestId, idUser, idDesa, productType, request)
 		case "postpaid_pln":
 			request := request.ReadFromCreateOrderPostpaidRequestBody(c, requestId, controller.Logger)
 			orderResponse = controller.OrderServiceInterface.CreateOrderPostpaidPln(requestId, idUser, idDesa, productType, request)
@@ -110,6 +125,10 @@ func (controller *OrderControllerImplementation) FindOrderById(c echo.Context) e
 
 	case "postpaid_pdam":
 		orderResponse := controller.OrderServiceInterface.FindOrderPostpaidPdamById(requestId, idOrder)
+		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
+
+	case "payment":
+		orderResponse := controller.OrderServiceInterface.FindOrderPaymentById(requestId, idOrder)
 		responses = response.Response{Code: 200, Mssg: "success", Data: orderResponse, Error: []string{}}
 	}
 

@@ -7,14 +7,15 @@ import (
 )
 
 type UserProfile struct {
-	Id          string    `gorm:"primaryKey;column:id;"`
-	IdUser      string    `gorm:"column:id_user;"`
-	User        User      `gorm:"foreignKey:IdUser;"`
-	NoIdentitas string    `gorm:"column:no_identitas;"`
-	NamaLengkap string    `gorm:"column:nama_lengkap;"`
-	Email       string    `gorm:"column:email;"`
-	CreatedDate time.Time `gorm:"column:created_at;"`
-	UpdatedDate null.Time `gorm:"column:created_at;"`
+	Id                    string    `gorm:"primaryKey;column:id;"`
+	IdUser                string    `gorm:"column:id_user;"`
+	User                  User      `gorm:"foreignKey:IdUser;"`
+	NoIdentitas           string    `gorm:"column:no_identitas;"`
+	NamaLengkap           string    `gorm:"column:nama_lengkap;"`
+	Email                 string    `gorm:"column:email;"`
+	AlamatSesuaiIdentitas string    `gorm:"column:alamat_sesuai_identitas;"`
+	CreatedDate           time.Time `gorm:"column:created_at;"`
+	UpdatedDate           null.Time `gorm:"column:created_at;"`
 }
 
 func (UserProfile) TableName() string {

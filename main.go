@@ -16,6 +16,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/controller"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/exceptions"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/routes"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/service"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
@@ -46,13 +47,17 @@ func main() {
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Skipper:      nil,
 		ErrorMessage: "Request Timeout",
-		Timeout:      15 * time.Second,
+		Timeout:      50 * time.Second,
 	}))
-	e.Use(middleware.Recover())
+	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		DisableStackAll:   true,
+		DisablePrintStack: true,
+	}))
 	e.HTTPErrorHandler = exceptions.ErrorHandler
 	e.Use(middleware.RequestID())
 
 	// Repository
+	merchantRepository := repository.NewMerchantRepository(&appConfig.Database)
 	userRepository := repository.NewUserRepository(&appConfig.Database)
 	userProfileRepository := repository.NewUserProfileRepository(&appConfig.Database)
 	otpManagerRepository := repository.NewOtpManagerRepository(&appConfig.Database)
@@ -73,8 +78,31 @@ func main() {
 	operatorPrefixRepository := repository.NewOperatorPrefixRepository(&appConfig.Database)
 	ppobDetailRepository := repository.NewPpobDetailRepository(&appConfig.Database)
 	infoDesaRepository := repository.NewInfoDesaRepository(&appConfig.Database)
+	bannerRepository := repository.NewBannerRepository(&appConfig.Database)
+	inveliAPIRepository := invelirepository.NewInveliAPIRepository()
+	listPinjamanRepository := repository.NewListPinjamanRepository(&appConfig.Database)
+	paymentHistoryRepository := repository.NewPaymentHistoryRepository(&appConfig.Database)
+	appVersionRepository := repository.NewAppVersionRepository(&appConfig.Database)
 
 	// Service
+	listPinjamanService := service.NewListPinjamanService(
+		DBConn,
+		logrusLogger,
+		listPinjamanRepository,
+	)
+	bannerService := service.NewBannerService(
+		DBConn,
+		validate,
+		logrusLogger,
+		bannerRepository,
+	)
+	merchantService := service.NewMerchantService(
+		DBConn,
+		validate,
+		logrusLogger,
+		userProfileRepository,
+		merchantRepository,
+	)
 	infoDesaService := service.NewInfoDesaService(
 		DBConn,
 		validate,
@@ -87,6 +115,19 @@ func main() {
 		validate,
 		logrusLogger,
 		userRepository,
+		inveliAPIRepository,
+		userProfileRepository,
+		desaRepository,
+	)
+	paylaterService := service.NewPaylaterService(
+		DBConn,
+		validate,
+		logrusLogger,
+		userRepository,
+		inveliAPIRepository,
+		orderRepository,
+		paymentHistoryRepository,
+		authService,
 	)
 	otpManagerService := service.NewOtpManagerService(
 		DBConn,
@@ -122,6 +163,9 @@ func main() {
 		userRepository,
 		userProfileRepository,
 		pointRepository,
+		desaRepository,
+		inveliAPIRepository,
+		authService,
 	)
 	productDesaService := service.NewProductDesaService(
 		DBConn,
@@ -137,6 +181,8 @@ func main() {
 		logrusLogger,
 		cartRepository,
 		productDesaRepository,
+		settingRepository,
+		desaRepository,
 	)
 	promoService := service.NewPromoService(
 		DBConn,
@@ -151,7 +197,12 @@ func main() {
 		pointRepository,
 	)
 	paymentService := service.NewPaymentService(
+		DBConn,
 		logrusLogger,
+		userRepository,
+		inveliAPIRepository,
+		orderRepository,
+		paymentHistoryRepository,
 	)
 	orderService := service.NewOrderService(
 		DBConn,
@@ -169,18 +220,26 @@ func main() {
 		orderItemPpobRepository,
 		ppobDetailRepository,
 		desaRepository,
+		inveliAPIRepository,
+		listPinjamanRepository,
+		userShippingAddressRepository,
 	)
 	paymentChannelService := service.NewPaymentChannelService(
 		DBConn,
 		validate,
 		logrusLogger,
 		paymentChannelRepository,
+		inveliAPIRepository,
+		userRepository,
+		orderRepository,
 	)
 	settingService := service.NewSettingService(
 		DBConn,
 		validate,
 		logrusLogger,
 		settingRepository,
+		desaRepository,
+		appVersionRepository,
 	)
 	userShippingAddressService := service.NewUserShippingAddressService(
 		DBConn,
@@ -196,10 +255,26 @@ func main() {
 		orderService,
 	)
 
+	// Controller
+	listPinjamanController := controller.NewListPinjamanController(
+		listPinjamanService,
+	)
+	paylaterController := controller.NewPaylaterController(
+		logrusLogger,
+		paylaterService,
+		paymentService,
+	)
+	bannerController := controller.NewBannerController(
+		logrusLogger,
+		bannerService,
+	)
+	merchantController := controller.NewMerchantController(
+		logrusLogger,
+		merchantService,
+	)
 	infoDesaController := controller.NewInfoDesaController(
 		infoDesaService,
 	)
-	// Controller
 	authController := controller.NewAuthController(
 		logrusLogger,
 		authService,
@@ -253,8 +328,15 @@ func main() {
 		logrusLogger,
 		ppobService,
 	)
+	testingInveliController := controller.NewInveliTestingController(
+		logrusLogger,
+	)
 
 	// Route
+	routes.ListPinjamanRoute(e, appConfig.Jwt, listPinjamanController)
+	routes.PaylaterRoute(e, appConfig.Jwt, paylaterController)
+	routes.BannerRoute(e, appConfig.Jwt, bannerController)
+	routes.MerchantRoute(e, appConfig.Jwt, merchantController)
 	routes.InfoDesaRoute(e, appConfig.Jwt, infoDesaController)
 	routes.AuthRoute(e, authController)
 	routes.OtpManagerRoute(e, otpManagerController)
@@ -271,6 +353,7 @@ func main() {
 	routes.SettingRoute(e, appConfig.Jwt, settingController)
 	routes.UserShippingAddressRoute(e, appConfig.Jwt, userShippingAddressController)
 	routes.PpobRoute(e, appConfig.Jwt, ppobController)
+	routes.InveliTestRoutes(e, testingInveliController)
 
 	// Careful shutdown
 	go func() {

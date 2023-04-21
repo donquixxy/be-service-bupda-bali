@@ -19,7 +19,7 @@ import (
 type CartServiceInterface interface {
 	CreateCart(requestId string, idUser string, createCartRequest *request.CreateCartRequest) string
 	UpdateCart(requestId string, updateCartRequest *request.UpdateCartRequest) string
-	FindCartByUser(requestId string, idUser string, accountType int) (cartResponses []response.FindCartByUserResponse)
+	FindCartByUser(requestId string, idUser string, accountType int, idDesa string) (cartResponses response.FindCartByIdUserResponse)
 }
 
 type CartServiceImplementation struct {
@@ -28,6 +28,8 @@ type CartServiceImplementation struct {
 	Logger                      *logrus.Logger
 	CartRepositoryInterface     repository.CartRepositoryInterface
 	ProductDesaServiceInterface repository.ProductDesaRepositoryInterface
+	SettingRepositoryInterface  repository.SettingRepositoryInterface
+	DesaRepositoryInterface     repository.DesaRepositoryInterface
 }
 
 func NewCartService(
@@ -36,6 +38,8 @@ func NewCartService(
 	logger *logrus.Logger,
 	cartRepositoryInterface repository.CartRepositoryInterface,
 	productDesaRepositoryInterface repository.ProductDesaRepositoryInterface,
+	settingRepositoryInterface repository.SettingRepositoryInterface,
+	desaRepositoryInterface repository.DesaRepositoryInterface,
 ) CartServiceInterface {
 	return &CartServiceImplementation{
 		DB:                          db,
@@ -43,6 +47,8 @@ func NewCartService(
 		Logger:                      logger,
 		CartRepositoryInterface:     cartRepositoryInterface,
 		ProductDesaServiceInterface: productDesaRepositoryInterface,
+		SettingRepositoryInterface:  settingRepositoryInterface,
+		DesaRepositoryInterface:     desaRepositoryInterface,
 	}
 }
 
@@ -119,12 +125,19 @@ func (service *CartServiceImplementation) UpdateCart(requestId string, updateCar
 	return cartResult.Id
 }
 
-func (service *CartServiceImplementation) FindCartByUser(requestid string, idUser string, accountType int) (cartResponses []response.FindCartByUserResponse) {
+func (service *CartServiceImplementation) FindCartByUser(requestid string, idUser string, accountType int, idDesa string) (cartResponses response.FindCartByIdUserResponse) {
 	carts, err := service.CartRepositoryInterface.FindCartByUser(service.DB, idUser)
 	exceptions.PanicIfError(err, requestid, service.Logger)
 	if len(carts) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("not found"), requestid, []string{"data not found"}, service.Logger)
 	}
-	cartResponses = response.ToFindCartByUserResponse(carts, accountType)
+
+	desa, err := service.DesaRepositoryInterface.FindDesaById(service.DB, idDesa)
+	exceptions.PanicIfError(err, requestid, service.Logger)
+	// if desa.Ongkir == 0 {
+	// 	exceptions.PanicIfRecordNotFound(errors.New("shipping cost not found"), requestid, []string{"shipping cost not found"}, service.Logger)
+	// }
+
+	cartResponses = response.ToFindCartByUserResponse(carts, desa.Ongkir, accountType)
 	return cartResponses
 }

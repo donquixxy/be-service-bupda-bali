@@ -1,7 +1,7 @@
 package entity
 
 type Setting struct {
-	Id           string  `gorm:"primaryKey;column:id;"`
+	Id           int     `gorm:"primaryKey;column:id;"`
 	IdDesa       string  `gorm:"column:id_desa;"`
 	SettingTitle string  `gorm:"column:settings_title;"`
 	SettingName  string  `gorm:"column:settings_name;"`

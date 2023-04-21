@@ -11,6 +11,7 @@ type UserShippingAddressRepositoryInterface interface {
 	FindUserShippingAddressByIdUser(DB *gorm.DB, idUser string) ([]entity.UserShippingAddress, error)
 	FindUserShippingAddressById(DB *gorm.DB, idUserShippingAddress string) (*entity.UserShippingAddress, error)
 	DeleteUserShippingAddress(DB *gorm.DB, idUserShippingAddress string) error
+	FindUserShippingAddressByAddress(DB *gorm.DB, address string) (*entity.UserShippingAddress, error)
 }
 
 type UserShippingAddressRepositoryImplementation struct {
@@ -21,6 +22,12 @@ func NewUserShippingAddressRepository(db *config.Database) UserShippingAddressRe
 	return &UserShippingAddressRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *UserShippingAddressRepositoryImplementation) FindUserShippingAddressByAddress(DB *gorm.DB, address string) (*entity.UserShippingAddress, error) {
+	userShippingAddresss := &entity.UserShippingAddress{}
+	results := DB.Where("alamat_pengiriman = ?", address).Find(userShippingAddresss)
+	return userShippingAddresss, results.Error
 }
 
 func (repository *UserShippingAddressRepositoryImplementation) CreateUserShippingAddress(DB *gorm.DB, userAddress *entity.UserShippingAddress) (*entity.UserShippingAddress, error) {

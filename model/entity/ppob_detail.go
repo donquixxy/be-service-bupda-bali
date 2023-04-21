@@ -29,6 +29,30 @@ func (PpobDetailPostpaidPdam) TableName() string {
 	return "ppob_detail_postpaid_pdam"
 }
 
+type PpobDetailPostpaidTelco struct {
+	Id                  string        `gorm:"primaryKey;column:id;"`
+	IdOrderItemPpob     string        `gorm:"column:id_order_item_ppob;"`
+	OrderItemPpob       OrderItemPpob `gorm:"foreignKey:IdOrderItemPpob;"`
+	TrId                int           `gorm:"column:tr_id;"`
+	CustomerId          string        `gorm:"column:customer_id;"`
+	CustomerName        string        `gorm:"column:customer_name;"`
+	RefId               string        `gorm:"column:ref_id;"`
+	Period              string        `gorm:"column:period;"`
+	KodeArea            string        `gorm:"column:kode_area;"`
+	Divre               string        `gorm:"column:divre;"`
+	Datel               string        `gorm:"column:datel;"`
+	StatusTopUp         int           `gorm:"column:status_topup;"`
+	LastBalance         float64       `gorm:"column:last_balance;"`
+	TopupProccesingDate null.Time     `gorm:"column:topup_proccesing_date;"`
+	TopupSuccessDate    null.Time     `gorm:"column:topup_success_date;"`
+	TopupFailedDate     null.Time     `gorm:"column:topup_failed_date;"`
+	JsonDetailTagihan   string        `gorm:"column:json_detail_tagihan;"`
+}
+
+func (PpobDetailPostpaidTelco) TableName() string {
+	return "ppob_detail_postpaid_telco"
+}
+
 type PpobDetailPostpaidPln struct {
 	Id                  string        `gorm:"primaryKey;column:id;"`
 	IdOrderItemPpob     string        `gorm:"column:id_order_item_ppob;"`

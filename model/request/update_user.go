@@ -1,5 +1,5 @@
 package request
 
-type UpdateUser struct {
-	
-}
+// type InveliUpdateMemberRequest struct {
+// 	IDMember
+// }

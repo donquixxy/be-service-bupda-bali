@@ -18,3 +18,17 @@ func ReadFromLoginRequestBody(c echo.Context, requestId string, logger *logrus.L
 	}
 	return loginRequest
 }
+
+type UbahPasswordInveliRequest struct {
+	Phone              string `json:"phone" form:"phone" validate:"required"`
+	PasswordFromInveli string `json:"password_from_inveli" form:"password_from_inveli" validate:"required"`
+	NewPassword        string `json:"new_password" form:"new_password" validate:"required"`
+}
+
+func ReadFromLoginInveliRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *UbahPasswordInveliRequest {
+	ubahPasswordInveliRequest := &UbahPasswordInveliRequest{}
+	if err := c.Bind(ubahPasswordInveliRequest); err != nil {
+		exceptions.PanicIfError(err, requestId, logger)
+	}
+	return ubahPasswordInveliRequest
+}

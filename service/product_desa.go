@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -11,6 +10,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/entity"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/repository"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"gorm.io/gorm"
 )
 
@@ -82,7 +82,7 @@ func (service *ProductDesaServiceImplementation) FindProductsDesaBySubCategory(r
 
 func (service *ProductDesaServiceImplementation) FindProductsDesaByPromo(requestid string, IdDesa string, IdPromo string, AccountType int) (productsDesaResponses []response.FindProductsDesaResponse) {
 	productsDesa, err := service.ProductDesaRepositoryInterface.FindProductsDesaByPromo(service.DB, IdDesa, IdPromo)
-	fmt.Println("product = ", productsDesa)
+	// fmt.Println("product = ", productsDesa)
 	exceptions.PanicIfError(err, requestid, service.Logger)
 	if len(productsDesa) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("not found"), requestid, []string{"data not found"}, service.Logger)
@@ -123,6 +123,7 @@ func (service *ProductDesaServiceImplementation) UpdateProductStock(requestId st
 		exceptions.PanicIfErrorWithRollback(errFindProduct, requestId, []string{"product not found"}, service.Logger, db)
 
 		productDesaEntityStockHistory := &entity.ProductDesaStockHistory{}
+		productDesaEntityStockHistory.Id = utilities.RandomUUID()
 		productDesaEntityStockHistory.IdProductDesa = orderItem.IdProductDesa
 		productDesaEntityStockHistory.TransDate = time.Now()
 		productDesaEntityStockHistory.MinStockQty = orderItem.Qty

@@ -13,6 +13,7 @@ import (
 
 type AuthControllerInterface interface {
 	Login(c echo.Context) error
+	FirstTimeUbahPasswordInveli(c echo.Context) error
 	NewToken(c echo.Context) error
 }
 
@@ -37,6 +38,14 @@ func (controller *AuthControllerImplementation) Login(c echo.Context) error {
 	request := request.ReadFromLoginRequestBody(c, requestId, controller.Logger)
 	loginResponse := controller.AuthServiceInterface.Login(requestId, request)
 	respon := response.Response{Code: 200, Mssg: "success", Data: loginResponse, Error: []string{}}
+	return c.JSON(http.StatusOK, respon)
+}
+
+func (controller *AuthControllerImplementation) FirstTimeUbahPasswordInveli(c echo.Context) error {
+	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
+	request := request.ReadFromLoginInveliRequestBody(c, requestId, controller.Logger)
+	loginInveliResponse := controller.AuthServiceInterface.FirstTimeUbahPasswordInveli(requestId, request)
+	respon := response.Response{Code: 200, Mssg: "success", Data: loginInveliResponse, Error: []string{}}
 	return c.JSON(http.StatusOK, respon)
 }
 
