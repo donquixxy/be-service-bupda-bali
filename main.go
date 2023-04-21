@@ -354,6 +354,7 @@ func main() {
 	routes.UserShippingAddressRoute(e, appConfig.Jwt, userShippingAddressController)
 	routes.PpobRoute(e, appConfig.Jwt, ppobController)
 	routes.InveliTestRoutes(e, testingInveliController)
+	routes.MainRoute(e)
 
 	// Careful shutdown
 	go func() {
