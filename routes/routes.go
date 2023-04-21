@@ -7,6 +7,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/controller"
 	authMiddlerware "github.com/tensuqiuwulu/be-service-bupda-bali/middleware"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 )
 
 func AuthRoute(e *echo.Echo, authControllerInterface controller.AuthControllerInterface) {
@@ -176,6 +177,6 @@ func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface con
 // Main Route
 func MainRoute(e *echo.Echo) {
 	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Welcome")
+		return c.JSON(http.StatusOK, response.Response{Code: 200, Mssg: "success", Data: nil, Error: []string{}})
 	})
 }
