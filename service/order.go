@@ -2848,24 +2848,24 @@ func (service *OrderServiceImplementation) CallbackPpobTransaction(requestId str
 	}
 }
 
-func (service *OrderServiceImplementation) UpdateLoanIdToOrder(idOrder string, idUser string) {
-	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
-	if err != nil {
-		exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
-	}
+// func (service *OrderServiceImplementation) UpdateLoanIdToOrder(idOrder string, idUser string) {
+// 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+// 	if err != nil {
+// 		exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
+// 	}
 
-	lastLoanId, err := service.InveliAPIRepositoryInterface.GetLastLoanIdPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
-	if err != nil {
-		log.Println("error get tagihan inveli", err.Error())
-		exceptions.PanicIfError(err, "", service.Logger)
-	}
+// 	lastLoanId, err := service.InveliAPIRepositoryInterface.GetLastLoanIdPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+// 	if err != nil {
+// 		log.Println("error get tagihan inveli", err.Error())
+// 		exceptions.PanicIfError(err, "", service.Logger)
+// 	}
 
-	err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, idOrder, &entity.Order{
-		LoanId: lastLoanId,
-	})
+// 	err = service.OrderRepositoryInterface.UpdateOrderByIdOrder(service.DB, idOrder, &entity.Order{
+// 		LoanId: lastLoanId,
+// 	})
 
-	if err != nil {
-		log.Println("error update loan id to order", err.Error())
-		exceptions.PanicIfError(err, "", service.Logger)
-	}
-}
+// 	if err != nil {
+// 		log.Println("error update loan id to order", err.Error())
+// 		exceptions.PanicIfError(err, "", service.Logger)
+// 	}
+// }

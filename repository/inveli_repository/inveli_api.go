@@ -474,7 +474,7 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 	if respData == nil {
 		return nil, nil
 	} else {
-		log.Println("response tagihan pay later : ", respData)
+		// log.Println("response tagihan pay later : ", respData)
 
 		riwayatPinjamans := []inveli.RiwayatPinjaman2{}
 
