@@ -7,6 +7,7 @@ RUN apk add git && CGO_ENABLED=0 GOOS=linux go build -o be-service-bupda-bali .
 
 # generate clean, final image for end users
 FROM alpine
+RUN apk add --no-cache curl
 RUN apk update && apk add ca-certificates && apk add tzdata && apk add git
 COPY --from=builder /build .
 ENV TZ="Asia/Makassar"
