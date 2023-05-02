@@ -6,6 +6,7 @@
 *.dylib
 config-dev.yml
 config-prod.yml
+config.yml
 # Test binary, built with `go test -c`
 *.test
 
