@@ -24,9 +24,14 @@ type FindProductDesaByIdResponse struct {
 }
 
 type ListItemsPackage struct {
-	Id          string `json:"id"`
-	ProductName string `json:"product_name"`
-	Qty         int    `json:"qty"`
+	Id          string  `json:"id"`
+	ProductName string  `json:"product_name"`
+	Description string  `json:"description"`
+	PictureUrl  string  `json:"picture_url"`
+	Thumbnail   string  `json:"thumbnail"`
+	Price       float64 `json:"price"`
+	Qty         int     `json:"qty"`
+	SubTotal    float64 `json:"sub_total"`
 }
 
 func ToFindProductDesaByIdResponse(productDesa *entity.ProductsDesa, AccountType int, listItems []entity.ProductsPackageItems) (productDesaResponse FindProductDesaByIdResponse) {
@@ -53,10 +58,18 @@ func ToFindProductDesaByIdResponse(productDesa *entity.ProductsDesa, AccountType
 		productDesaResponse.PriceInfo = "Harga Grosir"
 		productDesaResponse.Price = productDesa.PriceGrosir
 	}
-	productDesaResponse.Description = productDesa.ProductsMaster.Description
-	productDesaResponse.PictureUrl = productDesa.ProductsMaster.PictureUrl
-	productDesaResponse.Thumbnail = productDesa.ProductsMaster.Thumbnail
-	productDesaResponse.StockOpname = productDesa.StockOpname
+
+	if productDesa.IdType == 1 {
+		productDesaResponse.Description = productDesa.ProductsMaster.Description
+		productDesaResponse.PictureUrl = productDesa.ProductsMaster.PictureUrl
+		productDesaResponse.Thumbnail = productDesa.ProductsMaster.Thumbnail
+		productDesaResponse.StockOpname = productDesa.StockOpname
+	} else if productDesa.IdType == 2 {
+		productDesaResponse.Description = productDesa.Description
+		productDesaResponse.PictureUrl = productDesa.PictureUrl
+		productDesaResponse.Thumbnail = productDesa.Thumbnail
+		productDesaResponse.StockOpname = productDesa.StockOpname
+	}
 
 	if productDesa.IdType == 2 {
 		listItemsResponses := []ListItemsPackage{}
@@ -64,7 +77,12 @@ func ToFindProductDesaByIdResponse(productDesa *entity.ProductsDesa, AccountType
 			listItemResponse := ListItemsPackage{}
 			listItemResponse.Id = listItem.Id
 			listItemResponse.ProductName = listItem.ProductName
+			productDesaResponse.Description = productDesa.ProductsMaster.Description
+			productDesaResponse.PictureUrl = productDesa.ProductsMaster.PictureUrl
+			productDesaResponse.Thumbnail = productDesa.ProductsMaster.Thumbnail
+			listItemResponse.Price = listItem.Price
 			listItemResponse.Qty = listItem.Qty
+			listItemResponse.SubTotal = listItem.SubTotal
 			listItemsResponses = append(listItemsResponses, listItemResponse)
 		}
 		productDesaResponse.ListItemsPackage = listItemsResponses

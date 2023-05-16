@@ -31,6 +31,8 @@ func NewProductDesaRepository(
 func (repository *ProductDesaRepositoryImplementation) FindListPackageByIdProductDesa(db *gorm.DB, IdProductDesa string) ([]entity.ProductsPackageItems, error) {
 	productsDesa := []entity.ProductsPackageItems{}
 	result := db.
+		Joins("ProductsMaster").
+		Joins("ProductsDesa").
 		Find(&productsDesa, "id_product_primary = ?", IdProductDesa)
 	return productsDesa, result.Error
 }

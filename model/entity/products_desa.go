@@ -13,6 +13,9 @@ type ProductsDesa struct {
 	IdDesa          string         `gorm:"column:id_desa;"`
 	StockOpname     int            `gorm:"column:stock_opname;"`
 	IsPromo         int            `gorm:"column:is_promo;"`
+	PictureUrl      string         `gorm:"column:picture_url;"`
+	Thumbnail       string         `gorm:"column:thumbnail;"`
+	Description     string         `gorm:"column:description;"`
 }
 
 func (ProductsDesa) TableName() string {
@@ -27,6 +30,7 @@ type ProductsPackageItems struct {
 	ProductName         string  `gorm:"column:product_name;"`
 	Price               float64 `gorm:"column:price;"`
 	Qty                 int     `gorm:"column:qty;"`
+	SubTotal            float64 `gorm:"column:sub_total;"`
 }
 
 func (ProductsPackageItems) TableName() string {

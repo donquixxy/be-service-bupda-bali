@@ -221,10 +221,10 @@ func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.
 	var date1 time.Time
 	var date2 time.Time
 	if day < 25 {
-		date1 = time.Date(now.Year(), now.Month()-1, 25, 23, 59, 59, 0, time.UTC)
+		date1 = time.Date(now.Year(), now.Month()-1, 24, 23, 59, 59, 0, time.UTC)
 		date2 = time.Date(now.Year(), now.Month(), 26, 0, 0, 0, 0, time.UTC)
 	} else if day >= 25 {
-		date1 = time.Date(now.Year(), now.Month(), 25, 23, 59, 59, 0, time.UTC)
+		date1 = time.Date(now.Year(), now.Month(), 24, 23, 59, 59, 0, time.UTC)
 		date2 = time.Date(now.Year(), now.Month()+1, 26, 0, 0, 0, 0, time.UTC)
 	}
 
