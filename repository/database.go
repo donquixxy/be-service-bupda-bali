@@ -9,6 +9,7 @@ import (
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func NewDatabaseConnection(DB *config.Database) *gorm.DB {
@@ -19,7 +20,7 @@ func NewDatabaseConnection(DB *config.Database) *gorm.DB {
 		strconv.Itoa(int(DB.Port)),
 		DB.Name)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		// Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
 
 	if err != nil {

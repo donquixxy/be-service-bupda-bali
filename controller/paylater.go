@@ -16,7 +16,7 @@ import (
 
 type PaylaterControllerInterface interface {
 	PayPaylater(c echo.Context) error
-	DebetPerTransaksi(c echo.Context) error
+	DebetMultipleTransaksi(c echo.Context) error
 	GetTagihanPaylater(c echo.Context) error
 	GetRiwayatPaylaterPerBulan(c echo.Context) error
 	GetOrderPaylaterByMonth(c echo.Context) error
@@ -43,11 +43,11 @@ func NewPaylaterController(
 	}
 }
 
-func (controller *PaylaterControllerImplementation) DebetPerTransaksi(c echo.Context) error {
+func (controller *PaylaterControllerImplementation) DebetMultipleTransaksi(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	IdUser := middleware.TokenClaimsIdUser(c)
 	debetRequest := request.ReadFromDebetPerTransaksiRequestBody(c, requestId, controller.logger)
-	controller.PaymentServiceInterface.DebetPerTransaksi(requestId, IdUser, debetRequest.LoanId)
+	controller.PaymentServiceInterface.DebetMultipleTransaksi(requestId, IdUser, debetRequest.LoanId)
 	responses := response.Response{Code: 201, Mssg: "success", Data: "success pay paylater", Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }

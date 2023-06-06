@@ -26,7 +26,7 @@ type OrderRepositoryInterface interface {
 	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error)
-	FindOldestUnPaidPaylater(db *gorm.DB, idUser string) (entity.Order, error)
+	FindOldestUnPaidPaylater(db *gorm.DB, idUser string, limit int) ([]entity.Order, error)
 	FindOrderTotalPaylaterByMonth(db *gorm.DB, idUser string, month int) ([]entity.Order, error)
 }
 
@@ -56,8 +56,8 @@ func (repository *OrderRepositoryImplementation) FindUnPaidPaylater(db *gorm.DB,
 	return orders, result.Error
 }
 
-func (repository *OrderRepositoryImplementation) FindOldestUnPaidPaylater(db *gorm.DB, idUser string) (entity.Order, error) {
-	orders := entity.Order{}
+func (repository *OrderRepositoryImplementation) FindOldestUnPaidPaylater(db *gorm.DB, idUser string, limit int) ([]entity.Order, error) {
+	orders := []entity.Order{}
 
 	result := db.
 		Where("id_user = ?", idUser).
@@ -65,6 +65,7 @@ func (repository *OrderRepositoryImplementation) FindOldestUnPaidPaylater(db *go
 		Where("payment_method = ?", "paylater").
 		Where("paylater_paid_status = ?", 0).
 		Order("order_date ASC").
+		Limit(limit).
 		Find(&orders)
 
 	return orders, result.Error

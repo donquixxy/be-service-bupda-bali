@@ -7,7 +7,7 @@ import (
 )
 
 type DebetPerTransaksiRequest struct {
-	LoanId string `json:"loan_id" form:"loan_id" validate:"required"`
+	LoanId []string `json:"loan_id" form:"loan_id" validate:"required"`
 }
 
 func ReadFromDebetPerTransaksiRequestBody(c echo.Context, requestId string, logger *logrus.Logger) *DebetPerTransaksiRequest {
