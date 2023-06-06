@@ -37,7 +37,7 @@ type PaymentServiceInterface interface {
 	PayPaylaterBill(requestId, idUser string) error
 	GetTabunganBimaMutation(requestId, idUser, startDate, endDate string) (responseMutation []response.GetMutationResponse)
 	PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaNoRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order
-	DebetPerTransaksi(requestId, idUser, idOrder string) error
+	DebetMultipleTransaksi(requestId, idUser string, loanId []string) error
 	GetTagihanPelunasan(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPelunasan)
 }
 
@@ -48,6 +48,7 @@ type PaymentServiceImplementation struct {
 	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 	OrderRepositoryInterface          repository.OrderRepositoryInterface
 	PaymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface
+	PaymentQueueRepositoryInterface   repository.PaymentQueueRepositoryInterface
 }
 
 func NewPaymentService(
@@ -57,6 +58,7 @@ func NewPaymentService(
 	inveliAPIRepository invelirepository.InveliAPIRepositoryInterface,
 	orderRepository repository.OrderRepositoryInterface,
 	paymentHistoryRepository repository.PaymentHistoryRepositoryInterface,
+	paymentQueueRepository repository.PaymentQueueRepositoryInterface,
 ) PaymentServiceInterface {
 	return &PaymentServiceImplementation{
 		DB:                                db,
@@ -65,34 +67,70 @@ func NewPaymentService(
 		InveliAPIRepositoryInterface:      inveliAPIRepository,
 		OrderRepositoryInterface:          orderRepository,
 		PaymentHistoryRepositoryInterface: paymentHistoryRepository,
+		PaymentQueueRepositoryInterface:   paymentQueueRepository,
 	}
 }
 
-func (service *PaymentServiceImplementation) DebetPerTransaksi(requestId, idUser, loanId string) error {
-	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
-	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
-	}
+func (service *PaymentServiceImplementation) DebetMultipleTransaksi(requestId, idUser string, loanId []string) error {
+	var err error
 
-	orderOldest, err := service.OrderRepositoryInterface.FindOldestUnPaidPaylater(service.DB, idUser)
+	jmlLoan := len(loanId)
+	orderOldest, err := service.OrderRepositoryInterface.FindOldestUnPaidPaylater(service.DB, idUser, jmlLoan)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
 	}
 
-	err = service.InveliAPIRepositoryInterface.DebetPerTransaksi(user.User.InveliAccessToken, loanId)
-	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{"debet per transaksi failed"}, service.Logger)
+	paymentQueues := []entity.PaymentQueue{}
+	for i, loan := range loanId {
+
+		PaymentQueue := entity.PaymentQueue{}
+		PaymentQueue.IdOrder = orderOldest[i].Id
+		PaymentQueue.LoanId = loan
+		PaymentQueue.Status = 0
+		PaymentQueue.CreatedAt = time.Now()
+		PaymentQueue.ProcessedAt = null.TimeFrom(time.Now())
+
+		paymentQueues = append(paymentQueues, PaymentQueue)
 	}
 
-	// Update paylater status in order transaction
-	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, orderOldest.Id, &entity.Order{
-		PaylaterPaidStatus: 1,
-	})
-
+	err = service.PaymentQueueRepositoryInterface.CreatePaymentQueue(service.DB, paymentQueues)
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{"error create payment queue " + err.Error()}, service.Logger)
 	}
+
+	go service.QueuePaymentProcces(idUser)
+
 	return nil
+}
+
+func (service *PaymentServiceImplementation) QueuePaymentProcces(idUser string) {
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
+	}
+
+	paymentQueues, _ := service.PaymentQueueRepositoryInterface.FindPaymentQueueByIdUser(service.DB, idUser)
+
+	for _, paymentQueue := range paymentQueues {
+		err = service.InveliAPIRepositoryInterface.DebetPerTransaksi(user.User.InveliAccessToken, paymentQueue.LoanId)
+		if err != nil {
+			service.PaymentQueueRepositoryInterface.UpdateFailedPaymentQueueById(service.DB, user.Id, &entity.PaymentQueue{
+				Status:      2,
+				ProcessedAt: null.TimeFrom(time.Now()),
+			})
+
+			break
+		}
+
+		service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, paymentQueue.IdOrder, &entity.Order{
+			PaylaterPaidStatus: 1,
+		})
+
+		service.PaymentQueueRepositoryInterface.UpdatePaymentQueueById(service.DB, paymentQueue.Id, &entity.PaymentQueue{
+			Status:      1,
+			ProcessedAt: null.TimeFrom(time.Now()),
+		})
+	}
 }
 
 func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order {

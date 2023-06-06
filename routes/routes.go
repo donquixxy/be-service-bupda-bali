@@ -171,7 +171,7 @@ func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface con
 	group.GET("/paylater/paid-transaction", paylaterControllerInterface.GetPembayaranTransaksiByIdUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/bima/mutation", paylaterControllerInterface.GetTabunganBimaMutation, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/paylater/tagihan-pelunasan", paylaterControllerInterface.GetTagihanPelunasan, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
-	group.POST("/paylater/debet-per-transaksi", paylaterControllerInterface.DebetPerTransaksi, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/paylater/debet-multiple-transaksi", paylaterControllerInterface.DebetMultipleTransaksi, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 }
 
 // Main Route
