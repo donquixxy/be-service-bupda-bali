@@ -1,10 +1,13 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/controller"
 	authMiddlerware "github.com/tensuqiuwulu/be-service-bupda-bali/middleware"
+	"github.com/tensuqiuwulu/be-service-bupda-bali/model/response"
 )
 
 func AuthRoute(e *echo.Echo, authControllerInterface controller.AuthControllerInterface) {
@@ -167,4 +170,13 @@ func PaylaterRoute(e *echo.Echo, jwt config.Jwt, paylaterControllerInterface con
 	group.GET("/order/paylater-month", paylaterControllerInterface.GetOrderPaylaterByMonth, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/paylater/paid-transaction", paylaterControllerInterface.GetPembayaranTransaksiByIdUser, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
 	group.GET("/bima/mutation", paylaterControllerInterface.GetTabunganBimaMutation, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.GET("/paylater/tagihan-pelunasan", paylaterControllerInterface.GetTagihanPelunasan, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+	group.POST("/paylater/debet-multiple-transaksi", paylaterControllerInterface.DebetMultipleTransaksi, authMiddlerware.Authentication(jwt), authMiddlerware.RateLimit(), authMiddlerware.Timeout())
+}
+
+// Main Route
+func MainRoute(e *echo.Echo) {
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, response.Response{Code: 200, Mssg: "success", Data: nil, Error: []string{}})
+	})
 }

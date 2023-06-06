@@ -37,6 +37,8 @@ type PaymentServiceInterface interface {
 	PayPaylaterBill(requestId, idUser string) error
 	GetTabunganBimaMutation(requestId, idUser, startDate, endDate string) (responseMutation []response.GetMutationResponse)
 	PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaNoRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order
+	DebetMultipleTransaksi(requestId, idUser string, loanId []string) error
+	GetTagihanPelunasan(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPelunasan)
 }
 
 type PaymentServiceImplementation struct {
@@ -46,6 +48,7 @@ type PaymentServiceImplementation struct {
 	InveliAPIRepositoryInterface      invelirepository.InveliAPIRepositoryInterface
 	OrderRepositoryInterface          repository.OrderRepositoryInterface
 	PaymentHistoryRepositoryInterface repository.PaymentHistoryRepositoryInterface
+	PaymentQueueRepositoryInterface   repository.PaymentQueueRepositoryInterface
 }
 
 func NewPaymentService(
@@ -55,6 +58,7 @@ func NewPaymentService(
 	inveliAPIRepository invelirepository.InveliAPIRepositoryInterface,
 	orderRepository repository.OrderRepositoryInterface,
 	paymentHistoryRepository repository.PaymentHistoryRepositoryInterface,
+	paymentQueueRepository repository.PaymentQueueRepositoryInterface,
 ) PaymentServiceInterface {
 	return &PaymentServiceImplementation{
 		DB:                                db,
@@ -63,12 +67,87 @@ func NewPaymentService(
 		InveliAPIRepositoryInterface:      inveliAPIRepository,
 		OrderRepositoryInterface:          orderRepository,
 		PaymentHistoryRepositoryInterface: paymentHistoryRepository,
+		PaymentQueueRepositoryInterface:   paymentQueueRepository,
+	}
+}
+
+func (service *PaymentServiceImplementation) DebetMultipleTransaksi(requestId, idUser string, loanId []string) error {
+	var err error
+
+	jmlLoan := len(loanId)
+	orderOldest, err := service.OrderRepositoryInterface.FindOldestUnPaidPaylater(service.DB, idUser, jmlLoan)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
+	}
+
+	paymentQueues := []entity.PaymentQueue{}
+	for i, loan := range loanId {
+
+		PaymentQueue := entity.PaymentQueue{}
+		PaymentQueue.IdOrder = orderOldest[i].Id
+		PaymentQueue.LoanId = loan
+		PaymentQueue.Status = 0
+		PaymentQueue.CreatedAt = time.Now()
+		PaymentQueue.ProcessedAt = null.TimeFrom(time.Now())
+
+		paymentQueues = append(paymentQueues, PaymentQueue)
+	}
+
+	err = service.PaymentQueueRepositoryInterface.CreatePaymentQueue(service.DB, paymentQueues)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"error create payment queue " + err.Error()}, service.Logger)
+	}
+
+	go service.QueuePaymentProcces(idUser)
+
+	return nil
+}
+
+func (service *PaymentServiceImplementation) QueuePaymentProcces(idUser string) {
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
+	}
+
+	paymentQueues, _ := service.PaymentQueueRepositoryInterface.FindPaymentQueueByIdUser(service.DB, idUser)
+
+	for _, paymentQueue := range paymentQueues {
+		err = service.InveliAPIRepositoryInterface.DebetPerTransaksi(user.User.InveliAccessToken, paymentQueue.LoanId)
+		if err != nil {
+			service.PaymentQueueRepositoryInterface.UpdateFailedPaymentQueueById(service.DB, user.Id, &entity.PaymentQueue{
+				Status:      2,
+				ProcessedAt: null.TimeFrom(time.Now()),
+			})
+
+			break
+		}
+
+		service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, paymentQueue.IdOrder, &entity.Order{
+			PaylaterPaidStatus: 1,
+		})
+
+		service.PaymentQueueRepositoryInterface.UpdatePaymentQueueById(service.DB, paymentQueue.Id, &entity.PaymentQueue{
+			Status:      1,
+			ProcessedAt: null.TimeFrom(time.Now()),
+		})
 	}
 }
 
 func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, inveliIdMember, desaGroupIdBupda, desaRekening, idUser string, orderRequestTotalBill, orderRequestPaymentFee float64) entity.Order {
 	var isMerchant float64
 	var totalAmount float64
+	var err error
+
+	// cek tunggakan 2 bulan terakhir
+	unPaidPaylater, err := service.OrderRepositoryInterface.FindUnPaidPaylater(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfError(err, "", service.Logger)
+	}
+
+	if len(unPaidPaylater) > 0 && unPaidPaylater[0].OrderedDate.Before(time.Now().AddDate(0, -2, 0)) {
+		log.Println("ada tunggakan !!! ")
+		exceptions.PanicIfBadRequest(errors.New("masih ada tunggakan 2 bulan terakhir"), "", []string{"Masih ada tunggakan selama 2 bulan yang belum dibayar"}, service.Logger)
+	}
 
 	// Set Is Merchant 0
 	isMerchant = 0
@@ -79,27 +158,23 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	saldoBupda, err := service.InveliAPIRepositoryInterface.GetSaldoBupda(inveliAccessToken, desaGroupIdBupda)
 
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("error saldo bupda "+err.Error()), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error saldo bupda "+err.Error()), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 	}
 
 	if saldoBupda <= 0 {
-		exceptions.PanicIfBadRequest(errors.New("saldo bupda kurang"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
-	}
-
-	if saldoBupda <= totalAmount {
-		exceptions.PanicIfBadRequest(errors.New("saldo bupda kurang dari"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("saldo bupda kurang"), "", []string{"Mohon maaf transaksi belum bisa dilakukan"}, service.Logger)
 	}
 
 	// Get Bunga
 	bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(inveliAccessToken)
 	if errr != nil {
-		exceptions.PanicIfBadRequest(errors.New("error get loan product "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error get loan product "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	// Get Loan Product
 	loandProductID, err := service.InveliAPIRepositoryInterface.GetLoanProductId(inveliAccessToken)
 	if errr != nil {
-		exceptions.PanicIfBadRequest(errors.New("error get loan product id "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error get loan product id "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	if len(loandProductID) == 0 {
@@ -117,7 +192,7 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 
 	err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(inveliAccessToken, inveliIdMember, accountUser.IdAccount, orderRequestTotalBill, totalAmount, isMerchant, bunga, loandProductID, desaRekening)
 	if err != nil {
-		exceptions.PanicIfBadRequest(errors.New("error care pinjaman "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfRecordNotFound(errors.New("error care pinjaman "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	orderEntity := entity.Order{}
@@ -219,8 +294,12 @@ func (service *PaymentServiceImplementation) PayPaylaterBill(requestId, idUser s
 		subTotal += v.SubTotal
 	}
 
+	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		exceptions.PanicIfRecordNotFound(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+	}
+
 	now := time.Now()
-	rand.Seed(time.Now().UTC().UnixNano())
 	generateCode := 100000 + rand.Intn(999999-100000)
 	numberOrder := "TAGIHAN" + "/" + now.Format("20060102") + "/" + fmt.Sprint(generateCode)
 
@@ -253,21 +332,15 @@ func (service *PaymentServiceImplementation) PayPaylaterBill(requestId, idUser s
 		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error insert payment history " + err.Error()}, service.Logger, tx)
 	}
 
-	err = service.InveliAPIRepositoryInterface.PayPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(tx, idUser, &entity.Order{
+		PaylaterPaidStatus: 1,
+	})
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
+		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
 	}
 
 	commit := tx.Commit()
 	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
-
-	err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, idUser, &entity.Order{
-		PaylaterPaidStatus: 1,
-	})
-
-	if err != nil {
-		exceptions.PanicIfErrorWithRollback(err, requestId, []string{"error update paylater status " + err.Error()}, service.Logger, tx)
-	}
 
 	return nil
 }
@@ -446,4 +519,21 @@ func (service *PaymentServiceImplementation) CreditCardPay(requestId string, pay
 	}
 
 	return &dataResponseIpaymu
+}
+
+func (service *PaymentServiceImplementation) GetTagihanPelunasan(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPelunasan) {
+	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	if err != nil {
+		exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
+	}
+
+	tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylaterByLatest(user.User.InveliIDMember, user.User.InveliAccessToken)
+	if err != nil {
+		log.Println("error get tagihan inveli", err.Error())
+		exceptions.PanicIfError(err, requestId, service.Logger)
+	}
+
+	tagihanPaylaterResponse = response.ToFindTagihanPelunasan(tagihanPaylater)
+	return tagihanPaylaterResponse
+
 }

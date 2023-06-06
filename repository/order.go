@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/tensuqiuwulu/be-service-bupda-bali/config"
@@ -21,9 +20,14 @@ type OrderRepositoryInterface interface {
 	FindOrderPrepaidPlnById(db *gorm.DB, idUser string) (*entity.Order, error)
 	FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error)
 	FindOrderPaylaterUnpaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
-	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
+	FindOrderPaylaterAllPaidById(db *gorm.DB, idUser string) ([]entity.Order, error)
+	UpdateOrderPaylaterPaidStatus(db *gorm.DB, idUser string, orderUpdate *entity.Order) error
+	UpdateOrderPaylaterPaidStatusByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error
 	GetOrderPaylaterPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
 	GetOrderPaylaterPaidPerBulan(db *gorm.DB, idUser string, month int) ([]entity.Order, string, string, error)
+	FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error)
+	FindOldestUnPaidPaylater(db *gorm.DB, idUser string, limit int) ([]entity.Order, error)
+	FindOrderTotalPaylaterByMonth(db *gorm.DB, idUser string, month int) ([]entity.Order, error)
 }
 
 type OrderRepositoryImplementation struct {
@@ -36,6 +40,35 @@ func NewOrderRepository(
 	return &OrderRepositoryImplementation{
 		DB: db,
 	}
+}
+
+func (repository *OrderRepositoryImplementation) FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error) {
+	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("order_type < ?", 9).
+		Where("payment_method = ?", "paylater").
+		Where("paylater_paid_status = ?", 0).
+		Order("order_date ASC").
+		Find(&orders)
+
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOldestUnPaidPaylater(db *gorm.DB, idUser string, limit int) ([]entity.Order, error) {
+	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("order_type < ?", 9).
+		Where("payment_method = ?", "paylater").
+		Where("paylater_paid_status = ?", 0).
+		Order("order_date ASC").
+		Limit(limit).
+		Find(&orders)
+
+	return orders, result.Error
 }
 
 func (repository *OrderRepositoryImplementation) GetOrderPaylaterPaidPerBulan(db *gorm.DB, idOrder string, month int) ([]entity.Order, string, string, error) {
@@ -82,25 +115,10 @@ func (repository *OrderRepositoryImplementation) GetOrderPaylaterPerBulan(db *go
 	var startDate string
 	var endDate string
 
-	year := time.Now().Year()
+	// year := time.Now().Year()
 
-	if month == 1 {
-		startDate = fmt.Sprint(year-1) + "-" + fmt.Sprint(12) + "-26 " + "00:00:00"
-		endDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month) + "-25 " + "23:59:59"
-	} else {
-		if month >= 10 {
-			if (month - 1) == 9 {
-				startDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month-1) + "-26 " + "00:00:00"
-				endDate = fmt.Sprint(year) + "-" + fmt.Sprint(month) + "-25 " + "23:59:59"
-			} else {
-				startDate = fmt.Sprint(year) + "-" + fmt.Sprint(month-1) + "-26 " + "00:00:00"
-				endDate = fmt.Sprint(year) + "-" + fmt.Sprint(month) + "-25 " + "23:59:59"
-			}
-		} else {
-			startDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month-1) + "-26 " + "00:00:00"
-			endDate = fmt.Sprint(year) + "-" + "0" + fmt.Sprint(month) + "-25 " + "23:59:59"
-		}
-	}
+	startDate = time.Date(time.Now().Year(), time.Month(month), 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02 15:04:05")
+	endDate = time.Date(time.Now().Year(), time.Month(month+1), 1, 0, 59, 59, 59, time.UTC).Format("2006-01-02 15:04:05")
 
 	result := db.
 		Where("id_user = ?", idOrder).
@@ -123,6 +141,16 @@ func (repository *OrderRepositoryImplementation) UpdateOrderPaylaterPaidStatus(d
 	return result.Error
 }
 
+func (repository *OrderRepositoryImplementation) UpdateOrderPaylaterPaidStatusByIdOrder(db *gorm.DB, idOrder string, orderUpdate *entity.Order) error {
+	order := &entity.Order{}
+	result := db.
+		Model(order).
+		Where("id = ?", idOrder).
+		Where("paylater_paid_status = ?", 0).
+		Updates(orderUpdate)
+	return result.Error
+}
+
 func (repository *OrderRepositoryImplementation) FindOrderPaylaterUnpaidById(db *gorm.DB, idUser string) ([]entity.Order, error) {
 	orders := []entity.Order{}
 
@@ -132,6 +160,28 @@ func (repository *OrderRepositoryImplementation) FindOrderPaylaterUnpaidById(db 
 		Where("paylater_paid_status = ?", 0).
 		Find(&orders)
 
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOrderPaylaterAllPaidById(db *gorm.DB, idUser string) ([]entity.Order, error) {
+	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("payment_method = ?", "paylater").
+		Find(&orders)
+
+	return orders, result.Error
+}
+
+func (repository *OrderRepositoryImplementation) FindOrderTotalPaylaterByMonth(db *gorm.DB, idUser string, month int) ([]entity.Order, error) {
+	orders := []entity.Order{}
+
+	result := db.
+		Where("id_user = ?", idUser).
+		Where("payment_method = ?", "paylater").
+		Where("MONTH(order_date) = ?", month).
+		Find(&orders)
 	return orders, result.Error
 }
 
@@ -165,7 +215,6 @@ func (repository *OrderRepositoryImplementation) FindOrderById(db *gorm.DB, idUs
 }
 
 func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error) {
-	log.Println("masuk")
 	orders := []entity.Order{}
 	// var month time.Month
 	now := time.Now()
@@ -173,10 +222,10 @@ func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.
 	var date1 time.Time
 	var date2 time.Time
 	if day < 25 {
-		date1 = time.Date(now.Year(), now.Month()-1, 25, 23, 59, 59, 0, time.UTC)
+		date1 = time.Date(now.Year(), now.Month()-1, 24, 23, 59, 59, 0, time.UTC)
 		date2 = time.Date(now.Year(), now.Month(), 26, 0, 0, 0, 0, time.UTC)
 	} else if day >= 25 {
-		date1 = time.Date(now.Year(), now.Month(), 25, 23, 59, 59, 0, time.UTC)
+		date1 = time.Date(now.Year(), now.Month(), 24, 23, 59, 59, 0, time.UTC)
 		date2 = time.Date(now.Year(), now.Month()+1, 26, 0, 0, 0, 0, time.UTC)
 	}
 

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"errors"
 	"log"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/sirupsen/logrus"
@@ -14,7 +14,7 @@ import (
 )
 
 type PaylaterServiceInterface interface {
-	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse response.TotalTagihan)
+	GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater)
 	GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse)
 	GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse)
 	GetPembayaranTransaksiByIdUser(requestId, idUser, indexDate string) (response response.FindDetailPyamentPaylater)
@@ -69,6 +69,7 @@ func (service *PaylaterServiceImplementation) GetPembayaranTransaksiByIdUser(req
 }
 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId string, idUser string, month int) (orderResponse []response.FindOrderByUserResponse) {
+
 	order, _, _, err := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, month)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
@@ -79,77 +80,65 @@ func (service *PaylaterServiceImplementation) GetOrderPaylaterByMonth(requestId 
 }
 
 func (service *PaylaterServiceImplementation) GetOrderPaylaterPerBulan(requestId string, idUser string) (orderPaylaterPerBulanResponse []response.GetRiwayatPaylaterPerbulanResponse) {
-	for i := 1; i <= 12; i++ {
 
-		orderPaylaterPerBulan, start, end, _ := service.OrderRepositoryInterface.GetOrderPaylaterPerBulan(service.DB, idUser, i)
-		if len(orderPaylaterPerBulan) == 0 {
-			continue
-		}
+	yearNow := time.Now().Year()
+	monthNow := time.Now().Month()
 
+	for i := 12; i > 0; i-- {
 		var responseData = response.GetRiwayatPaylaterPerbulanResponse{}
+		orderPaylaterPerBulan, _ := service.OrderRepositoryInterface.FindOrderTotalPaylaterByMonth(service.DB, idUser, int(monthNow))
+		responseData.StartDate = time.Date(yearNow, monthNow, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02 15:04:05")
+		responseData.EndDate = time.Date(yearNow, monthNow+1, 0, 0, 0, 0, 0, time.UTC).Format("2006-01-02 15:04:05")
+		responseData.Month = int(monthNow)
+
 		for _, order := range orderPaylaterPerBulan {
-			responseData.StartDate = start
-			responseData.EndDate = end
-			responseData.Month = i
 			responseData.TotalBayar = responseData.TotalBayar + order.TotalBill
 		}
 
 		orderPaylaterPerBulanResponse = append(orderPaylaterPerBulanResponse, responseData)
+
+		monthNow = monthNow - 1
+		if monthNow == 0 {
+			monthNow = 12
+			yearNow = yearNow - 1
+		}
+
+		if responseData.TotalBayar == 0 {
+			orderPaylaterPerBulanResponse = orderPaylaterPerBulanResponse[:len(orderPaylaterPerBulanResponse)-1]
+		}
+
 	}
 
 	return orderPaylaterPerBulanResponse
 }
 
-func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse response.TotalTagihan) {
-	// log.Println("masuk ke tagihan paylater")
-	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
-	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
-	}
+func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPaylater) {
+	// user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
+	// if err != nil {
+	// 	exceptions.PanicIfBadRequest(err, requestId, []string{"user not found"}, service.Logger)
+	// }
 
-	tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	// _, err = service.InveliAPIRepositoryInterface.GetLastLoanIdPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+	// if err != nil {
+	// 	log.Println("error get tagihan inveli", err.Error())
+	// 	exceptions.PanicIfError(err, requestId, service.Logger)
+	// }
+
+	// log.Println("tagihanPaylater = ", tagihanPaylater[0].LoanAccountID)
+
+	// if tagihanPaylater == nil {
+	// 	if user.User.StatusPaylater == 2 {
+	// 		go service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
+	// 	}
+	// }
+
+	tagihanPaylater, err := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	if tagihanPaylater == nil {
-		if user.User.StatusPaylater == 2 {
-			go service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
-		}
-	}
-
-	count := 0
-	for _, tagihan := range tagihanPaylater {
-		if tagihan.IsPaid {
-			continue
-		}
-		count++
-	}
-
-	// log.Println("count", count)
-
-	if count == 0 {
-		log.Println("MASUK")
-		// get riwayat pinjaman
-		tunggakan, err := service.InveliAPIRepositoryInterface.GetRiwayatPinjaman(user.User.InveliAccessToken, user.User.InveliIDMember)
-		if err != nil {
-			log.Println("error get riwayat pinjaman", err.Error())
-			exceptions.PanicIfError(err, requestId, service.Logger)
-		}
-
-		log.Println("tunggakan", tunggakan)
-
-		if len(tunggakan) == 0 {
-			exceptions.PanicIfBadRequest(errors.New("tunggakan not found"), requestId, []string{"tunggakan not found"}, service.Logger)
-		}
-
-		// log.Println("tunggakan", tunggakans)
-		tagihanPaylaterResponse = response.ToFindTunggakanPaylater(tunggakan)
-		return tagihanPaylaterResponse
-	} else {
-		tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
-		return tagihanPaylaterResponse
-	}
+	tagihanPaylaterResponse = response.ToFindTagihanPaylater(tagihanPaylater)
+	return tagihanPaylaterResponse
 
 }

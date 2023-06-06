@@ -19,6 +19,7 @@ import (
 	invelirepository "github.com/tensuqiuwulu/be-service-bupda-bali/repository/inveli_repository"
 	"github.com/tensuqiuwulu/be-service-bupda-bali/utilities"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/guregu/null.v4"
 	"gorm.io/gorm"
 )
 
@@ -99,25 +100,24 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
-		if user.StatusPaylater == 2 {
+		if user.StatusPaylater == 1 || user.StatusPaylater == 2 {
 			go service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 		}
 		// service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 
 		// Get User Paylater List
 		if user.IsPaylater == 0 {
-			go func() {
-				userResult, _ := service.UserRepositoryInterface.FindUserById(service.DB, user.Id)
 
-				userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, userResult.NoIdentitas)
+			userResult, _ := service.UserRepositoryInterface.FindUserById(service.DB, user.Id)
 
-				if len(userPaylaterList.Id) != 0 {
-					userEntity := &entity.User{
-						IsPaylater: 1,
-					}
-					service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+			userPaylaterList, _ := service.UserRepositoryInterface.GetUserPaylaterList(service.DB, userResult.NoIdentitas)
+
+			if len(userPaylaterList.Id) != 0 {
+				userEntity := &entity.User{
+					IsPaylater: 1,
 				}
-			}()
+				service.UserRepositoryInterface.UpdateUser(service.DB, user.Id, userEntity)
+			}
 		}
 
 		return loginResponse
@@ -131,7 +131,7 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 	loginResult := service.InveliAPIRespositoryInterface.InveliLogin(phone, passwordFromInveli)
 
 	if len(loginResult.AccessToken) == 0 {
-		log.Println("login inveli gagal")
+		// log.Println("login inveli gagal")
 		return ""
 		// exceptions.PanicIfBadRequest(errors.New("gagal login to inveli"), "requestId", []string{"Invalid Credentials Inveli Login"}, service.Logger)
 	}
@@ -173,14 +173,12 @@ func (service *AuthServiceImplementation) FirstTimeLoginInveli(phone string, pas
 
 		return loginResult.AccessToken
 	}
-
 }
 
 func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessToken, IdUser string) {
 	accountInfo, _ := service.InveliAPIRespositoryInterface.GetAccountInfo(IDMember, AccessToken)
-	// fmt.Println("accountInfo : ", accountInfo)
 	if accountInfo == nil {
-		log.Println("akun belum aktif")
+		log.Println("Error Get Account Info")
 	} else {
 		go func() {
 			codeBIN, err := service.InveliAPIRespositoryInterface.GetKodeBIN(AccessToken)
@@ -201,7 +199,8 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 			}
 
 			user := &entity.User{
-				StatusPaylater: 2,
+				StatusPaylater:       2,
+				PaylaterApprovalDate: null.NewTime(time.Now(), true),
 			}
 
 			service.UserRepositoryInterface.SaveUserInveliToken(service.DB, IdUser, user)
@@ -219,7 +218,6 @@ func (service *AuthServiceImplementation) GetUserAccountInveli(IDMember, AccessT
 				log.Println("error save user account : ", err.Error())
 			}
 		}()
-
 	}
 }
 
@@ -269,8 +267,6 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 
 	desa, _ := service.DesaRepositoryInterface.FindDesaById(service.DB, user.User.IdDesa)
 
-	log.Println("desa : ", desa.GroupIdBupda)
-
 	if len(desa.GroupIdBupda) == 0 {
 		exceptions.PanicIfRecordNotFound(errors.New("groupd id not found"), requestId, []string{"groupd id not found"}, service.Logger)
 	}
@@ -282,7 +278,6 @@ func (service *AuthServiceImplementation) FirstTimeUbahPasswordInveli(requestId 
 	}
 
 	return nil
-
 }
 
 func (service *AuthServiceImplementation) NewToken(requestId string, refreshToken string) (token string) {

@@ -128,8 +128,6 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	// log.Println("GetLimitPayLater")
-
 	tagihanPaylater, err := service.InveliRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
 		log.Println("error get tagihan inveli", err.Error())
@@ -141,8 +139,6 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 			go service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)
 		}
 	}
-
-	// log.Println("tagihan", tagihanPaylater)
 
 	count := 0
 	for _, tagihan := range tagihanPaylater {
@@ -165,9 +161,11 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		}
 	} else {
 		for _, v := range tagihanPaylater {
-			loanAmount += v.RepaymentAmount
+			loanAmount += v.RepaymentPrincipal
 		}
 	}
+
+	// log.Println("loanAmount = ", loanAmount)
 
 	limitPinjaman, err := service.InveliRepositoryInterface.GetLimitPayLater(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
@@ -258,7 +256,6 @@ func (service *UserServiceImplementation) AktivasiAkunInveli(requestId string, i
 	go SendMessageToTelegram(mssg, desa.ChatIdTelegram, desa.TokenBot)
 
 	tx.Commit()
-
 }
 
 func SendMessageToTelegram(message, chatId, token string) {
@@ -609,10 +606,7 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 
 	var statusAktifUser int
 	if user.User.StatusPaylater != 2 {
-		statusAktifUser, err = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
-		if err != nil {
-			log.Println("error get status account inveli = ", err.Error())
-		}
+		statusAktifUser, _ = service.InveliRepositoryInterface.GetStatusAccount(user.User.InveliIDMember, user.User.InveliAccessToken)
 
 		//  Cek apakah data account ada di tabel user account
 		if statusAktifUser == 2 {
@@ -638,7 +632,8 @@ func (service *UserServiceImplementation) FindUserById(requestId string, idUser 
 
 		if len(userPaylaterList.Id) != 0 {
 			userEntity := &entity.User{
-				IsPaylater: 1,
+				IsPaylater:     1,
+				ActivationDate: null.NewTime(time.Now(), true),
 			}
 
 			service.UserRepositoryInterface.UpdateUser(service.DB, user.User.Id, userEntity)
@@ -718,7 +713,8 @@ func (service *UserServiceImplementation) UpdateUserForgotPassword(requestId str
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
-	tx.Commit()
+	commit := tx.Commit()
+	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
 }
 
 func (service *UserServiceImplementation) UpdateUserProfile(requestId string, idUser string, updateUserProfileRequest *request.UpdateUserProfileRequest) {

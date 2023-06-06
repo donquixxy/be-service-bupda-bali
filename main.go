@@ -83,6 +83,7 @@ func main() {
 	listPinjamanRepository := repository.NewListPinjamanRepository(&appConfig.Database)
 	paymentHistoryRepository := repository.NewPaymentHistoryRepository(&appConfig.Database)
 	appVersionRepository := repository.NewAppVersionRepository(&appConfig.Database)
+	paymentQueueRepository := repository.NewPaymentQueueRepository()
 
 	// Service
 	listPinjamanService := service.NewListPinjamanService(
@@ -203,6 +204,7 @@ func main() {
 		inveliAPIRepository,
 		orderRepository,
 		paymentHistoryRepository,
+		paymentQueueRepository,
 	)
 	orderService := service.NewOrderService(
 		DBConn,
@@ -354,6 +356,7 @@ func main() {
 	routes.UserShippingAddressRoute(e, appConfig.Jwt, userShippingAddressController)
 	routes.PpobRoute(e, appConfig.Jwt, ppobController)
 	routes.InveliTestRoutes(e, testingInveliController)
+	routes.MainRoute(e)
 
 	// Careful shutdown
 	go func() {

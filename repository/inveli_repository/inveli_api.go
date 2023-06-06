@@ -3,6 +3,7 @@ package invelirepository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -32,12 +33,15 @@ type InveliAPIRepositoryInterface interface {
 	GetTunggakan(LoanID, token string) ([]inveli.TunggakanPaylater, error)
 	GetLimitPayLater(IDMember, token string) (*inveli.LimitPaylater, error)
 	GetTagihanPaylater(IDMember, token string) ([]inveli.RiwayatPinjaman2, error)
+	GetTagihanPaylaterByLatest(IDMember, token string) ([]inveli.TagihanPaylater, error)
+	GetLastLoanIdPaylater(IDMember, token string) (lastLoanId string, err error)
 	PayPaylater(loanID, token string) error
 	GetLoanProduct(token string) (float64, error)
 	GetLoanProductId(token string) (string, error)
 	GetSaldoBupda(token, groupID string) (float64, error)
 	GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error)
 	GetRiwayatPinjaman(token, memberID string) ([]inveli.TunggakanPaylater2, error)
+	DebetPerTransaksi(token, loanID string) error
 }
 
 type InveliAPIRepositoryImplementation struct {
@@ -135,16 +139,17 @@ func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID s
 
 			if v.(map[string]interface{})["recordStatus"].(float64) != 18 {
 
-				tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
-				tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
-				tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
-				tunggakan = append(tunggakan, tunggakan2)
+				if len(v.(map[string]interface{})["loanAccountRepayments"].([]interface{})) != 0 {
+					tunggakan2.DateUpdate = v.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
+					tunggakan2.LoanAmount = v.(map[string]interface{})["loanAmount"].(float64)
+					tunggakan2.DateInsert = v.(map[string]interface{})["dateInsert"].(string)
+					tunggakan = append(tunggakan, tunggakan2)
+				}
 			}
 		}
 
 		return tunggakan, nil
 	}
-
 }
 
 func (r *InveliAPIRepositoryImplementation) GetMutation(token, accountID, startDate, endDate string) ([]inveli.Transaction, error) {
@@ -276,6 +281,13 @@ func (r *InveliAPIRepositoryImplementation) PayPaylater(IDMember, token string) 
 		log.Println(err)
 		return err
 	}
+
+	log.Println("response pay pay later : ", respData)
+
+	if respData == nil {
+		return errors.New("error pay pay later payment")
+	}
+
 	return nil
 }
 
@@ -462,10 +474,17 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 	if respData == nil {
 		return nil, nil
 	} else {
+		// log.Println("response tagihan pay later : ", respData)
+
 		riwayatPinjamans := []inveli.RiwayatPinjaman2{}
-		// var data []interface{}
+
 		for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
 			riwayatPinjaman := inveli.RiwayatPinjaman2{}
+
+			if loan.(map[string]interface{})["recordStatus"].(float64) == 18 {
+				continue
+			}
+
 			riwayatPinjaman.ID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["id"].(string)
 			riwayatPinjaman.LoanAccountID = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["loanAccountID"].(string)
 			riwayatPinjaman.RepaymentDate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["repaymentDate"].(string)
@@ -486,10 +505,179 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 			riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
 		}
 
-		// fmt.Println("riwayat pinjaman ", riwayatPinjamans)
 		return riwayatPinjamans, nil
 	}
+}
 
+func (r *InveliAPIRepositoryImplementation) GetTagihanPaylaterByLatest(IDMember, token string) ([]inveli.TagihanPaylater, error) {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	req := graphql.NewRequest(`
+		query ($id: String!) {
+		loans(memberID: $id){
+      loanID
+      code
+      customerID
+      customerName
+      productDesc
+      loanProductID
+      startDate
+      endDate
+      tenorMonth
+      loanAmount
+      interestPercentage
+      repaymentMethod
+      accountID
+      userInsert
+      dateInsert
+      dateAuthor
+      userAuthor
+      recordStatus
+      isLiquidated
+      outstandingAmount
+      nominalWajib
+      filePDFName
+      loanAccountRepayments{
+      	id
+        loanAccountID
+        repaymentType
+        repaymentDate
+        repaymentInterest
+        repaymentPrincipal
+        repaymentAmount
+        repaymentInterestPaid
+        repaymentPrincipalPaid
+        outStandingBakiDebet
+        tellerId
+        isPaid
+        amountPaid
+        paymentTxnID
+        recordStatus
+        userInsert
+        dateInsert
+        userUpdate
+        dateUpdate
+      	}
+    	}
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("id", IDMember)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if respData == nil {
+		return nil, nil
+	} else {
+
+		tagihanPaylaters := []inveli.TagihanPaylater{}
+
+		for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
+			tagihanPaylater := inveli.TagihanPaylater{}
+
+			if loan.(map[string]interface{})["recordStatus"].(float64) == 18 {
+				continue
+			}
+
+			tagihanPaylater.LoanId = loan.(map[string]interface{})["loanID"].(string)
+			tagihanPaylater.LoanAmount = loan.(map[string]interface{})["loanAmount"].(float64)
+			tagihanPaylater.StartDate = loan.(map[string]interface{})["startDate"].(string)
+			tagihanPaylater.EndDate = loan.(map[string]interface{})["endDate"].(string)
+
+			tagihanPaylaters = append(tagihanPaylaters, tagihanPaylater)
+		}
+
+		for i, j := 0, len(tagihanPaylaters)-1; i < j; i, j = i+1, j-1 {
+			tagihanPaylaters[i], tagihanPaylaters[j] = tagihanPaylaters[j], tagihanPaylaters[i]
+		}
+
+		return tagihanPaylaters, nil
+	}
+}
+
+func (r *InveliAPIRepositoryImplementation) GetLastLoanIdPaylater(IDMember, token string) (lastLoanId string, err error) {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	req := graphql.NewRequest(`
+	query ($id: String!) {
+		loans(memberID: $id){
+      loanID
+      code
+      customerID
+      customerName
+      productDesc
+      loanProductID
+      startDate
+      endDate
+      tenorMonth
+      loanAmount
+      interestPercentage
+      repaymentMethod
+      accountID
+      userInsert
+      dateInsert
+      dateAuthor
+      userAuthor
+      recordStatus
+      isLiquidated
+      outstandingAmount
+      nominalWajib
+      filePDFName
+      loanAccountRepayments{
+      	id
+        loanAccountID
+        repaymentType
+        repaymentDate
+        repaymentInterest
+        repaymentPrincipal
+        repaymentAmount
+        repaymentInterestPaid
+        repaymentPrincipalPaid
+        outStandingBakiDebet
+        tellerId
+        isPaid
+        amountPaid
+        paymentTxnID
+        recordStatus
+        userInsert
+        dateInsert
+        userUpdate
+        dateUpdate
+      	}
+    	}
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("id", IDMember)
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	if respData == nil {
+		return "", nil
+	} else {
+		// log.Println("response tagihan pay later : ", respData)
+
+		// for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
+
+		// 	lastLoanId = loan.(map[string]interface{})["loanID"].(string)
+		// }
+
+		lastLoanId = respData.(map[string]interface{})["loans"].([]interface{})[0].(map[string]interface{})["loanID"].(string)
+
+		// log.Println("lastLoanId : ", lastLoanId)
+
+		return lastLoanId, nil
+	}
 }
 
 func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token string) (*inveli.LimitPaylater, error) {
@@ -512,11 +700,9 @@ func (r *InveliAPIRepositoryImplementation) GetLimitPayLater(IDMember, token str
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println(err)
-		log.Println(respData)
+		log.Println("limit =", respData)
 		return nil, err
 	}
-
-	log.Println(respData)
 
 	if respData == nil {
 		return nil, nil
@@ -594,8 +780,6 @@ func (r *InveliAPIRepositoryImplementation) GetTunggakan(LoanID, token string) (
 func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccount, token string, amount float64, isMerchant float64) error {
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
-	log.Println("credit account api payment: ", creditAccount)
-
 	req := graphql.NewRequest(`
 		mutation ($payment: MemberPaymentInput!) {
 			requestPayment(memberPayment: $payment)
@@ -619,11 +803,6 @@ func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccou
 		}
 	`)
 
-	log.Println("creditAccount : ", creditAccount)
-	log.Println("debitAccount : ", debitAccount)
-	log.Println("amount : ", amount)
-	log.Println("isMerchant : ", isMerchant)
-
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Var("payment", map[string]interface{}{
 		"creditAccount":       creditAccount,
@@ -638,11 +817,14 @@ func (r *InveliAPIRepositoryImplementation) ApiPayment(creditAccount, debitAccou
 	fmt.Println("request api payment : ", req)
 
 	ctx := context.Background()
-
 	var respData interface{}
 	if err := client.Run(ctx, req, &respData); err != nil {
 		log.Println("error api payment : ", err)
 		return err
+	}
+
+	if respData == nil {
+		return errors.New("error api payment")
 	}
 
 	fmt.Println("response api payment : ", respData)
@@ -717,8 +899,6 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 
 	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
 
-	// log.Println("loan id di inveli", loanProductId)
-
 	req := graphql.NewRequest(`
 		mutation ($loanInputParam: LoanInput!) {
 			createLoan(loanInputParam: $loanInputParam) 
@@ -750,7 +930,11 @@ func (r *InveliAPIRepositoryImplementation) InveliCreatePaylater(token string, I
 		return err
 	}
 
-	// fmt.Println("response create pinjaman : ", respData)
+	if respData == nil {
+		return errors.New("error create pinjaman")
+	}
+
+	fmt.Println("response create pinjaman : ", respData)
 
 	return nil
 }
@@ -799,8 +983,8 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 	  }
 	`)
 
-	log.Println("groupId :", user.Phone)
-	log.Println("groupId : ", groupIdBupda)
+	// log.Println("groupId :", user.Phone)
+	// log.Println("groupId : ", groupIdBupda)
 
 	// set any variables
 	req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -864,7 +1048,7 @@ func (r *InveliAPIRepositoryImplementation) InveliUpdateMember(user *entity.User
 		"fileVideo64":               "",
 	})
 
-	fmt.Println("req : ", req)
+	log.Println("req update member : ", req)
 
 	ctx := context.Background()
 	var respData interface{}
@@ -968,6 +1152,8 @@ func (r *InveliAPIRepositoryImplementation) InveliResgisration(inveliRegistratio
 		"bankID":             "9B2FC1C5-9F3A-44C5-915C-60E8653F32D6",
 	})
 
+	log.Println("req registrasi member : ", req)
+
 	// run it and capture the response
 	ctx := context.Background()
 	var respData interface{}
@@ -1017,6 +1203,8 @@ func (r *InveliAPIRepositoryImplementation) GetAccountInfo(IDMember, token strin
 		log.Println(err)
 		return nil, err
 	}
+
+	log.Println("req ", respData)
 
 	if respData == nil {
 		log.Println("Account Info is null")
@@ -1074,10 +1262,13 @@ func (r *InveliAPIRepositoryImplementation) GetStatusAccount(IDMember, token str
 		return 1, err
 	}
 
+	log.Println("respData : ", respData)
+
 	if respData == nil {
 		return 3, nil
 	}
 	resStatus := respData.(map[string]interface{})["member"].(map[string]interface{})["recordStatus"].(float64)
+
 	return int(resStatus), nil
 }
 
@@ -1136,4 +1327,36 @@ func (r *InveliAPIRepositoryImplementation) GetBalanceAccount(Code, token string
 	}
 
 	return accountBalance, nil
+}
+
+func (r *InveliAPIRepositoryImplementation) DebetPerTransaksi(token, loanID string) error {
+	client := graphql.NewClient(config.GetConfig().Inveli.InveliAPI + "/query")
+
+	log.Println("loanId : ", loanID)
+
+	req := graphql.NewRequest(`
+		mutation ($loanID: String!) {
+			autodebetLoanPayment(loanID: $loanID)
+		}
+	`)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Var("loanID", loanID)
+
+	fmt.Println("request api debet per transaksi : ", req)
+
+	ctx := context.Background()
+	var respData interface{}
+	if err := client.Run(ctx, req, &respData); err != nil {
+		log.Println("error api debet per transaksi : ", err)
+		return err
+	}
+
+	if respData == nil {
+		return errors.New("error api debet per transaksi")
+	}
+
+	fmt.Println("response api debet per transaksi : ", respData)
+
+	return nil
 }

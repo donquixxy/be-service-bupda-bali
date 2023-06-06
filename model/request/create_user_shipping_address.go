@@ -10,8 +10,8 @@ type CreateUserShippingAddressRequest struct {
 	AlamatPengiriman string  `json:"alamat_pengiriman" form:"alamat_pengiriman" validate:"required"`
 	Latitude         float64 `json:"latitude" form:"latitude" validate:"required"`
 	Longitude        float64 `json:"longitude" form:"longitude" validate:"required"`
-	Radius           float64 `json:"radius" form:"radius" validate:"required"`
-	StatusPrimary    int     `json:"status_primary" form:"status_primary" validate:"required"`
+	Radius           float64 `json:"radius" form:"radius"`
+	StatusPrimary    int     `json:"status_primary" form:"status_primary"`
 	Catatan          string  `json:"catatan" form:"catatan" validate:"required"`
 }
 

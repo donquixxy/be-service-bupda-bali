@@ -61,7 +61,6 @@ func NewOtpManagerService(
 }
 
 func GenerateRandomOtpCode() string {
-	rand.Seed(time.Now().Unix())
 	charSet := "1234567890"
 	var output strings.Builder
 	length := 6

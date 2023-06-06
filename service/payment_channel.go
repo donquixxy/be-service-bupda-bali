@@ -74,7 +74,6 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 	jmlOrder += requestPayChan.TotalBill
 
 	userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
-	log.Println("userPaylaterFlag", userPaylaterFlag)
 
 	if len(userPaylaterFlag.Id) == 0 {
 
