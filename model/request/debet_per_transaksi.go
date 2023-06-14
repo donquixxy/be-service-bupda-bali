@@ -2,7 +2,6 @@ package request
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
@@ -25,8 +24,6 @@ func ReadFromDebetPerTransaksiRequestBody(c echo.Context, requestId string, logg
 			break
 		}
 	}
-
-	log.Println("...any", debetPerTransaksiRequest)
 
 	return debetPerTransaksiRequest
 }
