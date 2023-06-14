@@ -72,30 +72,37 @@ func NewPaymentService(
 }
 
 func (service *PaymentServiceImplementation) DebetMultipleTransaksi(requestId, idUser string, loanId []string) error {
-	var err error
-
 	jmlLoan := len(loanId)
+	order := 0
 	orderOldest, err := service.OrderRepositoryInterface.FindOldestUnPaidPaylater(service.DB, idUser, jmlLoan)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{"order not found"}, service.Logger)
 	}
 
-	paymentQueues := []entity.PaymentQueue{}
+	paymentQueues := make([]entity.PaymentQueue, len(loanId))
 	for i, loan := range loanId {
+		order++
+		paymentQueue := entity.PaymentQueue{
+			Id:          utilities.RandomUUID(),
+			IdOrder:     orderOldest[i].Id,
+			IdUser:      idUser,
+			LoanId:      loan,
+			Amount:      orderOldest[i].TotalBill,
+			Status:      0,
+			Order:       order,
+			CreatedAt:   time.Now(),
+			ProcessedAt: null.TimeFrom(time.Now()),
+		}
+		paymentQueues[i] = paymentQueue
+	}
 
-		PaymentQueue := entity.PaymentQueue{}
-		PaymentQueue.IdOrder = orderOldest[i].Id
-		PaymentQueue.LoanId = loan
-		PaymentQueue.Status = 0
-		PaymentQueue.CreatedAt = time.Now()
-		PaymentQueue.ProcessedAt = null.TimeFrom(time.Now())
-
-		paymentQueues = append(paymentQueues, PaymentQueue)
+	if len(paymentQueues) <= 0 {
+		exceptions.PanicIfBadRequest(errors.New("empty payment queues"), requestId, []string{"error creating payment queue: empty payment queues"}, service.Logger)
 	}
 
 	err = service.PaymentQueueRepositoryInterface.CreatePaymentQueue(service.DB, paymentQueues)
 	if err != nil {
-		exceptions.PanicIfBadRequest(err, requestId, []string{"error create payment queue " + err.Error()}, service.Logger)
+		exceptions.PanicIfBadRequest(err, requestId, []string{"error creating payment queue: " + err.Error()}, service.Logger)
 	}
 
 	go service.QueuePaymentProcces(idUser)
@@ -104,6 +111,8 @@ func (service *PaymentServiceImplementation) DebetMultipleTransaksi(requestId, i
 }
 
 func (service *PaymentServiceImplementation) QueuePaymentProcces(idUser string) {
+	var err error
+	test := 0
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
@@ -111,25 +120,44 @@ func (service *PaymentServiceImplementation) QueuePaymentProcces(idUser string) 
 
 	paymentQueues, _ := service.PaymentQueueRepositoryInterface.FindPaymentQueueByIdUser(service.DB, idUser)
 
+	log.Println("paymentQueues", len(paymentQueues))
+	exceptions.PanicIfBadRequest(err, "", []string{"user not found"}, service.Logger)
+
 	for _, paymentQueue := range paymentQueues {
+		test++
+		log.Println("count payment queue", test)
 		err = service.InveliAPIRepositoryInterface.DebetPerTransaksi(user.User.InveliAccessToken, paymentQueue.LoanId)
 		if err != nil {
-			service.PaymentQueueRepositoryInterface.UpdateFailedPaymentQueueById(service.DB, user.Id, &entity.PaymentQueue{
+			log.Println("error debet per transaksi", err.Error())
+			err = service.PaymentQueueRepositoryInterface.UpdateFailedPaymentQueueById(service.DB, idUser, &entity.PaymentQueue{
 				Status:      2,
 				ProcessedAt: null.TimeFrom(time.Now()),
 			})
 
+			if err != nil {
+				exceptions.PanicIfBadRequest(err, "", []string{"error update payment queue: " + err.Error()}, service.Logger)
+			}
+
 			break
 		}
 
-		service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatus(service.DB, paymentQueue.IdOrder, &entity.Order{
+		err = service.OrderRepositoryInterface.UpdateOrderPaylaterPaidStatusByIdOrder(service.DB, paymentQueue.IdOrder, &entity.Order{
 			PaylaterPaidStatus: 1,
 		})
+
+		if err != nil {
+			exceptions.PanicIfBadRequest(err, "", []string{"error update order paylater status: " + err.Error()}, service.Logger)
+		}
 
 		service.PaymentQueueRepositoryInterface.UpdatePaymentQueueById(service.DB, paymentQueue.Id, &entity.PaymentQueue{
 			Status:      1,
 			ProcessedAt: null.TimeFrom(time.Now()),
 		})
+
+		if err != nil {
+			exceptions.PanicIfBadRequest(err, "", []string{"error update payment queue: " + err.Error()}, service.Logger)
+		}
+
 	}
 }
 

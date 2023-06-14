@@ -13,6 +13,7 @@ type PaymentQueue struct {
 	LoanId      string    `gorm:"column:loan_id;"`
 	Amount      float64   `gorm:"column:amount;"`
 	Status      int       `gorm:"column:status;"`
+	Order       int       `gorm:"column:order;"`
 	CreatedAt   time.Time `gorm:"column:created_at;"`
 	ProcessedAt null.Time `gorm:"column:processed_at;"`
 }

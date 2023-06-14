@@ -27,8 +27,10 @@ func (repository *PaymentQueueRepositoryImplementation) CreatePaymentQueue(db *g
 func (repository *PaymentQueueRepositoryImplementation) FindPaymentQueueByIdUser(db *gorm.DB, idUser string) ([]entity.PaymentQueue, error) {
 	paymentQueue := []entity.PaymentQueue{}
 	result := db.
-		Find(&paymentQueue, "id_user = ?", idUser).
-		Where("status = ?", 0)
+		Where("id_user = ?", idUser).
+		Where("`status` = ?", 0).
+		Order("`order` ASC").
+		Find(&paymentQueue)
 	return paymentQueue, result.Error
 }
 
@@ -42,11 +44,10 @@ func (repository *PaymentQueueRepositoryImplementation) UpdatePaymentQueueById(d
 }
 
 func (repository *PaymentQueueRepositoryImplementation) UpdateFailedPaymentQueueById(db *gorm.DB, idUser string, paymentQueueUpdate *entity.PaymentQueue) error {
-	paymentQueue := &entity.PaymentQueue{}
 	result := db.
-		Model(paymentQueue).
+		Model(&entity.PaymentQueue{}).
 		Where("id_user = ?", idUser).
-		Where("status = ?", 0).
+		Where("`status` = ?", 0).
 		Updates(paymentQueueUpdate)
 	return result.Error
 }

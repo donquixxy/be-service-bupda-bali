@@ -48,7 +48,7 @@ func (controller *PaylaterControllerImplementation) DebetMultipleTransaksi(c ech
 	IdUser := middleware.TokenClaimsIdUser(c)
 	debetRequest := request.ReadFromDebetPerTransaksiRequestBody(c, requestId, controller.logger)
 	controller.PaymentServiceInterface.DebetMultipleTransaksi(requestId, IdUser, debetRequest.LoanId)
-	responses := response.Response{Code: 201, Mssg: "success", Data: "success pay paylater", Error: []string{}}
+	responses := response.Response{Code: 201, Mssg: "success", Data: "payment on proccess", Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
 }
 
@@ -83,7 +83,6 @@ func (controller *PaylaterControllerImplementation) GetOrderPaylaterByMonth(c ec
 func (controller *PaylaterControllerImplementation) GetRiwayatPaylaterPerBulan(c echo.Context) error {
 	requestId := c.Response().Header().Get(echo.HeaderXRequestID)
 	IdUser := middleware.TokenClaimsIdUser(c)
-	// month, _ := strconv.Atoi(c.QueryParam("month"))
 	riwayatResponse := controller.PaylaterServiceInterface.GetOrderPaylaterPerBulan(requestId, IdUser)
 	responses := response.Response{Code: 200, Mssg: "success", Data: riwayatResponse, Error: []string{}}
 	return c.JSON(http.StatusOK, responses)
