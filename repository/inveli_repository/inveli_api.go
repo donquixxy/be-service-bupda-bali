@@ -136,7 +136,7 @@ func (r *InveliAPIRepositoryImplementation) GetRiwayatPinjaman(token, memberID s
 		var tunggakan []inveli.TunggakanPaylater2
 		for _, v := range respData.(map[string]interface{})["loans"].([]interface{}) {
 			var tunggakan2 inveli.TunggakanPaylater2
-
+			fmt.Println("Value of V :", v)
 			if v.(map[string]interface{})["recordStatus"].(float64) != 18 {
 
 				if len(v.(map[string]interface{})["loanAccountRepayments"].([]interface{})) != 0 {

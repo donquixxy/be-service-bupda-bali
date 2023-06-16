@@ -1829,6 +1829,9 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	orderEntity.SubTotal = totalPrice
 
 	// Checking total bill from FE
+	log.Println("Total price :", totalPrice)
+	log.Println("Shipping cost :", orderRequest.ShippingCost)
+	log.Println("Total cost :", orderRequest.TotalBill)
 	log.Println("Harga kalkulasi server 1 = ", totalPrice+orderRequest.ShippingCost)
 	log.Println("Harga dari client 1 = ", orderRequest.TotalBill+orderRequest.PaymentPoint)
 	if (totalPrice + orderRequest.ShippingCost) != (orderRequest.TotalBill + orderRequest.PaymentPoint) {
