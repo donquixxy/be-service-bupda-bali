@@ -214,6 +214,8 @@ func (repository *OrderRepositoryImplementation) FindOrderById(db *gorm.DB, idUs
 	return orders, result.Error
 }
 
+// Get data Order dengan payment paylater
+// Berdasarkan periode saat ini
 func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.DB, idUser string) ([]entity.Order, error) {
 	orders := []entity.Order{}
 	// var month time.Month
@@ -221,12 +223,31 @@ func (repository *OrderRepositoryImplementation) FindOrderPayLaterById(db *gorm.
 	day := now.Day()
 	var date1 time.Time
 	var date2 time.Time
+
+	// Jika tanggal hari ini adalah Kurang dari 25 (1 S/D 24)
 	if day < 25 {
+		// Set value date 1 dengan
+		// Tahun sekarang, Bulan sekarang -1 (Contoh skrg maret, -1. maka bulan skrg adalah Feb)
+		// dan tanggal 24.
+		// Kenapa tanggal 24 ?. Karena setiap periode akan reset setiap tanggal 25
 		date1 = time.Date(now.Year(), now.Month()-1, 24, 23, 59, 59, 0, time.UTC)
+		fmt.Println("Value date 1 :", date1)
+		// Set value date 2 dengan
+		// Tahun Sekarang, Bulan sekarang dan Tanggal 26
+		// Intinya, untuk If yang ini adalah search between
+		// Bulan sekarang -1 tanggal 24 hingga Bulan sekarang Tanggal 26
 		date2 = time.Date(now.Year(), now.Month(), 26, 0, 0, 0, 0, time.UTC)
+		fmt.Println("Value date 2 :", date2)
 	} else if day >= 25 {
+		// Jika tidak.
+		// Set Value date 1 dengan
+		// Tahun Sekarang. Bulan Sekarang. Tanggal 24.
 		date1 = time.Date(now.Year(), now.Month(), 24, 23, 59, 59, 0, time.UTC)
+		fmt.Println("Value date 1 bawah :", date1)
+		// Set Value date 2 dengan
+		// Tahun Sekarang. Bulan Sekarang +1 (next periode). Tanggal 26
 		date2 = time.Date(now.Year(), now.Month()+1, 26, 0, 0, 0, 0, time.UTC)
+		fmt.Println("Value date 2 bawah :", date2)
 	}
 
 	result := db.

@@ -68,7 +68,9 @@ func (service *PaymentChannelServiceImplementation) FindPaymentChannel(requestId
 	}
 	jmlOrder = 0
 	for _, v := range jmlOrderPayLate {
+		log.Println("Total bill each items:", v.TotalBill)
 		jmlOrder = jmlOrder + v.TotalBill
+		log.Println("Jumlah order amount:", jmlOrder)
 	}
 
 	jmlOrder += requestPayChan.TotalBill
