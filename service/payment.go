@@ -234,19 +234,54 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	orderEntity.PaymentCash = totalAmount
 
 	var jmlOrder float64
+
+	// Cek belanjaan user (MENGGUNAKAN PAYLATER) pada periode ke X
+	// Selanjutnya kita sebut sebagai jmlOrderPayLate
 	jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
 	if err != nil {
 		log.Println(err.Error())
 	}
 	jmlOrder = 0
 	for _, v := range jmlOrderPayLate {
+		fmt.Println("Order total bill :", v.TotalBill)
 		jmlOrder = jmlOrder + v.TotalBill
+		fmt.Println("Jml order :", jmlOrder)
 	}
 
+	// Get flagging tanggung renteng user pada periode ke X
 	userPaylaterFlag, _ := service.UserRepositoryInterface.GetUserPayLaterFlagThisMonth(service.DB, idUser)
+
+	// jmlOrderPayLate ditambah dengan request total bill
+	// Flagging tanggung renteng user pada periode ke X dikali 1JUTA
+
+	// Contoh case
+	// User A punya limit Paylater 500ribu
+	// User A belanja item X seharga 200ribu
+	// Maka, user harus membayar 202.500 Ribu. *USER MASIH MEMILKI SISA LIMIT 300RIBU*
+	// Kenapa ? karena user pada periode tersebut melakukan transaksi menggunakan paylater
+	// Kemudian, user melakukan transaksi sebesar 200ribu *USER MASIH MEMILIKI SISA LIMIT 100RIBU*
+	// Maka user hanya membayar 200ribu. KENAPA ?
+	// Karena user telah membayar 2500 (Tanggung renteng pada periode yang sama)
+
+	// Case 2
+	// User C punya Limit paylater 500ribu
+	// User C belanja item X seharga 500ribu
+	// Maka, user harus membayar sebesar 502.500 ribu *SISA LIMIT 0*
+	// Masih dalam bulan (periode) yang sama. User ternyata melunasi TAGIHAN PAYLATER YANG IA MILIKI (500ribu)
+	// Maka, limit paylater user akan kembali ke 500ribu
+	// Kenapa ? karena user telah melunasi tagihan pada periode sebelumnya
+	// Kemudian, user melakukan transaksi 500ribu
+	// Maka user harus membayar sebesar 502.500 lagi
+	// Kenapa 2500 ? kenapa tidak 5000 ?
+	// Karena setelah user melakukan pembayaran tagihan
+	// Bisa dibilang user mendapatkan *reset* untuk tanggung renteng nya
+
+	// Cek jika total Belanjaan user pada periode ke X + dengan order request yang masuk
+	// Lebih dari 1 juta
 
 	// Jika jumlah order sebelumnya ditambah dengan request total bill lebih dari
 	if (int(jmlOrder) + int(orderRequestTotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
+		// Maka update paylaterflag nya
 		service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
 			TanggungRentengFlag: userPaylaterFlag.TanggungRentengFlag + 1,
 		})

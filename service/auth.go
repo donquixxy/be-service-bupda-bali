@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -101,6 +102,7 @@ func (service *AuthServiceImplementation) Login(requestId string, loginRequest *
 		loginResponse = response.ToLoginResponse(token, refreshToken)
 
 		if user.StatusPaylater == 1 || user.StatusPaylater == 2 {
+			fmt.Println("Masuk kesini seblum login !")
 			go service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
 		}
 		// service.FirstTimeLoginInveli(user.Phone, user.InveliPassword)
