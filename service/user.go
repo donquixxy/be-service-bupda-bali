@@ -123,8 +123,10 @@ func (service *UserServiceImplementation) GetVANasabah(requestId string, idUser 
 }
 
 func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idUser string) (limitPayLaterResponse response.FindLimitPayLaterResponse) {
+
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	if err != nil {
+		log.Println("Error user :", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
@@ -133,7 +135,7 @@ func (service *UserServiceImplementation) GetLimitPayLater(requestId string, idU
 		log.Println("error get tagihan inveli", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
-
+	log.Println("User paylater status :", user.User.StatusPaylater)
 	if tagihanPaylater == nil {
 		if user.User.StatusPaylater == 2 {
 			go service.AuthServiceInterface.FirstTimeLoginInveli(user.User.Phone, user.User.InveliPassword)

@@ -480,8 +480,14 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 
 		for _, loan := range respData.(map[string]interface{})["loans"].([]interface{}) {
 			riwayatPinjaman := inveli.RiwayatPinjaman2{}
-
+			// log.Println("Value loan :", loan)
 			if loan.(map[string]interface{})["recordStatus"].(float64) == 18 {
+				continue
+			}
+
+			// Update baru. Inveli ada ngasi array kosong. Wajib dicek
+			// DATA Yang dipake adalah field loadAccountRepayments
+			if len(loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})) == 0 {
 				continue
 			}
 
@@ -503,8 +509,8 @@ func (r *InveliAPIRepositoryImplementation) GetTagihanPaylater(IDMember, token s
 			riwayatPinjaman.UserUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["userUpdate"].(string)
 			riwayatPinjaman.DateUpdate = loan.(map[string]interface{})["loanAccountRepayments"].([]interface{})[0].(map[string]interface{})["dateUpdate"].(string)
 			riwayatPinjamans = append(riwayatPinjamans, riwayatPinjaman)
-		}
 
+		}
 		return riwayatPinjamans, nil
 	}
 }
