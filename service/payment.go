@@ -284,6 +284,7 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	// Cek jika total Belanjaan user pada periode ke X + dengan order request yang masuk
 	// Lebih dari 1 juta
 
+	// Jika jumlah order sebelumnya ditambah dengan request total bill lebih dari
 	if (int(jmlOrder) + int(orderRequestTotalBill)) > (userPaylaterFlag.TanggungRentengFlag * 1000000) {
 		// Maka update paylaterflag nya
 		service.UserRepositoryInterface.UpdateUserPayLaterFlag(service.DB, idUser, &entity.UsersPaylaterFlag{
@@ -595,6 +596,7 @@ func (service *PaymentServiceImplementation) CreditCardPay(requestId string, pay
 	return &dataResponseIpaymu
 }
 
+// Get tagihan pelunasan paylater
 func (service *PaymentServiceImplementation) GetTagihanPelunasan(requestId string, idUser string) (tagihanPaylaterResponse []response.FindTagihanPelunasan) {
 	user, err := service.UserRepositoryInterface.FindUserById(service.DB, idUser)
 	if err != nil {

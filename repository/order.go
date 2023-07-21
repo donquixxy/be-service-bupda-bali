@@ -45,6 +45,8 @@ func NewOrderRepository(
 func (repository *OrderRepositoryImplementation) FindUnPaidPaylater(db *gorm.DB, idUser string) ([]entity.Order, error) {
 	orders := []entity.Order{}
 
+	// Order type 1-8 Adalah sebuah TRANSAKSI PPOB / SEMBAKO
+	// 9 adalah pelunasan
 	result := db.
 		Where("id_user = ?", idUser).
 		Where("order_type < ?", 9).
