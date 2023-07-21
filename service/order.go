@@ -1861,6 +1861,14 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 		exceptions.PanicIfRecordNotFound(errors.New("desa account paylater not found"), requestId, []string{"desa account paylater not found"}, service.Logger)
 	}
 
+	// Order Status
+	// 0 : Menunggu Pembayaran
+	// 1 : mENUNGGU KONFIRMASI
+	// 2 : Sedang DIPROSES
+	// 3 : Sedang dikirim
+	// 4 : Sampai tujuan
+	// 5 : Selesai
+
 	switch orderRequest.PaymentMethod {
 	case "cod":
 		orderEntity.OrderStatus = 1
@@ -2047,6 +2055,7 @@ func (service *OrderServiceImplementation) FindOrderByUser(requestId, idUser str
 	return orderResponses
 }
 
+// Get ddata Order sembako. ADA API Khsusus
 func (service *OrderServiceImplementation) FindOrderSembakoById(requestId, idOrder string) (orderResponse response.FindOrderSembakoByIdResponse) {
 	var err error
 

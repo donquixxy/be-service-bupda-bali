@@ -39,6 +39,9 @@ func main() {
 	// Logger
 	logrusLogger := utilities.NewLogger(appConfig.Log)
 
+	logrusLogger.Infoln("This App is running on ENV :", appConfig.Application)
+	logrusLogger.Infoln("Time started :", time.Now().Format("2006-01-02"))
+
 	// Validator
 	validate := validator.New()
 

@@ -48,7 +48,7 @@ func ToFindTagihanPaylater(order []entity.Order) []FindTagihanPaylater {
 		// }
 
 		findTagihanPaylater.RepaymentDate = v.PaymentDueDate.Time
-		findTagihanPaylater.RepaymentAmount = v.TotalBill
+		findTagihanPaylater.RepaymentAmount = v.PaymentCash
 		findTagihanPaylater.DateInsert = v.OrderedDate
 
 		findTagihanPaylaters = append(findTagihanPaylaters, findTagihanPaylater)

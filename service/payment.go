@@ -71,6 +71,11 @@ func NewPaymentService(
 	}
 }
 
+// Digunakan untuk memproses list tunggakan yang ada.
+// Frontnend memilih transaksi2 mana yang ingin dibayar
+// Karena pihak inveli tidak bisa melakukan multiple pelunasan.
+// Maka harus kita loop request (ID Loan) yang dikirim oleh frontend
+// Kemudian HIT API Inveli untuk melakukan pelunasan
 func (service *PaymentServiceImplementation) DebetMultipleTransaksi(requestId, idUser string, loanId []string) error {
 	jmlLoan := len(loanId)
 	order := 0
@@ -335,6 +340,12 @@ func (service *PaymentServiceImplementation) PayPaylaterBill(requestId, idUser s
 	}
 	// cek tagihan
 	tagihan, err := service.InveliAPIRepositoryInterface.GetTagihanPaylater(user.User.InveliIDMember, user.User.InveliAccessToken)
+
+	for _, item := range tagihan {
+		fmt.Println("Amount paid :", item.AmountPaid)
+		fmt.Println("Is paid :", item.IsPaid)
+		fmt.Println("Repayment amount :", item.RepaymentAmount)
+	}
 
 	if err != nil {
 		exceptions.PanicIfBadRequest(err, requestId, []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)

@@ -7,6 +7,8 @@
 config-dev.yml
 config-prod.yml
 config.yml
+config-local.yml
+.env
 # Test binary, built with `go test -c`
 *.test
 
