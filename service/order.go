@@ -2016,7 +2016,9 @@ func (service *OrderServiceImplementation) CreateOrderSembako(requestId, idUser,
 	}
 
 	commit := tx.Commit()
-	exceptions.PanicIfError(commit.Error, requestId, service.Logger)
+	if commit.Error != nil {
+		exceptions.PanicIfBadRequest(commit.Error, requestId, []string{commit.Error.Error()}, service.Logger)
+	}
 
 	runtime.GOMAXPROCS(1)
 	mssg := "Order Sembako Baru Dari " + userProfile.NamaLengkap + " ID Order " + orderEntity.NumberOrder + " VIA " + paymentChannel.Alias

@@ -2,6 +2,7 @@ package exceptions
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -9,6 +10,7 @@ import (
 )
 
 func ErrorHandler(err error, e echo.Context) {
+	log.Println("error is :", err)
 	errS := ErrorStruct{}
 	json.Unmarshal([]byte(err.Error()), &errS)
 	if errS.Code != 0 {

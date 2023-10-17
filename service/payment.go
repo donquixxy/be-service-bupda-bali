@@ -201,12 +201,14 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	// Get Bunga
 	bunga, errr := service.InveliAPIRepositoryInterface.GetLoanProduct(inveliAccessToken)
 	if errr != nil {
+		service.Logger.Errorf("error get loan product : %v", errr)
 		exceptions.PanicIfRecordNotFound(errors.New("error get loan product "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
 	// Get Loan Product
 	loandProductID, err := service.InveliAPIRepositoryInterface.GetLoanProductId(inveliAccessToken)
-	if errr != nil {
+	if err != nil {
+		service.Logger.Errorf("error get loan product id : %v", err)
 		exceptions.PanicIfRecordNotFound(errors.New("error get loan product id "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
@@ -225,6 +227,7 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 
 	err = service.InveliAPIRepositoryInterface.InveliCreatePaylater(inveliAccessToken, inveliIdMember, accountUser.IdAccount, orderRequestTotalBill, totalAmount, isMerchant, bunga, loandProductID, desaRekening)
 	if err != nil {
+		service.Logger.Errorf("error create inveli paylater : %v", err)
 		exceptions.PanicIfRecordNotFound(errors.New("error care pinjaman "+err.Error()), "", []string{strings.TrimPrefix(err.Error(), "graphql: ")}, service.Logger)
 	}
 
@@ -244,7 +247,8 @@ func (service *PaymentServiceImplementation) PayWithPaylater(inveliAccessToken, 
 	// Selanjutnya kita sebut sebagai jmlOrderPayLate
 	jmlOrderPayLate, err := service.OrderRepositoryInterface.FindOrderPayLaterById(service.DB, idUser)
 	if err != nil {
-		log.Println(err.Error())
+		log.Printf("error find orderpaylaterbyid %v", err)
+		exceptions.PanicIfRecordNotFound(err, "", []string{err.Error()}, service.Logger)
 	}
 	jmlOrder = 0
 	for _, v := range jmlOrderPayLate {
@@ -318,6 +322,7 @@ func (service *PaymentServiceImplementation) GetTabunganBimaMutation(requestId, 
 
 	mutation, err := service.InveliAPIRepositoryInterface.GetMutation(user.User.InveliAccessToken, account.IdAccount, startDate, endDate)
 	if err != nil {
+		service.Logger.Errorf("failed get mutation inveli : %v", err)
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
@@ -605,7 +610,7 @@ func (service *PaymentServiceImplementation) GetTagihanPelunasan(requestId strin
 
 	tagihanPaylater, err := service.InveliAPIRepositoryInterface.GetTagihanPaylaterByLatest(user.User.InveliIDMember, user.User.InveliAccessToken)
 	if err != nil {
-		log.Println("error get tagihan inveli", err.Error())
+		log.Println("error get tagihan inveli 2", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 

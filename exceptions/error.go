@@ -15,6 +15,7 @@ type ErrorStruct struct {
 
 func PanicIfError(err error, requestId string, logger *logrus.Logger) {
 	if err != nil && err != gorm.ErrRecordNotFound {
+		logger.Error("error is :", err.Error())
 		logger.WithFields(logrus.Fields{"request_id": requestId}).Error(err)
 		panic(err)
 	}

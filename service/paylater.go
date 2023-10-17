@@ -134,7 +134,7 @@ func (service *PaylaterServiceImplementation) GetTagihanPaylater(requestId strin
 
 	tagihanPaylater, err := service.OrderRepositoryInterface.FindOrderPaylaterUnpaidById(service.DB, idUser)
 	if err != nil {
-		log.Println("error get tagihan inveli", err.Error())
+		log.Println("error get tagihan inveli 1", err.Error())
 		exceptions.PanicIfError(err, requestId, service.Logger)
 	}
 
